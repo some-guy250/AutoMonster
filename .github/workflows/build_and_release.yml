@@ -49,9 +49,7 @@ jobs:
             }
             for (const release of releases.data) {
               for (const asset of release.assets) {
-                if (asset.name === 'main.exe') {
                   totalDownloadCount += asset.download_count
-                }
               }
             }
             fs.writeFileSync('download_count.json', JSON.stringify({ downloads: totalDownloadCount }))
