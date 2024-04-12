@@ -1,7 +1,7 @@
 # 🎮 Auto Monster Project
 
 [![Build and Release](https://github.com/some-guy250/AutoMonster/actions/workflows/build_and_release.yml/badge.svg)](../../releases)
-![Downloads](https://img.shields.io/badge/dynamic/json?color=blue&label=downloads&query=$.downloads&url=https://raw.githubusercontent.com/some-guy250/repo/master/download_count.json)
+![Downloads](https://img.shields.io/badge/dynamic/json?color=blue&label=downloads&query=$.downloads&url=https://raw.githubusercontent.com/some-guy250/AutoMonster/master/download_count.json)
 
 This project aims to automate some tedious tasks in the game Monster Legends, making the gaming experience more
 enjoyable and efficient.
