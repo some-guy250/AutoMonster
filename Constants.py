@@ -44,11 +44,7 @@ class ASSETS:
     StartUnlocking = "startunlocking.png"
     EggDone = "eggdone.png"
     EggSpeedup = "eggspeedup.png"
-    Egg1Hour = "egg1h.png"
-    Egg2Hours = "egg2h.png"
-    Egg3Hours = "egg3h.png"
-    Egg6Hours = "egg6h.png"
-    Egg1Day = "egg1d.png"
+    Egg = "egg6h.png"
     RankUp1 = "rankup1.png"
     RankUp2 = "rankup2.png"
     RankUp3 = "rankup3.png"
@@ -144,6 +140,14 @@ class ASSETS:
     Selected3 = "selected3.png"
 
 
+IN_GAME_ASSETS = (
+    ASSETS.Cancel, ASSETS.Exit, ASSETS.Battles, ASSETS.Wheel, ASSETS.Shop, ASSETS.StartBattle,
+    ASSETS.AutoBattle, ASSETS.ChangeTeam, ASSETS.SelectTeam, ASSETS.Back, ASSETS.BackPVP,
+    ASSETS.CancelSmall, ASSETS.SpinWheel, ASSETS.ClaimSpin, ASSETS.AreYouThere,
+    ASSETS.PlayCutscene, ASSETS.Skip, ASSETS.AnotherTale, ASSETS.Change, ASSETS.CollectPVP,
+    ASSETS.DiscardPVP
+)
+
 Emulators = {
     'LDPlayer': r"C:\LDPlayer\LDPlayer4.0\dnplayer.exe",
     'LDPlayer9': r'C:\LDPlayer\LDPlayer9\dnplayer.exe',
@@ -180,13 +184,6 @@ All_Cavers = (
     ASSETS.CavernOriginal,
 )
 
-EGGS = (
-    ASSETS.Egg1Hour,
-    ASSETS.Egg2Hours,
-    ASSETS.Egg3Hours,
-    ASSETS.Egg6Hours,
-    ASSETS.Egg1Day
-)
 
 AdLocations = [[1240, 45], [1240, 35], [1250, 85], [630, 50], [666, 80], [680, 25]]
 AdLocationsHorizontal = ((1240, 45), (1240, 35), (1250, 85))
