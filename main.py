@@ -2,7 +2,8 @@ from typing import List, Callable
 import numpy as np
 import AutoMonsterErrors
 from HelperFunctions import *
-from Constants import ASSETS, Ancestral_Cavers, EGGS, AdLocationsHorizontal, AdLocationsVertical, NumberOfCommonAds
+from Constants import ASSETS, Ancestral_Cavers, AdLocationsHorizontal, AdLocationsVertical, NumberOfCommonAds, \
+    IN_GAME_ASSETS
 import logging
 import os
 
@@ -259,11 +260,7 @@ class Controller:
         return False
 
     def in_game(self, screenshot: Optional[np.ndarray] = None) -> bool:
-        return self.in_screen(ASSETS.Cancel, ASSETS.Exit, ASSETS.Battles, ASSETS.Wheel, ASSETS.Shop, ASSETS.StartBattle,
-                              ASSETS.AutoBattle, ASSETS.ChangeTeam, ASSETS.SelectTeam, ASSETS.Back, ASSETS.BackPVP,
-                              ASSETS.CancelSmall, ASSETS.SpinWheel, ASSETS.ClaimSpin, ASSETS.AreYouThere,
-                              ASSETS.PlayCutscene, ASSETS.Skip, ASSETS.AnotherTale, ASSETS.Change,
-                              screenshot=screenshot, skip_ad_check=True)
+        return self.in_screen(*IN_GAME_ASSETS, screenshot=screenshot, skip_ad_check=True)
 
     def wait_for(self, *assets: [str, tuple[str, ...]], timeout: float = 10, skip_ad_check=False,
                  raise_error=False, pause_for: float = 0) -> bool:
@@ -272,7 +269,7 @@ class Controller:
             if self.in_screen(*assets, skip_ad_check=skip_ad_check):
                 self.pause(pause_for)
                 return True
-            self.pause(.5)
+            # self.pause(.5)
         if raise_error:
             raise AutoMonsterErrors.WaitError(f"Could not find any of the assets: {assets} in {timeout} seconds")
         return False
@@ -574,12 +571,13 @@ class Controller:
                     break
             elif result:
                 nodes += 1
-                if losses != 0:
-                    logger.warning("--------------------")
+                if losses != 0 and max_losses != 0:
+                    logger.info("--------------------")
                 losses = 0
             else:
                 losses += 1
-                logger.warning("Lost a battle")
+                if max_losses != 0:
+                    logger.warning("Lost a battle")
             if 0 < max_losses <= losses:
                 logger.warning("Lost too many battles")
                 return False
@@ -730,15 +728,15 @@ class Controller:
             self.follow_sequence(ASSETS.EggDone, ASSETS.Exit, ASSETS.EnterBattlePVP, raise_error=True,
                                  timeout=10)
             logger.info("Opened egg")
+            self.wait_for(ASSETS.EnterBattlePVP, timeout=5, pause_for=2)
             return True
         return False
 
     def _start_unlocking_eggs(self) -> bool:
         sc = self.take_screenshot()
         if self._count_eggs(screenshot=sc) == 4:
-            if not self.in_screen(ASSETS.EggSpeedup, screenshot=sc) and self.follow_sequence(EGGS,
-                                                                                             ASSETS.StartUnlocking,
-                                                                                             ASSETS.EnterBattlePVP):
+            if (not self.in_screen(ASSETS.EggSpeedup, screenshot=sc) and
+                    self.follow_sequence(ASSETS.Egg, ASSETS.StartUnlocking, ASSETS.EnterBattlePVP)):
                 logger.info("Started unlocking egg")
                 return True
         return False
@@ -748,7 +746,9 @@ class Controller:
             screenshot = self.take_screenshot()
         if self.in_screen(ASSETS.EggSpeedup, screenshot=screenshot):
             return 0
-        return self.count(*EGGS, screenshot=screenshot) + len(self._get_cords(ASSETS.Unlock, screenshot=screenshot))
+        unopened_eggs = self.count(ASSETS.Egg, screenshot=screenshot, threshold=.8, gray_img=True)
+        has_extra_slot = self.in_screen(ASSETS.Unlock, screenshot=screenshot)
+        return unopened_eggs + (1 if has_extra_slot else 0)
 
     def do_pvp(self, num_battles: int = 5, handle_eggs: bool = True, reduce_egg_time: bool = True):
         wins = 0
@@ -771,9 +771,11 @@ class Controller:
                     if rd is not None:
                         reduce_egg_time = rd
 
-                self._open_eggs_in_pvp()
+                if self._open_eggs_in_pvp():
+                    self._start_unlocking_eggs()
 
             if wins + losses >= num_battles:
+                logger.info(f"Finished PVP, Wins: {wins}, Losses: {losses}")
                 return
 
             # self.click(ASSETS.EnterBattlePVP)
@@ -785,7 +787,7 @@ class Controller:
             self.click(ASSETS.Cancel, pause=4)
             if self.in_screen(ASSETS.CollectPVP):
                 wins += 1
-                self.click(ASSETS.CollectPVP, (ASSETS.EnterBattlePVP, ASSETS.SeePVP))
+                self.follow_sequence(ASSETS.CollectPVP, (ASSETS.EnterBattlePVP, ASSETS.SeePVP))
                 if not self.in_screen(ASSETS.EnterBattlePVP):
                     self.follow_sequence(ASSETS.BackPVP, ASSETS.DiscardPVP, None)
                 counter = 0
@@ -979,11 +981,12 @@ def main():
         # controller.do_dungeon(True, False, True)
         # time_function(controller.reduce_time)
         # time_function(controller.do_era_saga)
-        time_function(controller.do_cavern, *full_cavers, change_team=True)
-        time_function(controller.do_cavern, *half_cavers, change_team=True, max_rooms=3)
-        # time_function(controller.do_pvp, 2)
+        # time_function(controller.do_cavern, *full_cavers, change_team=True)
+        # time_function(controller.do_cavern, *half_cavers, change_team=True, max_rooms=3)
 
-        # time_function(controller.do_resource_dungeon)
+        time_function(controller.do_pvp, 2)
+
+        # controller.do_dungeon(True, False, True, max_losses=0)
 
         # controller.close_game()
         # close_emulator()

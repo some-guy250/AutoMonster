@@ -154,6 +154,14 @@ def download_with_progress(url, file_name):
     f.close()
 
 
+def show_img_with_detections(img, xy_points):
+    for xy in xy_points:
+        cv2.circle(img, xy, 5, (0, 255, 0), -1)
+    cv2.imshow('img', img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+
 for emulator_path in Emulators.values():
     if pathlib.Path(emulator_path).exists():
         Emulator_Path = emulator_path
