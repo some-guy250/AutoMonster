@@ -57,6 +57,15 @@ jobs:
             }
             fs.writeFileSync('download_count.json', JSON.stringify({ downloads: totalDownloadCount }))
 
+      - name: Commit and push download count
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add download_count.json
+          git commit -m "updated download count" -a
+          git push
+
+
       - name: Delete old release
         uses: actions/github-script@v3
         with:
