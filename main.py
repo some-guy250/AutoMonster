@@ -746,7 +746,7 @@ class Controller:
             screenshot = self.take_screenshot()
         if self.in_screen(ASSETS.EggSpeedup, screenshot=screenshot):
             return 0
-        unopened_eggs = self.count(ASSETS.Egg, screenshot=screenshot, threshold=.8, gray_img=True)
+        unopened_eggs = self.count(ASSETS.Egg, screenshot=screenshot, threshold=.85, gray_img=True)
         has_extra_slot = self.in_screen(ASSETS.Unlock, screenshot=screenshot)
         return unopened_eggs + (1 if has_extra_slot else 0)
 
@@ -757,7 +757,7 @@ class Controller:
             self._goto_pvp()
 
         while True:
-            if not self.in_screen(ASSETS.EnterBattlePVP):
+            if not self.wait_for(ASSETS.EnterBattlePVP, timeout=5):
                 try:
                     self._goto_pvp()
                 except AutoMonsterErrors:
@@ -785,7 +785,7 @@ class Controller:
                 self.follow_sequence(ASSETS.Yes, ASSETS.StartBattle, timeout=15)
             self.auto_battle()
             self.click(ASSETS.Cancel, pause=4)
-            if self.in_screen(ASSETS.CollectPVP):
+            if self.wait_for(ASSETS.CollectPVP, timeout=5):
                 wins += 1
                 self.follow_sequence(ASSETS.CollectPVP, (ASSETS.EnterBattlePVP, ASSETS.SeePVP))
                 if not self.in_screen(ASSETS.EnterBattlePVP):
@@ -984,7 +984,7 @@ def main():
         # time_function(controller.do_cavern, *full_cavers, change_team=True)
         # time_function(controller.do_cavern, *half_cavers, change_team=True, max_rooms=3)
 
-        time_function(controller.do_pvp, 2)
+        time_function(controller.do_pvp, 10, handle_eggs=False)
 
         # controller.do_dungeon(True, False, True, max_losses=0)
 
