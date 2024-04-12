@@ -13,8 +13,8 @@ enjoyable and efficient.
 - [🎯 Introduction](#-introduction)
 - [⚙️ Features](#-features)
 - [💻 Installation](#-installation)
-    - [Using Python](#using-python)
-    - [Using the Executable](#using-the-executable)
+    - [🐍 Using Python](#-using-python)
+    - [🚀 Using the Executable](#-using-the-executable)
 - [🤝 Contributing](#-contributing)
 - [📜 License](#-license)
 
@@ -34,9 +34,11 @@ repetitive tasks within the game, such as playing ads, doing dungeons, etc.
 
 ## 💻 Installation
 
+Note: It is recommended to create a folder for the program. It will download files to the folder where the program is located.
+
 ---
 
-### Using Python
+### 🐍 Using Python
 
 To install and run the Auto Monster Project with Python:
 
@@ -54,11 +56,12 @@ After installing the dependencies, run the following command to start the automa
 ```bash
 python main.py
 ```
+
 The Auto Monster Project is now running on your system, select which task you want to automate and enjoy the game.
 
 ---
 
-### Using the Executable
+### 🚀 Using the Executable
 
 To use the Auto Monster Project with the executable:
 
