@@ -148,7 +148,7 @@ class Controller:
             total += len(self._get_cords(a, screenshot, gray_img=gray_img, threshold=threshold))
         return total
 
-    def debug_get_cords_in_image(self, *assets: Optional[str | tuple[str, ...]], display=False) -> List[np.ndarray]:
+    def debug_get_cords_in_image(self, *assets: Optional[str, tuple[str, ...]], display=False) -> List[np.ndarray]:
         screenshot = self.take_screenshot()
         result = []
         for asset in assets:
@@ -197,7 +197,7 @@ class Controller:
             cv2.waitKey(0)
         return result
 
-    def click(self, *assets: Optional[str | tuple[str, ...]], skip_ad_check=False, pause: float = 1, screenshot=None,
+    def click(self, *assets: Optional[str, tuple[str, ...]], skip_ad_check=False, pause: float = 1, screenshot=None,
               raise_error=False, index=0, gray_img=False, threshold=.93) -> bool:
         if screenshot is None:
             screenshot = self.take_screenshot()
@@ -276,12 +276,12 @@ class Controller:
             raise AutoMonsterErrors.WaitError(f"Could not find any of the assets: {assets} in {timeout} seconds")
         return False
 
-    def follow_sequence(self, *sequence: Optional[Optional[str | tuple[str, ...]]], max_tries: int = 1,
+    def follow_sequence(self, *sequence: Optional[Optional[str, tuple[str, ...]]], max_tries: int = 1,
                         reset_func: Optional[Callable] = None, raise_error: bool = False, timeout: float = 5) -> bool:
         # follow sequence of actions, click and wait till then next "thing to click" appears if last is none then
         # don't wait for this to appear else the last one should not be clicked and wait till it appears
-        def click_and_wait(action: Optional[str | tuple[str, ...]],
-                           next_action: Optional[str | tuple[str, ...]] = None):
+        def click_and_wait(action: Optional[str, tuple[str, ...]],
+                           next_action: Optional[str, tuple[str, ...]] = None):
             if type(action) is str:
                 action = (action,)
             if type(next_action) is str:
