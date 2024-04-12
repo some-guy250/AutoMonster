@@ -145,7 +145,7 @@ IN_GAME_ASSETS = (
     ASSETS.AutoBattle, ASSETS.ChangeTeam, ASSETS.SelectTeam, ASSETS.Back, ASSETS.BackPVP,
     ASSETS.CancelSmall, ASSETS.SpinWheel, ASSETS.ClaimSpin, ASSETS.AreYouThere,
     ASSETS.PlayCutscene, ASSETS.Skip, ASSETS.AnotherTale, ASSETS.Change, ASSETS.CollectPVP,
-    ASSETS.DiscardPVP
+    ASSETS.DiscardPVP,
 )
 
 Emulators = {
