@@ -12,7 +12,7 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v2
@@ -22,17 +22,19 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install Docker
+      - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y docker.io
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
 
       - name: Build Executable
-        run: docker run --rm -v $PWD:/src -w /src python:3.10 bash -c "pip install --upgrade pip && pip install -r requirements.txt && pip install pyinstaller && pyinstaller --onefile main.py"
+        run: |
+          pyinstaller --onefile main.py
 
       - name: Get version
         id: get_version
-        run: echo "::set-output name=version::$(python -c 'from main import __version__; print(__version__)')"
+        run: echo "::set-output name=version::$(grep -oP '__version__ = \"\K[^\"]+' main.py)"
 
       - name: Fetch and store download count
         uses: actions/github-script@v3
