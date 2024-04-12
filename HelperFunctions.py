@@ -162,9 +162,9 @@ def show_img_with_detections(img, xy_points):
     cv2.destroyAllWindows()
 
 
-for emulator_path in Emulators.values():
-    if pathlib.Path(emulator_path).exists():
-        Emulator_Path = emulator_path
-        break
-else:
-    raise Exception("No emulator found")
+# for emulator_path in Emulators.values():
+#     if pathlib.Path(emulator_path).exists():
+#         Emulator_Path = emulator_path
+#         break
+# else:
+#     raise Exception("No emulator found")
