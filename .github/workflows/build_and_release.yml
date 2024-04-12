@@ -28,7 +28,7 @@ jobs:
 
       - name: Build Executable
         run: |
-          pyinstaller --onefile --icon="./compiling/favicon.ico" --add-data "./compiling/manifest.xml,." main.py
+          pyinstaller --onefile --icon="./compiling/favicon.ico" --add-data "./compiling/manifest.xml:." main.py
 
       - name: Get version
         id: get_version
