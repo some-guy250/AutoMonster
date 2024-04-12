@@ -54,14 +54,6 @@ jobs:
               }
             }
 
-      - name: Update README
-        run: |
-          sed -i "s/Download count: [0-9]*/Download count: $(cat download_count.txt)/g" README.md
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add README.md download_count.txt
-          git commit -m "Update download count" && git push
-
       - name: Delete old release
         uses: actions/github-script@v3
         with:
@@ -76,14 +68,18 @@ jobs:
               }
             }
 
+      - name: Get version
+        id: get_version
+        run: echo "::set-output name=version::$(python -c 'from main import __version__; print(__version__)')"
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: latest
-          release_name: Latest Release
+          tag_name: ${{ steps.get_version.outputs.version }}
+          release_name: Release ${{ steps.get_version.outputs.version }}
           draft: false
           prerelease: false
 
