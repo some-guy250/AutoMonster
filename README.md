@@ -8,8 +8,6 @@ enjoyable and efficient.
 
 ## 📚 Table of Contents
 
-----
-
 - [🎯 Introduction](#-introduction)
 - [⚙️ Features](#-features)
 - [💻 Installation](#-installation)
@@ -20,13 +18,10 @@ enjoyable and efficient.
 
 ## 🎯 Introduction
 
----
 The Auto Monster Project is a Python-based automation tool for the game Monster Legends. It is designed to handle
 repetitive tasks within the game, such as playing ads, doing dungeons, etc.
 
 ## ⚙️ Features
-
----
 
 - 📺 Automated ad playing: The tool can automatically play ads, reducing the need for manual interaction.
 - 🏰 Dungeon automation: The tool can automatically navigate through dungeons, making the process more efficient.
@@ -35,8 +30,6 @@ repetitive tasks within the game, such as playing ads, doing dungeons, etc.
 ## 💻 Installation
 
 Note: It is recommended to create a folder for the program. It will download files to the folder where the program is located.
-
----
 
 ### 🐍 Using Python
 
@@ -59,8 +52,6 @@ python main.py
 
 The Auto Monster Project is now running on your system, select which task you want to automate and enjoy the game.
 
----
-
 ### 🚀 Using the Executable
 
 To use the Auto Monster Project with the executable:
@@ -70,13 +61,9 @@ To use the Auto Monster Project with the executable:
 
 ## 🤝 Contributing
 
----
-
 Contributions to the Auto Monster Project are welcome. If you encounter any bugs or have feature requests, please ask.
 
 ## 📜 License
-
----
 
 This project is licensed under the MIT License. This allows others to use, modify, and distribute the project, subject
 to the terms of the license.
