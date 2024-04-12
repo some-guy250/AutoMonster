@@ -7,6 +7,8 @@ from Constants import ASSETS, Ancestral_Cavers, AdLocationsHorizontal, AdLocatio
 import logging
 import os
 
+__version__ = "0.0.1"
+
 
 class CustomFormatter(logging.Formatter):
     blue = "\x1b[38;5;4m"
@@ -784,12 +786,16 @@ class Controller:
             if self.in_screen(ASSETS.Yes, screenshot=self.__last_screenshot):
                 self.follow_sequence(ASSETS.Yes, ASSETS.StartBattle, timeout=15)
             self.auto_battle()
-            self.click(ASSETS.Cancel, pause=4)
-            if self.wait_for(ASSETS.CollectPVP, timeout=5):
+            self.click(ASSETS.Cancel)
+            if self.wait_for(ASSETS.CollectPVP, timeout=7):
+                print("Won")
                 wins += 1
                 self.follow_sequence(ASSETS.CollectPVP, (ASSETS.EnterBattlePVP, ASSETS.SeePVP))
+                print("Collected")
                 if not self.in_screen(ASSETS.EnterBattlePVP):
+                    print("Not in PVP")
                     self.follow_sequence(ASSETS.BackPVP, ASSETS.DiscardPVP, None)
+                    print("Discarded Egg")
                 counter = 0
                 while self.in_screen(ASSETS.SeePVP):
                     if counter > 5:
