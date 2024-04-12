@@ -80,6 +80,11 @@ jobs:
           draft: false
           prerelease: false
 
+      - name: List contents of dist directory
+        run: |
+          ls
+          ls -l ./dist
+
       - name: Upload Release Asset
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
