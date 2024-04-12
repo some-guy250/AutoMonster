@@ -2,6 +2,10 @@ name: Build and Release
 
 on:
   push:
+    paths:
+      - '**.py'
+      - 'assets/**'
+      - '.github/workflows/build_and_release.yml'
     branches:
       - master
 
@@ -11,72 +15,85 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.9'
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
 
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
-        pip install pyinstaller
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
 
-    - name: Build Executable
-      run: pyinstaller --onefile main.py
+      - name: Build Executable
+        run: pyinstaller --onefile main.py
 
-    - name: Fetch and store download count
-      uses: actions/github-script@v3
-      with:
-        github-token: ${{secrets.GITHUB_TOKEN}}
-        script: |
-          const { owner, repo } = context.repo
-          const releases = await github.repos.listReleases({ owner, repo })
-          for (const release of releases.data) {
-            if (release.tag_name === 'latest') {
-              for (const asset of release.assets) {
-                if (asset.name === 'main.exe') {
-                  const download_count = asset.download_count
-                  const fs = require('fs')
-                  fs.appendFileSync('download_count.txt', `Download count for ${asset.updated_at}: ${download_count}\n`)
+      - name: Fetch and store download count
+        uses: actions/github-script@v3
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const fs = require('fs')
+            const { owner, repo } = context.repo
+            const releases = await github.repos.listReleases({ owner, repo })
+            let totalDownloadCount = 0
+            if (fs.existsSync('download_count.txt')) {
+              totalDownloadCount = parseInt(fs.readFileSync('download_count.txt', 'utf8'))
+            }
+            for (const release of releases.data) {
+              if (release.tag_name === 'latest') {
+                for (const asset of release.assets) {
+                  if (asset.name === 'main.exe') {
+                    totalDownloadCount += asset.download_count
+                    fs.writeFileSync('download_count.txt', `${totalDownloadCount}\n`)
+                  }
                 }
               }
             }
-          }
 
-    - name: Delete old release
-      uses: actions/github-script@v3
-      with:
-        github-token: ${{secrets.GITHUB_TOKEN}}
-        script: |
-          const { owner, repo } = context.repo
-          const releases = await github.repos.listReleases({ owner, repo })
-          for (const release of releases.data) {
-            if (release.tag_name === 'latest') {
-              await github.repos.deleteRelease({ owner, repo, release_id: release.id })
-              await github.git.deleteRef({ owner, repo, ref: 'tags/latest' })
+      - name: Update README
+        run: |
+          sed -i "s/Download count: [0-9]*/Download count: $(cat download_count.txt)/g" README.md
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add README.md download_count.txt
+          git commit -m "Update download count" && git push
+
+      - name: Delete old release
+        uses: actions/github-script@v3
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const { owner, repo } = context.repo
+            const releases = await github.repos.listReleases({ owner, repo })
+            for (const release of releases.data) {
+              if (release.tag_name === 'latest') {
+                await github.repos.deleteRelease({ owner, repo, release_id: release.id })
+                await github.git.deleteRef({ owner, repo, ref: 'tags/latest' })
+              }
             }
-          }
 
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: latest
-        release_name: Latest Release
-        draft: false
-        prerelease: false
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: latest
+          release_name: Latest Release
+          draft: false
+          prerelease: false
 
-    - name: Upload Release Asset
-      id: upload-release-asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./dist/main
-        asset_name: main.exe
-        asset_content_type: application/octet-stream
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./dist/main
+          asset_name: main.exe
+          asset_content_type: application/octet-stream
