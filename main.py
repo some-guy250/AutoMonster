@@ -950,6 +950,10 @@ def main():
     # set logger level to debug
     # logger.basicConfig(level=logger.DEBUG)
 
+    if not check_platform_tools():
+        input("Press enter to exit")
+        return
+
     full_cavers = (
         ASSETS.CavernJestin,
         ASSETS.CavernBaBa,
