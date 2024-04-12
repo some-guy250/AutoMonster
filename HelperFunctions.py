@@ -1,9 +1,16 @@
+import os
+from urllib.request import urlopen
+from zipfile import ZipFile
+
 import ppadb.client
 import ppadb.device
 import subprocess
 import time
 import cv2
 import pathlib
+
+from tqdm import tqdm
+
 from Constants import Emulators
 from typing import Optional
 
@@ -90,6 +97,61 @@ def compare_imgs(img1, img2, transform_to_black=False):
         similarity = 1 - errorL2 / (height * width)
         return similarity > 0.99
     return False
+
+
+def check_platform_tools():
+    if not (pathlib.Path("platform-tools").is_dir() and pathlib.Path("platform-tools/adb.exe").exists()):
+        # try to download it from "https://dl.google.com/android/repository/platform-tools-latest-windows.zip"
+        print("'platform-tools' folder or 'adb.exe' not found")
+        if input("Download platform-tools? (y/n) ").lower() == 'y':
+            return download_platform_tools()
+        else:
+            print("Download and extract platform-tools folder from "
+                  "https://developer.android.com/studio/releases/platform-tools\n"
+                  "Then place the platform-tools folder in the same directory as AutoMonster")
+            return False
+    return True
+
+
+def download_platform_tools():
+    try:
+        download_with_progress("https://dl.google.com/android/repository/platform-tools-latest-windows.zip",
+                               "platform-tools.zip")
+        print("Extracting...")
+        with ZipFile("platform-tools.zip", "r") as zip_ref:
+            zip_ref.extractall()
+        os.remove("platform-tools.zip")
+
+        if not pathlib.Path("platform-tools/adb.exe").exists():
+            raise Exception("platform-tools/adb.exe not found")
+
+        print("Downloaded platform-tools")
+    except Exception as e:
+        print("Failed to download platform-tools\n"
+              "Download and extract platform-tools folder from "
+              "https://developer.android.com/studio/releases/platform-tools\n"
+              "Then place the platform-tools folder in the same directory as AutoMonster")
+        print(e)
+        return False
+    return True
+
+
+def download_with_progress(url, file_name):
+    u = urlopen(url)
+    f = open(file_name, 'wb')
+    meta = u.info()
+    file_size = int(meta["Content-Length"])
+
+    block_sz = 8192
+    with tqdm(total=file_size, desc=f"Downloading {file_name}", unit_scale=True, unit='B', unit_divisor=1024,
+              ascii=True, dynamic_ncols=True) as pbar:
+        while True:
+            buffer = u.read(block_sz)
+            if not buffer:
+                break
+            f.write(buffer)
+            pbar.update(block_sz)
+    f.close()
 
 
 for emulator_path in Emulators.values():
