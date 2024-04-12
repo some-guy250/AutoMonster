@@ -40,15 +40,15 @@ jobs:
             const { owner, repo } = context.repo
             const releases = await github.repos.listReleases({ owner, repo })
             let totalDownloadCount = 0
-            if (fs.existsSync('download_count.txt')) {
-              totalDownloadCount = parseInt(fs.readFileSync('download_count.txt', 'utf8'))
+            if (fs.existsSync('download_count.json')) {
+              totalDownloadCount = JSON.parse(fs.readFileSync('download_count.json', 'utf8')).downloads
             }
             for (const release of releases.data) {
               if (release.tag_name === 'latest') {
                 for (const asset of release.assets) {
                   if (asset.name === 'main.exe') {
                     totalDownloadCount += asset.download_count
-                    fs.writeFileSync('download_count.txt', `${totalDownloadCount}\n`)
+                    fs.writeFileSync('download_count.json', JSON.stringify({ downloads: totalDownloadCount }))
                   }
                 }
               }
