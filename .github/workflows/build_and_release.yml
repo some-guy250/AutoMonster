@@ -22,14 +22,17 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: Install Docker
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
+          sudo apt-get update
+          sudo apt-get install -y docker.io
 
       - name: Build Executable
-        run: pyinstaller --onefile main.py
+        run: docker run --rm -v $PWD:/src -w /src python:3.10 bash -c "pip install --upgrade pip && pip install -r requirements.txt && pip install pyinstaller && pyinstaller --onefile main.py"
+
+      - name: Get version
+        id: get_version
+        run: echo "::set-output name=version::$(python -c 'from main import __version__; print(__version__)')"
 
       - name: Fetch and store download count
         uses: actions/github-script@v3
@@ -44,15 +47,13 @@ jobs:
               totalDownloadCount = JSON.parse(fs.readFileSync('download_count.json', 'utf8')).downloads
             }
             for (const release of releases.data) {
-              if (release.tag_name === 'latest') {
-                for (const asset of release.assets) {
-                  if (asset.name === 'main.exe') {
-                    totalDownloadCount += asset.download_count
-                    fs.writeFileSync('download_count.json', JSON.stringify({ downloads: totalDownloadCount }))
-                  }
+              for (const asset of release.assets) {
+                if (asset.name === 'main.exe') {
+                  totalDownloadCount += asset.download_count
                 }
               }
             }
+            fs.writeFileSync('download_count.json', JSON.stringify({ downloads: totalDownloadCount }))
 
       - name: Delete old release
         uses: actions/github-script@v3
@@ -62,15 +63,9 @@ jobs:
             const { owner, repo } = context.repo
             const releases = await github.repos.listReleases({ owner, repo })
             for (const release of releases.data) {
-              if (release.tag_name === 'latest') {
-                await github.repos.deleteRelease({ owner, repo, release_id: release.id })
-                await github.git.deleteRef({ owner, repo, ref: 'tags/latest' })
-              }
+              await github.repos.deleteRelease({ owner, repo, release_id: release.id })
+              await github.git.deleteRef({ owner, repo, ref: 'tags/' + release.tag_name })
             }
-
-      - name: Get version
-        id: get_version
-        run: echo "::set-output name=version::$(python -c 'from main import __version__; print(__version__)')"
 
       - name: Create Release
         id: create_release
@@ -78,8 +73,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.get_version.outputs.version }}
-          release_name: Release ${{ steps.get_version.outputs.version }}
+          tag_name: Latest v-${{ steps.get_version.outputs.version }}
+          release_name: Latest v-${{ steps.get_version.outputs.version }}
           draft: false
           prerelease: false
 
