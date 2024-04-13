@@ -9,10 +9,12 @@ import time
 import cv2
 import pathlib
 
+import requests
 from tqdm import tqdm
 
 # from Constants import Emulators
 from typing import Optional
+
 
 # Emulator_Path: str | None = None
 
@@ -144,7 +146,7 @@ def download_with_progress(url, file_name):
 
     block_sz = 8192
     with tqdm(total=file_size, desc=f"Downloading {file_name}", unit_scale=True, unit='B', unit_divisor=1024,
-              ascii=True, dynamic_ncols=True) as pbar:
+              dynamic_ncols=True) as pbar:
         while True:
             buffer = u.read(block_sz)
             if not buffer:
@@ -154,13 +156,44 @@ def download_with_progress(url, file_name):
     f.close()
 
 
-def show_img_with_detections(img, xy_points):
-    for xy in xy_points:
-        cv2.circle(img, xy, 5, (0, 255, 0), -1)
-    cv2.imshow('img', img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+def download_assets():
+    # Define the GitHub repository URL
+    repo_url = "https://api.github.com/repos/some-guy250/AutoMonster/contents/assets"
 
+    # Send a GET request to the GitHub API to retrieve information about the contents of the "assets" folder
+    response = requests.get(repo_url)
+
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Parse the JSON response
+        contents = response.json()
+
+        # Create the "assets" folder if it doesn't exist
+        assets_folder = "assets"
+        if not os.path.exists(assets_folder):
+            os.makedirs(assets_folder)
+
+        # Iterate through each item in the contents
+        for item in tqdm(contents, desc="Downloading assets", unit="file", dynamic_ncols=True):
+            # Check if the item is a file
+            if item["type"] == "file":
+                # Get the download URL for the file
+                download_url = item["download_url"]
+
+                # Extract the file name from the URL
+                file_name = os.path.basename(download_url)
+
+                # Define the file path to save the file
+                file_path = os.path.join(assets_folder, file_name)
+
+                # Send a GET request to download the file
+                response = requests.get(download_url)
+
+                # Save the file
+                with open(file_path, "wb") as f:
+                    f.write(response.content)
+    else:
+        print(f"Failed to retrieve contents. Status code: {response.status_code}")
 
 # for emulator_path in Emulators.values():
 #     if pathlib.Path(emulator_path).exists():
