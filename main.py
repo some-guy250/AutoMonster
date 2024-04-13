@@ -7,7 +7,7 @@ from Constants import ASSETS, Ancestral_Cavers, AdLocationsHorizontal, AdLocatio
 import logging
 import os
 
-__version__ = "0.0.1"
+__version__ = "0.2.0"
 
 
 class CustomFormatter(logging.Formatter):
@@ -78,7 +78,9 @@ class Controller:
         self.callable_functions = {
             'do_era_saga': self.do_era_saga,
             'do_pvp': self.do_pvp,
-            'reduce_time': self.reduce_time,
+            'resource_dungeons': self.do_resource_dungeons,
+            'play_ads': self.play_ads,
+            # 'reduce_time': self.reduce_time,
         }
 
     def take_screenshot(self) -> np.ndarray:
@@ -466,7 +468,7 @@ class Controller:
         return times > 0
 
     def auto_battle(self):
-        if not self.follow_sequence(ASSETS.StartBattle, ASSETS.AutoBattle, None):
+        if not self.follow_sequence((ASSETS.StartBattle, ASSETS.StartBattlePVP), ASSETS.AutoBattle, None):
             raise AutoMonsterErrors.BattleError("Failed to start battle")
         self.pause(5)
         counter = 5
@@ -699,6 +701,7 @@ class Controller:
             try:
                 self.follow_sequence(ASSETS.Battles, ASSETS.EnterMultiplayer, ASSETS.EnterPVP, ASSETS.BattleLog,
                                      reset_func=self._goto_islands, max_tries=3, raise_error=True)
+                self.pause(1)
                 if not self.in_screen(ASSETS.EnterBattlePVP):
                     self.click_back()
                 if self.in_screen(ASSETS.EnterBattlePVP):
@@ -710,11 +713,25 @@ class Controller:
             if attempts == 3:
                 raise AutoMonsterErrors.GoToError("Failed to enter PVP")
 
+    def _goto_resource_dungeons(self):
+        attempts = 0
+        while True:
+            try:
+                self.follow_sequence(ASSETS.Battles, ASSETS.EnterDungeons, ASSETS.ResourceDungeon, ASSETS.EnterCavern,
+                                     reset_func=self._goto_islands, max_tries=3, raise_error=True)
+                logger.info("In Resource Dungeons")
+                break
+            except AutoMonsterErrors.AutoMonsterError:
+                pass
+            attempts += 1
+            if attempts == 3:
+                raise AutoMonsterErrors.GoToError("Failed to enter Resource Dungeons")
+
     def _reduce_egg_time(self) -> Optional[bool]:
-        if self.in_screen(ASSETS.EggSpeedup):
+        if self.in_screen(ASSETS.EggSpeedup, threshold=.9):
             logger.info("Reducing time for egg")
             if not self.in_screen(ASSETS.ReduceTime, ASSETS.ReduceTimeGold, ASSETS.ComeBackLater):
-                self.click(ASSETS.EggSpeedup, screenshot=self.__last_screenshot)
+                self.click(ASSETS.EggSpeedup, screenshot=self.__last_screenshot, threshold=.9)
             if self.in_screen(ASSETS.ComeBackLater):
                 logger.warning("No ads available")
                 res = False
@@ -780,14 +797,12 @@ class Controller:
                 logger.info(f"Finished PVP, Wins: {wins}, Losses: {losses}")
                 return
 
-            # self.click(ASSETS.EnterBattlePVP)
-            self.follow_sequence(ASSETS.EnterBattlePVP, (ASSETS.StartBattle, ASSETS.Yes), timeout=15)
-            # self.wait_for(ASSETS.StartBattle, ASSETS.Yes, timeout=15)
+            self.follow_sequence(ASSETS.EnterBattlePVP, (ASSETS.StartBattlePVP, ASSETS.Yes), timeout=15)
             if self.in_screen(ASSETS.Yes, screenshot=self.__last_screenshot):
-                self.follow_sequence(ASSETS.Yes, ASSETS.StartBattle, timeout=15)
+                self.follow_sequence(ASSETS.Yes, ASSETS.StartBattlePVP, timeout=15)
             self.auto_battle()
-            self.click(ASSETS.Cancel)
-            if self.wait_for(ASSETS.CollectPVP, timeout=7):
+            self.follow_sequence(ASSETS.Cancel, (ASSETS.CollectPVP, ASSETS.EnterBattlePVP), timeout=10)
+            if self.in_screen(ASSETS.CollectPVP):
                 print("Won")
                 wins += 1
                 self.follow_sequence(ASSETS.CollectPVP, (ASSETS.EnterBattlePVP, ASSETS.SeePVP))
@@ -950,8 +965,80 @@ class Controller:
             delta = time.time() - now
             print(f"Finished auto play ads ({played_ads}) {delta // 60}m {delta % 60:.2f}s")
 
-    def do_resource_dungeon(self):
-        self.do_dungeon(True, False, True)
+    def do_resource_dungeons(self):
+        self._goto_resource_dungeons()
+        sc = self.take_screenshot()
+
+        while self.in_screen(ASSETS.RightArrow, screenshot=sc):
+            if self.in_screen(ASSETS.GemDungeon, screenshot=sc):
+                self.click(ASSETS.EnterCavern, screenshot=sc)
+                self.do_dungeon(True, False, True, max_losses=0)
+            self.click(ASSETS.RightArrow, screenshot=sc)
+            sc = self.take_screenshot()
+        logger.info("Finished all resource dungeons")
+
+
+def perform_tests(controller: Controller):
+    def run_test():
+        fun = test["fun"]
+        args = test.get("args")
+        kwargs = test.get("kwargs")
+        requires_user_input = test.get("requires_user_input", False)
+        if requires_user_input:
+            print(f"Set up the game for the test '{test['name']}' and press enter to continue")
+            input()
+        try:
+            # Call the test function with the provided arguments and keyword arguments
+            if args is None and kwargs is None:
+                fun()
+            elif args is not None and kwargs is None:
+                fun(*args)
+            elif args is None and kwargs is not None:
+                fun(**kwargs)
+            else:
+                fun(*args, **kwargs)
+            return "-"  # Return an empty string if the test passed
+        except Exception as e:
+            return str(e)  # Return the error message if the test failed
+
+    # Define the tests
+    tests = [
+        {
+            "name": "Era Saga",
+            "fun": controller.do_era_saga,
+            "requires_user_input": True
+        },
+        {
+            "name": "Resource Dungeons",
+            "fun": controller.do_resource_dungeons,
+        },
+        {
+            "name": "PVP",
+            "fun": controller.do_pvp,
+            "kwargs": {"num_battles": 2, "handle_eggs": True, "reduce_egg_time": True}
+        }
+    ]
+
+    # Perform each test and collect the results
+    test_results = []
+    for test in tests:
+        print(f"Running test: {test['name']}")
+        result = run_test()
+        # Use checkmark (✔) for passed and cross mark (✘) for failed
+        symbol = "✔" if result == "-" else "✘"
+        test_results.append((test["name"], symbol, result))
+        print(f"Finished test: {test['name']}, Result: {symbol}")
+
+    # Calculate the maximum length of test names for formatting
+    max_name_length = max(len(test[0]) for test in test_results)
+
+    # Print the test report table header
+    print(f"{'Test Name':<{max_name_length}} | {'Result':^7} | Error Message")
+    print("-" * int(max_name_length * 2.5))
+
+    # Print the test results
+    for name, result, error_message in test_results:
+        print(f"{name:<{max_name_length}} | {result.center(7)} | {error_message}")
 
 
 def main():
@@ -990,8 +1077,11 @@ def main():
         # time_function(controller.do_cavern, *full_cavers, change_team=True)
         # time_function(controller.do_cavern, *half_cavers, change_team=True, max_rooms=3)
 
-        time_function(controller.do_pvp, 10, handle_eggs=False)
+        # time_function(controller.do_pvp, 10)
 
+        # perform_tests(controller)
+
+        # controller.do_resource_dungeons()
         # controller.do_dungeon(True, False, True, max_losses=0)
 
         # controller.close_game()
