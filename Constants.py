@@ -1,6 +1,7 @@
 class ASSETS:
     EnterBattleStamina = "stamina.png"
     StartBattle = "fight.png"
+    StartBattlePVP = "fightpvp.png"
     StartBattleGray = "fightgray.png"
     AutoBattle = "auto.png"
     Cancel = "cancel.png"
@@ -141,7 +142,7 @@ class ASSETS:
 
 
 IN_GAME_ASSETS = (
-    ASSETS.Cancel, ASSETS.Exit, ASSETS.Battles, ASSETS.Wheel, ASSETS.Shop, ASSETS.StartBattle,
+    ASSETS.Cancel, ASSETS.Exit, ASSETS.Battles, ASSETS.Wheel, ASSETS.Shop, ASSETS.StartBattle, ASSETS.StartBattlePVP,
     ASSETS.AutoBattle, ASSETS.ChangeTeam, ASSETS.SelectTeam, ASSETS.Back, ASSETS.BackPVP,
     ASSETS.CancelSmall, ASSETS.SpinWheel, ASSETS.ClaimSpin, ASSETS.AreYouThere,
     ASSETS.PlayCutscene, ASSETS.Skip, ASSETS.AnotherTale, ASSETS.Change, ASSETS.CollectPVP,
