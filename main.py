@@ -1011,18 +1011,35 @@ class Controller:
                 return False
 
         while True:
-            time.sleep(.5)
+            options = ['era', 'pvp', 'resource dungeons', 'ads', 'cavern', 'help', 'version', 'exit']
+
+            # made the options a bit more user friendly
+            print("\nWelcome to AutoMonsters!")
+            print("Available commands:")
+            for i in options:
+                print(f"- {i}")
+            
             raw_command = input("Enter command: ").lower()
-            command, *args = raw_command.split()
+
+            # made a check in case user enters nothing, keep asking until they enter something
+            if len(raw_command) == 0:
+                print("Please enter a command")
+                continue
+            try:
+                command, *args = raw_command.split()
+            except ValueError:
+                print("Invalid command: 'help' for a list of commands")
+            
             if command == 'exit':
                 break
-            if command not in callable_functions.keys():
+            elif command not in callable_functions.keys():
                 print(f"Invalid command: '{command}' type 'help' for a list of commands")
                 continue
             try:
                 run_command()
             except KeyboardInterrupt:
                 print("Command interrupted")
+
 
 
 def perform_tests(controller: Controller):
