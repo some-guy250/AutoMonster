@@ -1,7 +1,7 @@
 # 🎮 Auto Monster Project
 
 [![Latest release](https://img.shields.io/github/v/release/some-guy250/AutoMonster?style=for-the-badge)](../../releases/latest)
-![Number of downloads](https://img.shields.io/badge/dynamic/json?color=blue&label=Number%20of%20downloads&query=$.downloads&url=https://raw.githubusercontent.com/some-guy250/AutoMonster/master/download_count.json&style=for-the-badge)
+[![Number of downloads](https://img.shields.io/badge/dynamic/json?color=blue&label=Number%20of%20downloads&query=$.downloads&url=https://raw.githubusercontent.com/some-guy250/AutoMonster/master/download_count.json&style=for-the-badge)]()
 
 This project aims to automate some tedious tasks in the game Monster Legends, making the gaming experience more
 enjoyable and efficient.
@@ -13,6 +13,8 @@ enjoyable and efficient.
 - [💻 Installation](#-installation)
     - [🐍 Using Python](#-using-python)
     - [🚀 Using the Executable](#-using-the-executable)
+- [🕹️ Setting Up an Emulator](#-setting-up-an-emulator)
+- [💬 Usage and Commands](#-usage-and-commands)
 - [🤝 Contributing](#-contributing)
 - [📜 License](#-license)
 
@@ -27,11 +29,12 @@ repetitive tasks within the game, such as playing ads, doing dungeons, etc.
 - Era Saga automation: ✔️ Working
 - PVP automation: ⚠️ Some issues
 - Daily Dungeon automation (Gem and Rune): ✔️ Working
+- Cavern Dungeon automation: ✔️ Working
 - Maze automation: ❌ Not implemented
 
 ## 💻 Installation
 
-Note: It is recommended to create a folder for the program. It will download files to the folder where the program is located.
+Note: It is better to create a folder for the program. It will download files to the folder where the program is located.
 
 ### 🐍 Using Python
 
@@ -42,17 +45,57 @@ To install and run the Auto Monster Project with Python:
 3. Navigate to the project directory in your terminal.
 4. Run the following command to install the necessary dependencies:
 
-```bash
-pip install -r requirements.txt
-```
+> pip install -r requirements.txt
 
 After installing the dependencies, run the following command to start the automation process:
 
-```bash
-python main.py
-```
+> python main.py
 
 The Auto Monster Project is now running on your system, select which task you want to automate and enjoy the game.
+
+## 🕹️ Setting Up an Emulator
+
+To automate tasks in Monster Legends, you'll need to set up an emulator on your computer.
+
+### Step 1: Choose, Download and Install the Emulator an Emulator
+
+There are several emulators available for running Android apps on your computer. Some popular choices include:
+
+- **BlueStacks**: One of the most popular Android emulators, known for its stability and performance.
+- **NoxPlayer**: Another reliable emulator with a wide range of features.
+- **LDPlayer**: Optimized for gaming, LDPlayer offers smooth gameplay and customization options.
+
+Choose any emulator that has access to adb and can run Android apps on your computer.
+
+### Step 2: Install Monster Legends
+
+After setting up the emulator, it is recommended to install Monster Legends using an APK file and not from the Google Play Store. APKPure is a good source for APK files since Google Play Store sometimes detects emulators and doesn't allow you to download the game.
+
+### Step 3: Configure Emulator Settings
+
+To ensure the scripts runs, configure the emulator settings as follows:
+- **Resolution**: Set the resolution to 1280x720
+- **DPI**: Set the DPI to 240
+- **ADB Connection**: Enable ADB connection in the emulator settings to allow communication with the automation scripts.
+
+## 💬 Usage and Commands
+
+While the Auto Monster Project is running, you can use the following commands:
+
+- `era`: Goes through the Era Saga automatically.
+- `pvp`: Does PVP battles automatically
+- `rd`: Does the daily dungeons automatically (Gem and Rune).
+- `ads`: Plays and skips ads in Monster-Wood automatically.
+- `cavern`: Does the selected rank-up cavern dungeon automatically.
+- `update`: Checks for updates and updates the project if a new version is available. (Not implemented)
+- `version`: Displays the current version of the Auto Monster Project.
+- `help`: Displays the help menu, listing all available commands and their descriptions. You can also use `help [command]` to get more details about a specific command.
+
+You can also chain commands using `&` or `&&`: ❌ Not implemented
+
+- Using `&` between commands will run them concurrently, regardless of the success or failure of the previous command.
+- Using `&&` between commands will run the next command only if the previous one succeeded without errors.
+
 
 ### 🚀 Using the Executable
 
