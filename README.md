@@ -17,11 +17,17 @@ enjoyable and efficient.
 - [💬 Usage and Commands](#-usage-and-commands)
 - [🤝 Contributing](#-contributing)
 - [📜 License](#-license)
+- [🚨 Disclaimer](#-disclaimer)
 
 ## 🎯 Introduction
 
 The Auto Monster Project is a Python-based automation tool for the game Monster Legends. It is designed to handle
-repetitive tasks within the game, such as playing ads, doing dungeons, etc.
+repetitive tasks within the game, such as playing ads, doing dungeons, etc. Please note that while the project is
+functional, it is still in active development and may undergo changes and improvements.
+
+**Compatibility:** The Auto Monster Project can be used on both phones and tablets, although it is primarily designed
+for desktop use. Mobile compatibility is still under development and may vary depending on the device and emulator
+setup.
 
 ## ⚙️ Features
 
@@ -34,7 +40,8 @@ repetitive tasks within the game, such as playing ads, doing dungeons, etc.
 
 ## 💻 Installation
 
-Note: It is better to create a folder for the program. It will download files to the folder where the program is located.
+Note: It is better to create a folder for the program. It will download files to the folder where the program is
+located.
 
 ### 🐍 Using Python
 
@@ -69,11 +76,14 @@ Choose any emulator that has access to adb and can run Android apps on your comp
 
 ### Step 2: Install Monster Legends
 
-After setting up the emulator, it is recommended to install Monster Legends using an APK file and not from the Google Play Store. APKPure is a good source for APK files since Google Play Store sometimes detects emulators and doesn't allow you to download the game.
+After setting up the emulator, it is recommended to install Monster Legends using an APK file and not from the Google
+Play Store. APKPure is a good source for APK files since Google Play Store sometimes detects emulators and doesn't allow
+you to download the game.
 
 ### Step 3: Configure Emulator Settings
 
 To ensure the scripts runs, configure the emulator settings as follows:
+
 - **Resolution**: Set the resolution to 1280x720
 - **DPI**: Set the DPI to 240
 - **ADB Connection**: Enable ADB connection in the emulator settings to allow communication with the automation scripts.
@@ -89,13 +99,13 @@ While the Auto Monster Project is running, you can use the following commands:
 - `cavern`: Does the selected rank-up cavern dungeon automatically.
 - `update`: Checks for updates and updates the project if a new version is available. (Not implemented)
 - `version`: Displays the current version of the Auto Monster Project.
-- `help`: Displays the help menu, listing all available commands and their descriptions. You can also use `help [command]` to get more details about a specific command.
+- `help`: Displays the help menu, listing all available commands and their descriptions. You can also
+  use `help [command]` to get more details about a specific command.
 
 You can also chain commands using `&` or `&&`: ❌ Not implemented
 
 - Using `&` between commands will run them concurrently, regardless of the success or failure of the previous command.
 - Using `&&` between commands will run the next command only if the previous one succeeded without errors.
-
 
 ### 🚀 Using the Executable
 
@@ -112,3 +122,17 @@ Contributions to the Auto Monster Project are welcome. If you encounter any bugs
 
 This project is licensed under the MIT License. This allows others to use, modify, and distribute the project, subject
 to the terms of the license.
+
+## 🚨 Disclaimer
+
+The Auto Monster Project is provided for educational and informational purposes only. While efforts have been made to
+ensure its reliability and safety, it's essential to understand that the use of automation tools, including this
+project, may violate the terms of service of the game Monster Legends.
+
+**Responsibility:** The creator of the Auto Monster Project is not responsible for any consequences that may arise from
+the use of this tool. This includes but is not limited to account suspension, banning, or other penalties imposed by the
+game developers.
+
+**Usage:** By using the Auto Monster Project, you acknowledge that you are solely responsible for your actions and any
+risks associated with using automated tools in online games. It's recommended to review and comply with the terms of
+service of Monster Legends and to use the Auto Monster Project responsibly and at your own risk.
