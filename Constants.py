@@ -82,6 +82,7 @@ class ASSETS:
     CommonAd12 = "commonad12.png"
     CommonAd13 = "commonad13.png"
     CommonAd14 = "commonad14.png"
+    CommonAd15 = "commonad15.png"
     ResumeAd = "resumead.png"
     NoAds = "noads.png"
     NotFullTeam = "notfullteam.png"
@@ -185,8 +186,34 @@ All_Cavers = (
     ASSETS.CavernOriginal,
 )
 
-
 AdLocations = [[1240, 45], [1240, 35], [1250, 85], [630, 50], [666, 80], [680, 25]]
 AdLocationsHorizontal = ((1240, 45), (1240, 35), (1250, 85))
 AdLocationsVertical = ((630, 50), (666, 80), (680, 25))
-NumberOfCommonAds = 14
+NumberOfCommonAds = 15
+
+# help string for the current commands available
+HELP_STRING = """
+Commands:
+era: Does the current era saga
+pvp: Does pvp battles specified 
+rd: Does the daily resource dungeons (gem and rune)
+ads: Plays as many ads as specified, no argument means all possible ads
+cavern: Does the rank-up caverns specified see possible arguments with 'help cavern'
+version: Shows the current version of the program
+help: Shows this help message use 'help <command>' for more information on a specific command
+exit: Exits the program
+"""
+
+SPECIFIC_HELP_DIC = {
+    'era': "This command will do the era saga that is in the screen, so make sure you are in an era saga screen",
+    'pvp': "This command will do the pvp battles specified, the arguments are the number of battles you want to do",
+    'rd': "This command will do the daily resource dungeons (gem and rune)",
+    'ads': "This command will play as many ads as specified, before using this command navigate to MonsterWood",
+    'cavern': "This command will do the rank-up caverns specified, the arguments are the caverns you want to do"
+              "possible arguments are: 'multiverse', 'jestin', 'baba', 'khalorc', 'tyr', 'robur', 'theton', "
+              "'griffania',"
+              " 'alpine', 'abyssal', 'galactic', 'blossom', 'doomed', 'metro', 'corrupted', 'cosmic', 'original'",
+    'version': "This command will show the current version of the program",
+    'help': "This command will show the help message, use 'help <command>' for more information on a specific command",
+    'exit': "This command will exit the program"
+}
