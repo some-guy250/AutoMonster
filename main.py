@@ -62,6 +62,16 @@ class Controller:
             #     raise Exception('No device connected')
         logger.info(f'Device connected')
 
+        size = get_size(self.device)
+        self.flipped_xy = False
+        if size[0] < size[1]:
+            size = size[1], size[0]
+            self.flipped_xy = True
+        self.ratio = size[0] / 1280, size[1] / 720
+        if self.ratio != (1, 1):
+            logger.info(f"Screen resolution is {size[0]}x{size[1]}, recommended resolution is 1280x720")
+            logger.info(f"Resizing assets to {int(self.ratio[0] * 100)}% of the original size this may cause issues")
+
         pathlib.Path('assets').mkdir(parents=True, exist_ok=True)
         self.available_assets: List[str] = []
         for asset in dir(ASSETS):
@@ -70,11 +80,14 @@ class Controller:
             png_file = getattr(ASSETS, asset)
             if pathlib.Path(f'assets/{png_file}').exists():
                 img = cv2.imread(f'assets/{png_file}')
+                img = cv2.resize(img, (int(img.shape[1] * self.ratio[0]), int(img.shape[0] * self.ratio[1])),
+                                 interpolation=cv2.INTER_AREA)
                 self.template_dict[png_file] = (img, img.shape[0], img.shape[1])
             else:
                 logger.warning(f'Asset {png_file} is missing')
 
         self.open_game(force_close=False)
+        # self.debug_get_cords_in_image(ASSETS.Cancel, display=True, show_asset=True)
 
     def take_screenshot(self) -> np.ndarray:
         def extract_digit(s: str) -> float:
@@ -143,7 +156,8 @@ class Controller:
             total += len(self._get_cords(a, screenshot, gray_img=gray_img, threshold=threshold))
         return total
 
-    def debug_get_cords_in_image(self, *assets: Optional[str | tuple[str, ...]], display=False) -> List[np.ndarray]:
+    def debug_get_cords_in_image(self, *assets: Optional[str | tuple[str, ...]], display=False, show_asset=False) -> \
+            List[np.ndarray]:
         screenshot = self.take_screenshot()
         result = []
         for asset in assets:
@@ -189,6 +203,12 @@ class Controller:
 
             for i, images in enumerate(images):
                 cv2.imshow(f"Assets: {key[i]}", images)
+
+            if show_asset:
+                for asset in assets:
+                    print(asset)
+                    cv2.imshow(asset, self.template_dict[asset][0])
+
             cv2.waitKey(0)
         return result
 
@@ -367,9 +387,15 @@ class Controller:
             return self.in_game()
 
         def get_orientation():
-            if self.device.shell(r"dumpsys input | grep SurfaceOrientation").strip() == "SurfaceOrientation: 3":
-                return "portrait"
-            return "landscape"
+            def _get_orientation():
+                if self.device.shell(r"dumpsys input | grep SurfaceOrientation").strip() in ["SurfaceOrientation: 1",
+                                                                                             "SurfaceOrientation: 3"]:
+                    return "portrait"
+                return "landscape"
+
+            ori = _get_orientation()
+            if self.flipped_xy:
+                return "portrait" if ori == "landscape" else "landscape"
 
         if self.in_game():
             return False
@@ -406,7 +432,7 @@ class Controller:
                 index = 0
 
             pos = ad_locations[index]
-            self.device.input_tap(pos[0], pos[1])
+            self.device.input_tap(int(pos[0] * self.ratio[0]), int(pos[1] * self.ratio[1]))
             index += 1
 
             counter += 1
@@ -1123,6 +1149,7 @@ def main():
     try:
         controller = Controller()
         controller.main_loop()
+        # reset_density(controller.device)
     # except Exception as e:
     #     print(e)
     finally:

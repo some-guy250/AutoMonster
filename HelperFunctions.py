@@ -76,17 +76,27 @@ def connect_to_any_device(port: int = None) -> Optional[ppadb.device.Device]:
                     if device.shell('wm size').count("1280x720") > 0:
                         return device
                     else:
-                        print(f'Device screen size is not 1280x720, its: {device.shell("wm size")}')
+                        # print(f'Device screen size is not 1280x720, its: {size[0]}x{size[1]}')
                         # print(device.shell('wm density'))
                         # print the dpi of the device
-                        device.shell('wm density 240')
-                        # print(device.shell('wm density reset'))
-                        # print(device.shell('wm density'))
+                        # device.shell('wm density 240')
+                        # # print(device.shell('wm density reset'))
+                        # if device.shell('wm density').count("240") == 0:
+                        #     raise Exception("Density cannot be set to 240")
                         return device
                 except Exception as e:
-                    print('Device is not responding', e)
+                    print(e)
     subprocess.Popen(r"platform-tools\adb.exe kill-server", stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
     return None
+
+
+def get_size(device: ppadb.device.Device) -> tuple[int, ...]:
+    size = device.shell('wm size')
+    tuple_size = tuple(map(int, size.split("Physical size: ")[1].split("x")))
+    return tuple_size
+
+# def reset_density(device: ppadb.device.Device):
+#     device.shell('wm density reset')
 
 
 def compare_imgs(img1, img2, transform_to_black=False):
