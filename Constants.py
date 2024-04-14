@@ -187,7 +187,7 @@ All_Cavers = (
 )
 
 AdLocations = [[1240, 45], [1240, 35], [1250, 85], [630, 50], [666, 80], [680, 25]]
-AdLocationsHorizontal = ((1240, 45), (1240, 35), (1250, 85))
+AdLocationsHorizontal = ((1240, 45), (1240, 35), (1250, 85), (1165, 75))
 AdLocationsVertical = ((630, 50), (666, 80), (680, 25))
 NumberOfCommonAds = 15
 
