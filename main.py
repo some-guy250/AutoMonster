@@ -1,13 +1,14 @@
 from typing import List, Callable
 import numpy as np
 import AutoMonsterErrors
+import Constants
 from HelperFunctions import *
 from Constants import ASSETS, Ancestral_Cavers, AdLocationsHorizontal, AdLocationsVertical, NumberOfCommonAds, \
     IN_GAME_ASSETS
 import logging
 import os
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 
 class CustomFormatter(logging.Formatter):
@@ -74,14 +75,6 @@ class Controller:
                 logger.warning(f'Asset {png_file} is missing')
 
         self.open_game(force_close=False)
-
-        self.callable_functions = {
-            'do_era_saga': self.do_era_saga,
-            'do_pvp': self.do_pvp,
-            'resource_dungeons': self.do_resource_dungeons,
-            'play_ads': self.play_ads,
-            # 'reduce_time': self.reduce_time,
-        }
 
     def take_screenshot(self) -> np.ndarray:
         def extract_digit(s: str) -> float:
@@ -348,6 +341,7 @@ class Controller:
             self.pause(1)
         if force_close:
             self.pause(13)
+        self.click(ASSETS.Exit)
         logger.info("Game opened")
 
     def _check_for_common_ads(self):
@@ -495,7 +489,7 @@ class Controller:
         result = True
         skip_part = False
         # timeout = 5
-        timeout = 10
+        timeout = 12
 
         if has_cutscene:
             if self.in_screen(ASSETS.PlayCutscene):
@@ -769,9 +763,18 @@ class Controller:
         has_extra_slot = self.in_screen(ASSETS.Unlock, screenshot=screenshot)
         return unopened_eggs + (1 if has_extra_slot else 0)
 
-    def do_pvp(self, num_battles: int = 5, handle_eggs: bool = True, reduce_egg_time: bool = True):
+    def do_pvp(self, num_battles: int, handle_eggs: bool = True, reduce_egg_time: bool = True):
         wins = 0
         losses = 0
+
+        try:
+            num_battles = int(num_battles)
+        except ValueError:
+            raise AutoMonsterErrors.InputError(f"Invalid number of battles: {num_battles} must be an integer")
+
+        if num_battles < 1:
+            raise AutoMonsterErrors.InputError("PVP battles must be greater than 0")
+
         if not self.in_screen(ASSETS.EnterBattlePVP):
             self._goto_pvp()
 
@@ -803,14 +806,10 @@ class Controller:
             self.auto_battle()
             self.follow_sequence(ASSETS.Cancel, (ASSETS.CollectPVP, ASSETS.EnterBattlePVP), timeout=10)
             if self.in_screen(ASSETS.CollectPVP):
-                print("Won")
                 wins += 1
                 self.follow_sequence(ASSETS.CollectPVP, (ASSETS.EnterBattlePVP, ASSETS.SeePVP))
-                print("Collected")
                 if not self.in_screen(ASSETS.EnterBattlePVP):
-                    print("Not in PVP")
                     self.follow_sequence(ASSETS.BackPVP, ASSETS.DiscardPVP, None)
-                    print("Discarded Egg")
                 counter = 0
                 while self.in_screen(ASSETS.SeePVP):
                     if counter > 5:
@@ -970,12 +969,60 @@ class Controller:
         sc = self.take_screenshot()
 
         while self.in_screen(ASSETS.RightArrow, screenshot=sc):
-            if self.in_screen(ASSETS.GemDungeon, screenshot=sc):
+            if self.in_screen(ASSETS.GemDungeon, ASSETS.RuneDungeon, screenshot=sc):
                 self.click(ASSETS.EnterCavern, screenshot=sc)
                 self.do_dungeon(True, False, True, max_losses=0)
             self.click(ASSETS.RightArrow, screenshot=sc)
             sc = self.take_screenshot()
         logger.info("Finished all resource dungeons")
+
+    def seasonal_era_saga(self):
+        self.do_dungeon(True, True, False)
+
+    def token_dungeon(self):
+        self.do_dungeon(True, False, True)
+
+    def main_loop(self):
+        def print_help(cmd: str = None):
+            if cmd is None:
+                print(Constants.HELP_STRING)
+            else:
+                if cmd in callable_functions.keys():
+                    print(f"\t{Constants.SPECIFIC_HELP_DIC[cmd]}")
+                else:
+                    print(f"Invalid argument: '{cmd}' for help")
+
+        callable_functions = {
+            'era': self.do_era_saga,
+            'pvp': self.do_pvp,
+            'rd': self.do_resource_dungeons,
+            'ads': self.play_ads,
+            'cavern': self.do_cavern,
+            'help': print_help,
+            'version': lambda: print(f"Version: {__version__}"),
+        }
+
+        def run_command():
+            try:
+                callable_functions[command](*args)
+                return True
+            except AutoMonsterErrors.AutoMonsterError as e:
+                print("Error:", e)
+                return False
+
+        while True:
+            time.sleep(.5)
+            raw_command = input("Enter command: ").lower()
+            command, *args = raw_command.split()
+            if command == 'exit':
+                break
+            if command not in callable_functions.keys():
+                print(f"Invalid command: '{command}' type 'help' for a list of commands")
+                continue
+            try:
+                run_command()
+            except KeyboardInterrupt:
+                print("Command interrupted")
 
 
 def perform_tests(controller: Controller):
@@ -985,8 +1032,9 @@ def perform_tests(controller: Controller):
         kwargs = test.get("kwargs")
         requires_user_input = test.get("requires_user_input", False)
         if requires_user_input:
-            print(f"Set up the game for the test '{test['name']}' and press enter to continue")
-            input()
+            print(f"Set up the game for the test '{test['name']}' and press 'y' to continue or any other key to skip")
+            if input().lower() != "y":
+                return "Test skipped"
         try:
             # Call the test function with the provided arguments and keyword arguments
             if args is None and kwargs is None:
@@ -1024,7 +1072,7 @@ def perform_tests(controller: Controller):
     for test in tests:
         print(f"Running test: {test['name']}")
         result = run_test()
-        # Use checkmark (✔) for passed and cross mark (✘) for failed
+        # Use checkmark (✔) for passed and cross mark (✘) for failed or skipped tests
         symbol = "✔" if result == "-" else "✘"
         test_results.append((test["name"], symbol, result))
         print(f"Finished test: {test['name']}, Result: {symbol}")
@@ -1049,8 +1097,12 @@ def main():
         input("Press enter to exit")
         return
 
+    if not pathlib.Path("assets").exists():
+        print("Assets folder not found, downloading assets")
+        download_assets()
+
     full_cavers = (
-        ASSETS.CavernJestin,
+        # ASSETS.CavernJestin,
         ASSETS.CavernBaBa,
         ASSETS.CavernKhalorc,
         ASSETS.CavernTyr,
@@ -1070,27 +1122,9 @@ def main():
 
     try:
         controller = Controller()
-        # time_function(controller.play_ads)
-        # controller.do_dungeon(True, False, True)
-        # time_function(controller.reduce_time)
-        # time_function(controller.do_era_saga)
-        # time_function(controller.do_cavern, *full_cavers, change_team=True)
-        # time_function(controller.do_cavern, *half_cavers, change_team=True, max_rooms=3)
-
-        # time_function(controller.do_pvp, 10)
-
-        # perform_tests(controller)
-
-        # controller.do_resource_dungeons()
-        # controller.do_dungeon(True, False, True, max_losses=0)
-
-        # controller.close_game()
-        # close_emulator()
-
-        # controller.debug_get_cords_in_image(ASSETS.StartBattle, ASSETS.PlayCutscene, ASSETS.EraSagaDone,
-        #                                          ASSETS.EnterEraSaga, display=True)
-    except Exception as e:
-        print(e)
+        controller.main_loop()
+    # except Exception as e:
+    #     print(e)
     finally:
         subprocess.Popen(r"platform-tools\adb.exe kill-server", stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
 
