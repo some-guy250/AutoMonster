@@ -8,7 +8,7 @@ from Constants import ASSETS, Ancestral_Cavers, AdLocationsHorizontal, AdLocatio
 import logging
 import os
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 
 class CustomFormatter(logging.Formatter):
@@ -1044,28 +1044,26 @@ class Controller:
             print("Available commands:")
             for i in options:
                 print(f"- {i}")
-            
+
             raw_command = input("Enter command: ").lower()
 
             # made a check in case user enters nothing, keep asking until they enter something
             if len(raw_command) == 0:
                 print("Please enter a command")
                 continue
-            try:
-                command, *args = raw_command.split()
-            except ValueError:
-                print("Invalid command: 'help' for a list of commands")
-            
+
+            command, *args = raw_command.split()
+
             if command == 'exit':
                 break
-            elif command not in callable_functions.keys():
+
+            if command not in callable_functions.keys():
                 print(f"Invalid command: '{command}' type 'help' for a list of commands")
                 continue
             try:
                 run_command()
             except KeyboardInterrupt:
                 print("Command interrupted")
-
 
 
 def perform_tests(controller: Controller):
