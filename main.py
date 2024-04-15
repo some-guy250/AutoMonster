@@ -1,3 +1,4 @@
+import time
 from typing import List, Callable
 import numpy as np
 import AutoMonsterErrors
@@ -8,7 +9,7 @@ from Constants import ASSETS, Ancestral_Cavers, AdLocationsHorizontal, AdLocatio
 import logging
 import os
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 
 class CustomFormatter(logging.Formatter):
@@ -63,14 +64,20 @@ class Controller:
         logger.info(f'Device connected')
 
         size = get_size(self.device)
+        self.original_size = size
         self.flipped_xy = False
         if size[0] < size[1]:
             size = size[1], size[0]
             self.flipped_xy = True
         self.ratio = size[0] / 1280, size[1] / 720
+        self.resize_sc = False
+        if self.ratio[0] > 1 or self.ratio[1] > 1:
+            self.resize_sc = True
+            self.new_size = self.take_screenshot().shape
+            self.ratio = self.original_size[0] / self.new_size[0], self.original_size[1] / self.new_size[1]
         if self.ratio != (1, 1):
             logger.info(f"Screen resolution is {size[0]}x{size[1]}, recommended resolution is 1280x720")
-            logger.info(f"Resizing assets to {int(self.ratio[0] * 100)}% of the original size this may cause issues")
+            # logger.info(f"Resizing assets to {int(self.ratio[0] * 100)}% of the original size this may cause issues")
 
         pathlib.Path('assets').mkdir(parents=True, exist_ok=True)
         self.available_assets: List[str] = []
@@ -80,8 +87,9 @@ class Controller:
             png_file = getattr(ASSETS, asset)
             if pathlib.Path(f'assets/{png_file}').exists():
                 img = cv2.imread(f'assets/{png_file}')
-                img = cv2.resize(img, (int(img.shape[1] * self.ratio[0]), int(img.shape[0] * self.ratio[1])),
-                                 interpolation=cv2.INTER_AREA)
+                if not self.resize_sc:
+                    img = cv2.resize(img, (int(img.shape[1] * self.ratio[0]), int(img.shape[0] * self.ratio[1])),
+                                     interpolation=cv2.INTER_AREA)
                 self.template_dict[png_file] = (img, img.shape[0], img.shape[1])
             else:
                 logger.warning(f'Asset {png_file} is missing')
@@ -94,6 +102,13 @@ class Controller:
             return round(int(''.join(filter(str.isdigit, s))) / 1024 / 1024, 2)
 
         self.__last_screenshot = cv2.imdecode(np.frombuffer(self.device.screencap(), dtype="uint8"), cv2.IMREAD_COLOR)
+        if self.resize_sc:
+            # Calculate aspect ratios
+            image = self.__last_screenshot
+            new_width = int(720 * image.shape[1] / image.shape[0])
+            resized_image = cv2.resize(image, (new_width, 720))
+            self.__last_screenshot = resized_image
+
         # cpu = self.device.shell("top -n 1").split("\n")
         # temp = cpu[1].split(",")
         # total = extract_digit(temp[0])
@@ -146,6 +161,11 @@ class Controller:
             y = sum(loc[0] for loc in group) // len(group)
             # add half the width and height of the template to the location and cast to int
             location.append([int(x + w / 1.9), int(y + h / 1.9)])
+            if self.resize_sc:
+                x, y = location[-1]
+                x = int(x * self.ratio[0])
+                y = int(y * self.ratio[1])
+                location[-1] = [x, y]
         return location
 
     def count(self, *assets, gray_img=False, threshold=.93, screenshot=None):
@@ -162,6 +182,8 @@ class Controller:
         result = []
         for asset in assets:
             cords = self._get_cords(asset, screenshot, gray_img=True)
+            if self.resize_sc:
+                cords = [[int(x / self.ratio[0]), int(y / self.ratio[1])] for x, y in cords]
             colors = [(0, 255, 0)]
             if len(cords) > 1:
                 # create a gradient of colors form blue to green in BGR format for each cord
@@ -206,7 +228,6 @@ class Controller:
 
             if show_asset:
                 for asset in assets:
-                    print(asset)
                     cv2.imshow(asset, self.template_dict[asset][0])
 
             cv2.waitKey(0)
@@ -223,7 +244,9 @@ class Controller:
             cords = self._get_cords(asset, screenshot, threshold=threshold, gray_img=gray_img)
             if len(cords) > 0:
                 x, y = cords[index]
-                self.device.input_tap(x, y)
+                if self.device.input_tap(x, y):
+                    raise AutoMonsterErrors.ClickError(
+                        f"Permission denied to click. Check USB Debugging(Security settings) is enabled")
                 self.pause(pause)
                 return True
         if raise_error:
@@ -292,7 +315,7 @@ class Controller:
         return False
 
     def follow_sequence(self, *sequence: Optional[Optional[str | tuple[str, ...]]], max_tries: int = 1,
-                        reset_func: Optional[Callable] = None, raise_error: bool = False, timeout: float = 5) -> bool:
+                        reset_func: Optional[Callable] = None, raise_error: bool = False, timeout: float = 7) -> bool:
         # follow sequence of actions, click and wait till then next "thing to click" appears if last is none then
         # don't wait for this to appear else the last one should not be clicked and wait till it appears
         def click_and_wait(action: Optional[str | tuple[str, ...]],
@@ -899,6 +922,15 @@ class Controller:
 
         if len(dungeons_to_do) == 0:
             raise AutoMonsterErrors.InputError("No dungeons to do")
+
+        dungeons_to_do_temp = []
+        for dungeon in set(dungeons_to_do):
+            if dungeon not in Constants.CAVERN_TO_ASSETS.keys():
+                logger.warning(f"Invalid dungeon: {dungeon}")
+            else:
+                dungeons_to_do_temp.append(Constants.CAVERN_TO_ASSETS[dungeon])
+        dungeons_to_do = dungeons_to_do_temp
+
         num_dungeons = len(dungeons_to_do)
         dungeons_done = []
         self._goto_cavern()
@@ -1131,9 +1163,6 @@ def perform_tests(controller: Controller):
 
 
 def main():
-    # set logger level to debug
-    # logger.basicConfig(level=logger.DEBUG)
-
     if not check_platform_tools():
         input("Press enter to exit")
         return
@@ -1144,15 +1173,14 @@ def main():
 
     full_cavers = (
         # ASSETS.CavernJestin,
-        ASSETS.CavernBaBa,
-        ASSETS.CavernKhalorc,
-        ASSETS.CavernTyr,
-        ASSETS.CavernRobur,
-        ASSETS.CavernTheton,
-        ASSETS.CavernGriffania,
-
-        ASSETS.CavernGalactic,
-        ASSETS.CavernBlossom,
+        "baba",
+        "khalorc",
+        "tyr",
+        "robur",
+        "theton",
+        "griffania",
+        "galactic",
+        "blossom",
     )
 
     half_cavers = (
@@ -1163,7 +1191,9 @@ def main():
 
     try:
         controller = Controller()
+        # controller.do_cavern(*full_cavers, max_rooms=3)
         controller.main_loop()
+
         # reset_density(controller.device)
     # except Exception as e:
     #     print(e)

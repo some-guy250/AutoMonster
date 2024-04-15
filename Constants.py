@@ -187,7 +187,7 @@ All_Cavers = (
 )
 
 AdLocations = [[1240, 45], [1240, 35], [1250, 85], [630, 50], [666, 80], [680, 25]]
-AdLocationsHorizontal = ((1240, 45), (1240, 35), (1250, 85), (1165, 75))
+AdLocationsHorizontal = ((1165, 75), (1240, 45), (1240, 35), (1250, 85))
 AdLocationsVertical = ((630, 50), (666, 80), (680, 25))
 NumberOfCommonAds = 15
 
@@ -216,4 +216,24 @@ SPECIFIC_HELP_DIC = {
     'version': "This command will show the current version of the program",
     'help': "This command will show the help message, use 'help <command>' for more information on a specific command",
     'exit': "This command will exit the program"
+}
+
+CAVERN_TO_ASSETS = {
+    'multiverse': ASSETS.CavernMultiverse,
+    'jestin': ASSETS.CavernJestin,
+    'baba': ASSETS.CavernBaBa,
+    'khalorc': ASSETS.CavernKhalorc,
+    'tyr': ASSETS.CavernTyr,
+    'robur': ASSETS.CavernRobur,
+    'theton': ASSETS.CavernTheton,
+    'griffania': ASSETS.CavernGriffania,
+    'alpine': ASSETS.CavernAlpine,
+    'abyssal': ASSETS.CavernAbyssal,
+    'galactic': ASSETS.CavernGalactic,
+    'blossom': ASSETS.CavernBlossom,
+    'doomed': ASSETS.CavernDoomed,
+    'metro': ASSETS.CavernMetro,
+    'corrupted': ASSETS.CavernCorrupted,
+    'cosmic': ASSETS.CavernCosmic,
+    'original': ASSETS.CavernOriginal,
 }
