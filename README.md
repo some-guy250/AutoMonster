@@ -26,8 +26,8 @@ repetitive tasks within the game, such as playing ads, doing dungeons, etc. Plea
 functional, it is still in active development and may undergo changes and improvements.
 
 **Compatibility:** The Auto Monster Project can be used on both phones and tablets, although it is primarily designed
-for desktop use. Mobile compatibility is still under development and may vary depending on the device and emulator
-setup.
+for desktop use.
+Mobile compatibility is still under development and may vary depending on the device.
 
 ## ⚙️ Features
 
@@ -82,7 +82,7 @@ you to download the game.
 
 ### Step 3: Configure Emulator Settings
 
-To ensure the scripts runs, configure the emulator settings as follows:
+To ensure the script run, configure the emulator settings as follows:
 
 - **Resolution**: Set the resolution to 1280x720
 - **DPI**: Set the DPI to 240
@@ -111,8 +111,8 @@ You can also chain commands using `&` or `&&`: ❌ Not implemented
 
 To use the Auto Monster Project with the executable:
 
-1. Download the executable file for the Auto Monster Project from the [releases page](../../releases) on GitHub.
-2. After downloading, simply run the executable file to start the automation process.
+1. Download the executable file for the Auto Monster Project from the [release page](../../releases) on GitHub.
+2. After downloading, run the executable file to start the automation process.
 
 ## 🚨 Disclaimer
 
