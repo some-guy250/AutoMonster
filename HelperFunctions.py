@@ -1,4 +1,5 @@
 import os
+import sys
 from urllib.request import urlopen
 from zipfile import ZipFile
 
@@ -14,9 +15,12 @@ from tqdm import tqdm
 
 # from Constants import Emulators
 from typing import Optional
-
+from tempfile import gettempdir
 
 # Emulator_Path: str | None = None
+
+repo_url_api = "https://api.github.com/repos/some-guy250/AutoMonster"
+repo_url = "https://github.com/some-guy250/AutoMonster"
 
 
 def time_function(func, *args, **kwargs) -> any:
@@ -95,6 +99,7 @@ def get_size(device: ppadb.device.Device) -> tuple[int, ...]:
     tuple_size = tuple(map(int, size.split("Physical size: ")[1].split("x")))
     return tuple_size
 
+
 # def reset_density(device: ppadb.device.Device):
 #     device.shell('wm density reset')
 
@@ -168,10 +173,9 @@ def download_with_progress(url, file_name):
 
 def download_assets():
     # Define the GitHub repository URL
-    repo_url = "https://api.github.com/repos/some-guy250/AutoMonster/contents/assets"
 
     # Send a GET request to the GitHub API to retrieve information about the contents of the "assets" folder
-    response = requests.get(repo_url)
+    response = requests.get(f"{repo_url_api}/contents/assets")
 
     # Check if the request was successful
     if response.status_code == 200:
@@ -204,6 +208,81 @@ def download_assets():
                     f.write(response.content)
     else:
         print(f"Failed to retrieve contents. Status code: {response.status_code}")
+
+
+def compare_versions(version1, version2):
+    v1_parts = version1.split('.')
+    v2_parts = version2.split('.')
+
+    # Compare each part of the version number
+    for i in range(max(len(v1_parts), len(v2_parts))):
+        v1_part = int(v1_parts[i]) if i < len(v1_parts) else 0
+        v2_part = int(v2_parts[i]) if i < len(v2_parts) else 0
+
+        if v1_part < v2_part:
+            return -1
+        elif v1_part > v2_part:
+            return 1
+
+    # All parts are equal, versions are the same
+    return 0
+
+
+def check_for_updates(current_version: str):
+    response = requests.get(f"{repo_url_api}/releases/latest")
+    latest_release = response.json()
+    latest_version = latest_release['tag_name'].replace("v-", "")
+    if compare_versions(latest_version, current_version) == 1:
+        print(f"New version available: v-{latest_version}")
+        # check if it's the exe
+        if sys.argv[0].endswith(".exe"):
+            if input("Download update? (y/n): ").lower() == 'y':
+                download_update()
+            else:
+                print(f"Download the update from the releases page: {repo_url}/releases")
+        else:
+            print(f"Clone the repository to get the latest version")
+            print(f"git clone {repo_url}.git")
+
+
+def download_update():
+    response = requests.get(f"{repo_url_api}/releases/latest")
+    latest_release = response.json()
+    assets = latest_release['assets']
+    asset_url = assets[0]['browser_download_url']
+    name = assets[0]['name']
+    temp_dir = gettempdir()
+    print(f"Update downloaded to {temp_dir})")
+    download_with_progress(asset_url, f"{temp_dir}/{name}")
+    # extract the zip file
+    with ZipFile(f"{temp_dir}/{name}", "r") as zip_ref:
+        zip_ref.extractall(temp_dir)
+    # delete the zip file
+    os.remove(f"{temp_dir}/{name}")
+
+    # delete the assets folder and everything in it
+    if os.path.exists("assets"):
+        for file in os.listdir("assets"):
+            os.remove(f"assets/{file}")
+        os.rmdir("assets")
+
+    # create a batch file to delete the old "AutoMonster.exe" and replace it with the new one in the temp directory
+    # make it so the bat waits for AutoMonster to close before replacing it, a new terminal window should open
+    # detached from the current one so this one can close
+    bat = f"""@echo off
+    taskkill /f /im AutoMonster.exe >nul 2>&1
+    if exist "{os.path.abspath("AutoMonster.exe")}" (
+        del "{os.path.abspath("AutoMonster.exe")}"
+    )
+    move "{os.path.abspath(f"{temp_dir}/AutoMonster.exe")}" "{os.path.abspath("AutoMonster.exe")}"
+    start AutoMonster.exe --update
+    del "{os.path.abspath(f"{temp_dir}/update.bat")}"
+    """
+    with open(f"{temp_dir}/update.bat", "w") as f:
+        f.write(bat)
+    # run the batch file and close the current instance of AutoMonster
+    subprocess.Popen(f"{temp_dir}/update.bat", creationflags=subprocess.CREATE_NEW_CONSOLE)
+    exit()
 
 # for emulator_path in Emulators.values():
 #     if pathlib.Path(emulator_path).exists():
