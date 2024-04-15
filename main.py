@@ -454,8 +454,14 @@ class Controller:
             elif index > len(ad_locations) - 1:
                 index = 0
 
-            pos = ad_locations[index]
-            self.device.input_tap(int(pos[0] * self.ratio[0]), int(pos[1] * self.ratio[1]))
+            x, y = ad_locations[index]
+            if self.resize_sc:
+                x = int(x * self.original_size[0] / 1280)
+                y = int(y * self.original_size[1] / 720)
+            else:
+                x = int(x * self.ratio[0])
+                y = int(y * self.ratio[1])
+            self.device.input_tap(x, y)
             index += 1
 
             counter += 1
