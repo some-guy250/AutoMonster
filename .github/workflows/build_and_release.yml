@@ -33,7 +33,7 @@ jobs:
 
       - name: Get version
         id: get_version
-        run: echo "::set-output name=version::$(python -c 'from main import __version__; print(__version__)')"
+        run: echo "::set-output name=version::$(python -c 'from AutoMonster import __version__; print(__version__)')"
 
       - name: Fetch and store download count
         uses: actions/github-script@v3
