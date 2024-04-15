@@ -15,9 +15,9 @@ enjoyable and efficient.
     - [🚀 Using the Executable](#-using-the-executable)
 - [🕹️ Setting Up an Emulator](#-setting-up-an-emulator)
 - [💬 Usage and Commands](#-usage-and-commands)
+- [🚨 Disclaimer](#-disclaimer)
 - [🤝 Contributing](#-contributing)
 - [📜 License](#-license)
-- [🚨 Disclaimer](#-disclaimer)
 
 ## 🎯 Introduction
 
@@ -114,15 +114,6 @@ To use the Auto Monster Project with the executable:
 1. Download the executable file for the Auto Monster Project from the [releases page](../../releases) on GitHub.
 2. After downloading, simply run the executable file to start the automation process.
 
-## 🤝 Contributing
-
-Contributions to the Auto Monster Project are welcome. If you encounter any bugs or have feature requests, please ask.
-
-## 📜 License
-
-This project is licensed under the MIT License. This allows others to use, modify, and distribute the project, subject
-to the terms of the license.
-
 ## 🚨 Disclaimer
 
 The Auto Monster Project is provided for educational and informational purposes only. While efforts have been made to
@@ -136,3 +127,13 @@ game developers.
 **Usage:** By using the Auto Monster Project, you acknowledge that you are solely responsible for your actions and any
 risks associated with using automated tools in online games. It's recommended to review and comply with the terms of
 service of Monster Legends and to use the Auto Monster Project responsibly and at your own risk.
+
+## 🤝 Contributing
+
+Contributions to the Auto Monster Project are welcome. If you encounter any bugs or have feature requests, please ask.
+
+## 📜 License
+
+This project is licensed under the MIT License. This allows others to use, modify, and distribute the project, subject
+to the terms of the license.
+
