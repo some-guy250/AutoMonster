@@ -1,5 +1,4 @@
 import logging
-import sys
 from typing import List, Callable
 
 import numpy as np
@@ -10,7 +9,7 @@ from Constants import ASSETS, Ancestral_Cavers, AdLocationsHorizontal, AdLocatio
     IN_GAME_ASSETS
 from HelperFunctions import *
 
-__version__ = "0.6.2"
+__version__ = "0.6.3"
 
 
 class CustomFormatter(logging.Formatter):
