@@ -1,4 +1,5 @@
 import logging
+import sys
 from typing import List, Callable
 
 import numpy as np
@@ -9,7 +10,7 @@ from Constants import ASSETS, Ancestral_Cavers, AdLocationsHorizontal, AdLocatio
     IN_GAME_ASSETS
 from HelperFunctions import *
 
-__version__ = "0.6.1"
+__version__ = "0.6.2"
 
 
 class CustomFormatter(logging.Formatter):
@@ -1178,6 +1179,9 @@ def main():
         download_assets()
 
     check_for_updates(__version__)
+
+    if len(sys.argv) > 1:
+        print(f"Updated to the latest version: v-{__version__}")
 
     full_cavers = (
         # ASSETS.CavernJestin,
