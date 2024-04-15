@@ -9,7 +9,7 @@ from Constants import ASSETS, Ancestral_Cavers, AdLocationsHorizontal, AdLocatio
     IN_GAME_ASSETS
 from HelperFunctions import *
 
-__version__ = "0.6.0"
+__version__ = "0.6.1"
 
 
 class CustomFormatter(logging.Formatter):
@@ -1201,8 +1201,6 @@ def main():
         controller = Controller()
         # controller.do_cavern(*full_cavers, max_rooms=3)
         controller.main_loop()
-
-        # reset_density(controller.device)
     except Exception as e:
         input(f"An error occurred: {e}\nPress enter to exit")
     finally:
