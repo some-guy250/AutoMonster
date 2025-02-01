@@ -1,10 +1,9 @@
-import sys
-from gui import ControllerGUI
-from tkinter import messagebox
 import os
-import requests
-import tempfile
-import time
+import sys
+from tkinter import messagebox
+
+from gui import ControllerGUI
+
 
 def main():
     try:

@@ -967,11 +967,10 @@ class Controller:
                     else:
                         sub_dungeons: int = 0
                         while True:
-                            for _ in range(2):
-                                if self.in_screen(ASSETS.EnterEraSaga):
+                            for _ in range(3):
+                                if self.wait_for(ASSETS.EnterEraSaga, timeout=1.5):
                                     break
                                 self.client.control.swipe(500, 200, 100, 200)
-                                self.pause(.5)
                             if not self.click(ASSETS.EnterEraSaga):
                                 self.click_back()
                                 if self.in_screen(ASSETS.EnterCavern):
@@ -1120,7 +1119,6 @@ class Controller:
 
 def main():
     controller = Controller()
-    controller.play_ads()
 
 
 if __name__ == '__main__':
