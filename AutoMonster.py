@@ -50,10 +50,6 @@ os.system('color')
 
 class Controller:
     def __init__(self, save_screen: bool = False, set_brightness=False):
-        if not pathlib.Path("assets").exists():
-            print("Assets folder not found, downloading assets")
-            download_assets()
-
         self.gui_logger = None
         self.cancel_flag = False
         self.pause = time.sleep

@@ -1,9 +1,7 @@
 import os
 import time
 import cv2
-import requests
 from PIL import Image
-from tqdm import tqdm
 
 repo_url_api = "https://api.github.com/repos/some-guy250/AutoMonster"
 repo_url = "https://github.com/some-guy250/AutoMonster"
@@ -37,43 +35,6 @@ def compare_imgs(img1, img2, transform_to_black=False):
     return False
 
 
-def download_assets():
-    # Send a GET request to the GitHub API to retrieve information about the contents of the "assets" folder
-    response = requests.get(f"{repo_url_api}/contents/assets")
-
-    # Check if the request was successful
-    if response.status_code == 200:
-        # Parse the JSON response
-        contents = response.json()
-
-        # Create the "assets" folder if it doesn't exist
-        assets_folder = "assets"
-        if not os.path.exists(assets_folder):
-            os.makedirs(assets_folder)
-
-        # Iterate through each item in the contents
-        for item in tqdm(contents, desc="Downloading assets", unit="file", dynamic_ncols=True):
-            # Check if the item is a file
-            if item["type"] == "file":
-                # Get the download URL for the file
-                download_url = item["download_url"]
-
-                # Extract the file name from the URL
-                file_name = os.path.basename(download_url)
-
-                # Define the file path to save the file
-                file_path = os.path.join(assets_folder, file_name)
-
-                # Send a GET request to download the file
-                response = requests.get(download_url)
-
-                # Save the file
-                with open(file_path, "wb") as f:
-                    f.write(response.content)
-    else:
-        print(f"Failed to retrieve contents. Status code: {response.status_code}")
-
-
 def crush_png(image_path):
     # Open an existing image
     image = Image.open(image_path)
@@ -81,7 +42,7 @@ def crush_png(image_path):
 
 
 def crush_assets():
-    for file in tqdm(os.listdir("assets"), desc="Crushing assets", unit="file", dynamic_ncols=True):
+    for file in os.listdir("assets"):
         if file.endswith(".png"):
             crush_png(f"assets/{file}")
 

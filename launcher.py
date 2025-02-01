@@ -1,10 +1,10 @@
 import os
-from tempfile import gettempdir
-from zipfile import ZipFile
 import threading
+import time
+from tempfile import gettempdir
+
 import customtkinter as ctk
 import requests
-import time
 
 repo_url_api = "https://api.github.com/repos/some-guy250/AutoMonster"
 repo_url = "https://github.com/some-guy250/AutoMonster"
@@ -76,6 +76,49 @@ def check_for_updates():
         return False, None
 
 
+def download_assets():
+    # Send a GET request to the GitHub API to retrieve information about the contents of the "assets" folder
+    response = requests.get(f"{repo_url_api}/contents/assets")
+
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Parse the JSON response
+        contents = response.json()
+
+        # Create the "assets" folder if it doesn't exist
+        assets_folder = "assets"
+        if not os.path.exists(assets_folder):
+            os.makedirs(assets_folder)
+
+        total_files = len(contents)
+        for i, item in enumerate(contents):
+            # Check if the item is a file
+            if item["type"] == "file":
+                # Get the download URL for the file
+                download_url = item["download_url"]
+
+                # Extract the file name from the URL
+                file_name = os.path.basename(download_url)
+
+                # Define the file path to save the file
+                file_path = os.path.join(assets_folder, file_name)
+
+                # Send a GET request to download the file
+                response = requests.get(download_url)
+
+                # Save the file
+                with open(file_path, "wb") as f:
+                    f.write(response.content)
+                
+                # Update progress in GUI
+                progress = (i + 1) / total_files
+                if hasattr(ctk, '_running_app') and ctk._running_app:
+                    app = ctk._running_app
+                    app.update_progress(progress, f"Downloading assets: {i+1}/{total_files}")
+    else:
+        print(f"Failed to retrieve contents. Status code: {response.status_code}")
+
+
 def launch_main(updated=False):
     # run AutoMonster.exe and add updated flag to the command
     # if updated is True delete the assets folder (if it exists) to remove old files that are no longer needed
@@ -84,6 +127,7 @@ def launch_main(updated=False):
             for file in os.listdir("assets"):
                 os.remove(f"assets/{file}")
             os.rmdir("assets")
+        download_assets()
     os.system(f"start AutoMonster.exe {'updated' if updated else ''}")
 
 
@@ -162,6 +206,9 @@ class UpdaterGUI(ctk.CTk):
                 border_width=2
             )
             skip_btn.pack(side="right", padx=10, expand=True)
+
+        # Add this line after initializing the window
+        ctk._running_app = self
 
     def center_window(self):
         self.update_idletasks()
