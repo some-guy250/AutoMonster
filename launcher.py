@@ -109,14 +109,15 @@ def download_assets():
                 # Save the file
                 with open(file_path, "wb") as f:
                     f.write(response.content)
-                
+
                 # Update progress in GUI
                 progress = (i + 1) / total_files
                 if hasattr(ctk, '_running_app') and ctk._running_app:
                     app = ctk._running_app
-                    app.update_progress(progress, f"Downloading assets: {i+1}/{total_files}")
+                    app.update_progress(progress, f"Downloading assets: {i + 1}/{total_files}")
     else:
         print(f"Failed to retrieve contents. Status code: {response.status_code}")
+    input("Assets downloaded successfully.")
 
 
 def launch_main(updated=False):
