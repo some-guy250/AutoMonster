@@ -280,6 +280,10 @@ class UpdaterGUI(ctk.CTk):
             current_dir = os.path.dirname(os.path.abspath(__file__))
             os.replace(temp_file, f"{current_dir}/AutoMonster.exe")
 
+            # Download assets after installing main executable
+            self.after(0, lambda: self.status_label.configure(text="Downloading assets..."))
+            download_assets()
+
             # Save version and complete
             save_version(self.latest_version)
             self.after(0, self.complete_update)

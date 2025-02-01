@@ -47,7 +47,7 @@ jobs:
             Write-Host "scrcpy directory not found"
             exit 1
           }
-          pyinstaller --noconfirm --onefile --windowed --icon "./compiling/favicon.ico" --add-data "$scrcpyPath;scrcpy" ${{ matrix.script }} -n ${{ matrix.name }}.exe
+          pyinstaller --noconfirm --onefile --console --icon "./compiling/favicon.ico" --add-data "$scrcpyPath;scrcpy" ${{ matrix.script }} -n ${{ matrix.name }}.exe
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
