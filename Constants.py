@@ -18,6 +18,7 @@ class ASSETS:
     RightArrow = "rightharrow.png"
     GemDungeon = "gemdungeon.png"
     RuneDungeon = "runedungeon.png"
+    MazeCoinDungeon = "mazecoindungeon.png"
     CoinDungeon = "coindungeon.png"
     RefillStamina = "refillstamina.png"
     PlayVideo = "playvideo.png"
@@ -40,8 +41,9 @@ class ASSETS:
     CollectPVP = "collectpvp.png"
     SeePVP = "seepvp.png"
     StartUnlocking = "startunlocking.png"
-    EggDone = "eggdone.png"
-    EggSpeedup = "eggspeedup.png"
+    BoxDone = "boxdone.png"
+    BoxSpeedup = "boxspeedup.png"
+    BoxToUnlock = "boxtounlock.png"
     RankUp1 = "rankup1.png"
     RankUp2 = "rankup2.png"
     RankUp3 = "rankup3.png"
@@ -85,6 +87,9 @@ class ASSETS:
     CommonAd13 = "commonad13.png"
     CommonAd14 = "commonad14.png"
     CommonAd15 = "commonad15.png"
+    CommonAd16 = "commonad16.png"
+    CommonAd17 = "commonad17.png"
+    CommonAd18 = "commonad18.png"
     ResumeAd = "resumead.png"
     NoAds = "noads.png"
     NotFullTeam = "notfullteam.png"
@@ -177,34 +182,7 @@ All_Cavers = (
 AdLocations = [[1240, 45], [1240, 35], [1250, 85], [630, 50], [666, 80], [680, 25]]
 AdLocationsHorizontal = ((1165, 75), (1240, 45), (1240, 35), (1250, 85))
 AdLocationsVertical = ((630, 50), (666, 80), (680, 25))
-NumberOfCommonAds = 15
-
-# help string for the current commands available
-HELP_STRING = """
-Commands:
-era: Does the current era saga
-pvp: Does pvp battles specified 
-rd: Does the daily resource dungeons (gem and rune)
-ads: Plays as many ads as specified, no argument means all possible ads
-cavern: Does the rank-up caverns specified see possible arguments with 'help cavern'
-version.txt: Shows the current version.txt of the program
-help: Shows this help message use 'help <command>' for more information on a specific command
-exit: Exits the program
-"""
-
-SPECIFIC_HELP_DIC = {
-    'era': "This command will do the era saga that is in the screen, so make sure you are in an era saga screen",
-    'pvp': "This command will do the pvp battles specified, the arguments are the number of battles you want to do",
-    'rd': "This command will do the daily resource dungeons (gem and rune)",
-    'ads': "This command will play as many ads as specified, before using this command navigate to MonsterWood",
-    'cavern': "This command will do the rank-up caverns specified, the arguments are the caverns you want to do"
-              "possible arguments are: 'multiverse', 'jestin', 'baba', 'khalorc', 'tyr', 'robur', 'theton', "
-              "'griffania',"
-              " 'alpine', 'abyssal', 'galactic', 'blossom', 'doomed', 'metro', 'corrupted', 'cosmic', 'original'",
-    'version.txt': "This command will show the current version.txt of the program",
-    'help': "This command will show the help message, use 'help <command>' for more information on a specific command",
-    'exit': "This command will exit the program"
-}
+NumberOfCommonAds = 18
 
 CAVERN_TO_ASSETS = {
     'historia': ASSETS.CavernHistoria,
@@ -237,9 +215,9 @@ GUI_COMMANDS = {
             "type": "multiple_choice",
             "choices": [
                 "evaris",
-                "geneza", 
+                "geneza",
                 "jestin",
-                "baba", 
+                "baba",
                 "khalorc",
                 "tyr",
                 "robur",
@@ -269,9 +247,9 @@ GUI_COMMANDS = {
         "change_team": {"type": "bool", "default": True}
     },
     "PVP": {
-        "num_battles": {"type": "int", "min": 1, "max": 15, "default": 5},
-        "handle_eggs": {"type": "bool", "default": True},
-        "reduce_egg_time": {"type": "bool", "default": True}
+        "num_battles": {"type": "int", "min": 1, "max": 15, "default": 2},
+        "handle_boxes": {"type": "bool", "default": True},
+        "reduce_box_time": {"type": "bool", "default": True} 
     },
     "Era Saga": {},
 }
@@ -283,11 +261,11 @@ GUI_COMMAND_DESCRIPTIONS = {
                        "Features:\n"
                        "• Auto battle multiple times\n"
                        "• Handle rewards\n"
-                       "• Option to reduce egg incubation time",
+                       "• Option to reduce box open time if possible",
         "parameters": {
             "num_battles": "Number of PVP battles to fight",
-            "handle_eggs": "Collect and manage egg rewards",
-            "reduce_egg_time": "Use gems to reduce egg incubation time"
+            "handle_boxes": "Automatically open boxes when available and start unlocking new ones",
+            "reduce_box_time": "Automatically watch ads to reduce box opening time (only works if handle_boxes is enabled)"
         }
     },
     "Era Saga": {
@@ -299,7 +277,7 @@ GUI_COMMAND_DESCRIPTIONS = {
     "Resource Dungeons": {
         "title": "Resource Dungeons",
         "description": "Automatically do all important dungeons.\n\n"
-                       "Goes through all available dungeons (Gem and Rune) and finishes them.",
+                       "Goes through Gem, Rune and Coin dungeons and finishes them.",
         "parameters": {}
     },
     "Ads": {
@@ -314,7 +292,7 @@ GUI_COMMAND_DESCRIPTIONS = {
                        "Features:\n"
                        "• Select multiple dungeons to complete\n"
                        "• Control how many sub-dungeons to do\n"
-                       "• Team management. Name '1', '2', '3' the monsters you want to use and the bot will switch to them automatically",
+                       "• Team management. Name '1', '2', '3' the monsters you want to use and the program will switch to them automatically",
         "parameters": {
             "ancestral": "Select which ancestral cavern dungeons to explore",
             "era": "Select which era cavern dungeons to explore",

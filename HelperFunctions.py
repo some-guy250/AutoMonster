@@ -45,5 +45,6 @@ def crush_assets():
     for file in os.listdir("assets"):
         if file.endswith(".png"):
             crush_png(f"assets/{file}")
+    print("Crushed all assets")
 
 # crush_assets()

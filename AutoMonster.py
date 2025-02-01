@@ -399,8 +399,6 @@ class Controller:
 
     def _check_for_common_ads(self):
         if self.click(*(f"commonad{i + 1}.png" for i in range(NumberOfCommonAds)), skip_ad_check=True):
-            # print("Found common ad")
-            # self.pause(1)
             if self.click(ASSETS.ResumeAd, skip_ad_check=True):
                 return None
             return self.in_game()
@@ -627,7 +625,9 @@ class Controller:
                         logger.warning("Stamina is empty")
                         if wait_for_stamina_to_refill:
                             logger.info("Waiting for stamina to refill")
-                            self.pause(60 * 10)
+                            for _ in range(10):
+                                self.pause(60)
+                                self.take_screenshot()
                             self.click_back()
                             waited_for_stamina = True
                         else:
@@ -769,15 +769,18 @@ class Controller:
             self.pause(1)
             raise AutoMonsterErrors.GoToError("Failed to enter Activity Hub")
 
-    def scroll_hub(self, times: int = 1):
-        for _ in range(times):
+    def scroll_hub(self, asset: str):
+        count = 0
+        while not self.in_screen(asset):
             self.client.control.swipe(self.scale_x(600), self.scale_y(400), self.scale_x(100), self.scale_y(400))
-            self.pause(.1)
-        self.pause(.5)
+            self.pause(.25)
+            count += 1
+            if count > 10:
+                raise AutoMonsterErrors.GoToError(f"Failed to scroll to {asset}")
 
     def _goto_pvp(self):
         self._goto_activity_hub()
-        self.scroll_hub(1)
+        self.scroll_hub(ASSETS.EnterMultiplayer)
         self.follow_sequence(ASSETS.EnterMultiplayer, ASSETS.EnterPVP, ASSETS.BattleLog, timeout=15)
         if not self.in_screen(ASSETS.EnterBattlePVP, ASSETS.PVPNoPoints):
             self.click_back()
@@ -786,53 +789,50 @@ class Controller:
 
     def _goto_resource_dungeons(self):
         self._goto_activity_hub()
-        self.scroll_hub(4)
+        self.scroll_hub(ASSETS.ResourceDungeon)
         self.follow_sequence(ASSETS.ResourceDungeon, ASSETS.EnterCavern)
         logger.info("In Resource Dungeons")
 
-    def _reduce_egg_time(self) -> Optional[bool]:
-        if self.in_screen(ASSETS.EggSpeedup, threshold=.9):
-            logger.info("Reducing time for egg")
-            if not self.in_screen(ASSETS.ReduceTime, ASSETS.ReduceTimeGold, ASSETS.ComeBackLater):
-                self.click(ASSETS.EggSpeedup, screenshot=self.__last_screenshot, threshold=.9)
+    def _reduce_box_time(self) -> Optional[bool]:
+        if self.in_screen(ASSETS.BoxSpeedup, threshold=.85, gray_img=True):
+            logger.info("Reducing time for box")  # Changed from egg to box
+            if not self.in_screen(ASSETS.ReduceTime, screenshot=self.__last_screenshot):
+                return False
+            self.click(ASSETS.BoxSpeedup, screenshot=self.__last_screenshot)
             if self.in_screen(ASSETS.ComeBackLater):
                 logger.warning("No ads available")
                 res = False
             else:
                 res = self.reduce_time()
-            while not self.in_screen(ASSETS.EnterBattlePVP):
+            while not self.in_screen(ASSETS.EnterBattlePVP, ASSETS.PVPNoPoints):
                 self.click_back()
             return res
         return None
 
-    def _open_eggs_in_pvp(self) -> bool:
-        while self.in_screen(ASSETS.EggDone):
-            self.follow_sequence(ASSETS.EggDone, ASSETS.Exit, ASSETS.EnterBattlePVP, raise_error=True,
-                                 timeout=10)
-            logger.info("Opened egg")
-            self.wait_for(ASSETS.EnterBattlePVP, timeout=5, pause_for=2)
+    def _open_pvp_box(self) -> bool:
+        while self.in_screen(ASSETS.BoxDone):
+            self.follow_sequence(ASSETS.BoxDone, ASSETS.Exit, (ASSETS.EnterBattlePVP, ASSETS.PVPNoPoints),
+                                 raise_error=True, timeout=10)
+            logger.info("Opened box")  # Changed from egg to box
             return True
         return False
 
-    def _start_unlocking_eggs(self) -> bool:
+    def _start_unlocking_box(self) -> bool:
         sc = self.take_screenshot()
-        if self._count_eggs(screenshot=sc) == 4:
-            if (not self.in_screen(ASSETS.EggSpeedup, screenshot=sc) and
-                    self.follow_sequence(ASSETS.Egg, ASSETS.StartUnlocking, ASSETS.EnterBattlePVP)):
-                logger.info("Started unlocking egg")
-                return True
+        if self._can_unlock(screenshot=sc):
+            self.follow_sequence(ASSETS.BoxToUnlock, ASSETS.StartUnlocking, (ASSETS.EnterBattlePVP, ASSETS.PVPNoPoints))
+            logger.info("Started unlocking box")  # Changed from egg to box
+            return True
         return False
 
-    def _count_eggs(self, screenshot: Optional[np.ndarray] = None) -> int:
+    def _can_unlock(self, screenshot: Optional[np.ndarray] = None) -> bool:
         if screenshot is None:
             screenshot = self.take_screenshot()
-        if self.in_screen(ASSETS.EggSpeedup, screenshot=screenshot):
-            return 0
-        unopened_eggs = self.count(ASSETS.Egg, screenshot=screenshot, threshold=.85, gray_img=True)
-        has_extra_slot = self.in_screen(ASSETS.Unlock, screenshot=screenshot)
-        return unopened_eggs + (1 if has_extra_slot else 0)
+        if self.in_screen(ASSETS.BoxSpeedup, threshold=.85, gray_img=True, screenshot=screenshot):
+            return False
+        return self.in_screen(ASSETS.BoxToUnlock, threshold=.85, gray_img=True, screenshot=screenshot)
 
-    def do_pvp(self, num_battles: int, handle_eggs: bool = True, reduce_egg_time: bool = True):
+    def do_pvp(self, num_battles: int, handle_boxes: bool = True, reduce_box_time: bool = True):
         wins = 0
         losses = 0
 
@@ -854,19 +854,20 @@ class Controller:
                 except AutoMonsterErrors:
                     raise AutoMonsterErrors.PVPError("Failed to enter PVP")
 
-            if handle_eggs:
-                self._start_unlocking_eggs()
+            if handle_boxes:
+                self._start_unlocking_box()
 
-                if reduce_egg_time:
-                    rd = self._reduce_egg_time()
+                if reduce_box_time:
+                    rd = self._reduce_box_time()
                     if rd is not None:
-                        reduce_egg_time = rd
+                        reduce_box_time = rd
 
-                if self._open_eggs_in_pvp():
-                    self._start_unlocking_eggs()
+                if self._open_pvp_box():
+                    self._start_unlocking_box()
 
             if wins + losses >= num_battles:
                 logger.info(f"Finished PVP, Wins: {wins}, Losses: {losses}")
+                self.log_gui(f"Finished PVP, Wins: {wins}, Losses: {losses}")
                 return
 
             if self.in_screen(ASSETS.PVPNoPoints):
@@ -880,8 +881,6 @@ class Controller:
             self.click(ASSETS.NextPVP)
             if self.wait_for(ASSETS.CollectPVP, timeout=5):
                 wins += 1
-                # self.follow_sequence(ASSETS.CollectPVP,
-                #                      (ASSETS.EnterBattlePVP, ASSETS.PVPNoPoints, ASSETS.SeePVP, ASSETS.BackPVP))
                 self.click(ASSETS.CollectPVP)
                 if self.wait_for(ASSETS.BackPVP, timeout=5):
                     self.follow_sequence(ASSETS.BackPVP, ASSETS.DiscardPVP,
@@ -893,7 +892,7 @@ class Controller:
                     self.click_back()
             else:
                 losses += 1
-            print(f'Wins: {wins}, Losses: {losses}')
+            self.log_gui(f'Wins: {wins}, Losses: {losses}')
 
     def do_era_saga(self):
         while True:
@@ -910,7 +909,7 @@ class Controller:
 
     def _goto_cavern(self):
         self._goto_activity_hub()
-        self.scroll_hub(4)
+        self.scroll_hub(ASSETS.Cavern)
         if self.follow_sequence(ASSETS.Cavern, ASSETS.RightArrow, timeout=20):
             logger.info("In cavern")
         else:
@@ -1042,11 +1041,13 @@ class Controller:
         self._goto_resource_dungeons()
 
         while True:
-            if self.in_screen(ASSETS.GemDungeon, ASSETS.RuneDungeon):
+            if self.in_screen(ASSETS.GemDungeon, ASSETS.RuneDungeon, ASSETS.MazeCoinDungeon):
                 if self.in_screen(ASSETS.GemDungeon):
                     logger.info("Entering gem dungeon")
-                else:
+                elif self.in_screen(ASSETS.RuneDungeon):
                     logger.info("Entering rune dungeon")
+                elif self.in_screen(ASSETS.MazeCoinDungeon):
+                    logger.info("Entering maze coin dungeon")
                 self.click(ASSETS.EnterCavern)
                 print(self.do_dungeon(True, False, True, max_losses=0))
             if not self.click(ASSETS.RightArrow, pause=2):
@@ -1119,7 +1120,7 @@ class Controller:
 
 def main():
     controller = Controller()
-    controller.debug_get_cords_in_image(ASSETS.FlashRaid)
+    controller.debug_get_cords_in_image(ASSETS.PlayVideo)
 
 
 if __name__ == '__main__':

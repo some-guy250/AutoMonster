@@ -235,6 +235,9 @@ def format_size(size):
 
 
 def download_assets(progress_window=None):
+    if progress_window:
+        progress_window.update_progress(0, "Preparing to download assets...", "Fetching file information...")
+        
     if os.path.exists("assets"):
         for fname in os.listdir("assets"):
             os.remove(f"assets/{fname}")
@@ -247,9 +250,18 @@ def download_assets(progress_window=None):
         files_to_download = [item for item in contents if item["type"] == "file"]
         total_files = len(files_to_download)
 
-        # Calculate total size first
+        # Calculate total size with progress updates
+        if progress_window:
+            progress_window.update_progress(0, "Preparing download...", "Calculating total size...")
+        
         total_size = 0
-        for item in files_to_download:
+        for idx, item in enumerate(files_to_download):
+            if progress_window:
+                progress_window.update_progress(
+                    0,
+                    "Preparing download...",
+                    f"Checking file {idx + 1}/{total_files}: {item['name']}"
+                )
             response = requests.head(item["download_url"])
             total_size += int(response.headers.get('content-length', 0))
 
@@ -356,6 +368,7 @@ def save_version(version):
 
 def update_process(progress_window, latest_version):
     try:
+        progress_window.update_progress(0, "Initializing update...", "Starting download process...")
         download_assets(progress_window)
         download_main_exe(progress_window)
         if latest_version:

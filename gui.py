@@ -58,7 +58,6 @@ class CommandFrame(ctk.CTkFrame):
                 widget = ctk.CTkSlider(param_frame,
                                        from_=param_config.get("min", 0),
                                        to=param_config.get("max", 100),
-                                       number_of_steps=param_config.get("max", 100),
                                        command=lambda val, lbl=value_label: lbl.configure(text=str(int(val))))
                 widget.set(param_config.get("default", 0))
                 widget.grid(row=1, column=0, padx=5, pady=(0, 5), sticky="ew")
@@ -220,8 +219,9 @@ class DeviceSelectionDialog(ctk.CTkToplevel):
         # IP address entry with example placeholder
         self.ip_entry = ctk.CTkEntry(
             self.content_frame,
-            placeholder_text="192.168.1.100:5555"
+            placeholder_text="192.168.1.100:5555",
         )
+        self.ip_entry.bind("<Return>", lambda e: self.connect_wireless())
         self.ip_entry.grid(row=1, column=0, padx=5, pady=(0, 5), sticky="ew")
 
         # Connect wireless button
@@ -331,7 +331,6 @@ class ControllerGUI(ctk.CTk):
             return
 
         self.controller = Controller()
-        # self.deiconify()  # Show main window again
 
         ctk.set_default_color_theme("dark-blue")
 
@@ -344,7 +343,7 @@ class ControllerGUI(ctk.CTk):
         }
 
         self.title("AutoMonster")
-        self.geometry("1200x800")
+        # self.geometry("1200x800")
 
         # Set minimum window size
         self.minsize(900, 700)
@@ -662,7 +661,11 @@ class ControllerGUI(ctk.CTk):
 
     def get_command_callback(self, command_name):
         if command_name == "PVP":
-            return self.controller.do_pvp
+            return lambda **kwargs: self.controller.do_pvp(
+                kwargs.pop("num_battles", 2),
+                kwargs.pop("handle_boxes", True),
+                kwargs.pop("reduce_box_time", True)
+            )
         elif command_name == "Era Saga":
             return self.controller.do_era_saga
         elif command_name == "Resource Dungeons":
@@ -671,8 +674,9 @@ class ControllerGUI(ctk.CTk):
             return self.controller.play_ads
         elif command_name == "Cavern":
             return lambda **kwargs: self.controller.do_cavern(
-                *(kwargs.pop("ancestral") + kwargs.pop("era")),
-                **kwargs
+                *kwargs.pop("ancestral", []) + kwargs.pop("era", []),
+                max_rooms=kwargs.pop("max_rooms", 3),
+                change_team=kwargs.pop("change_team", True)
             )
 
     def run_command(self):
@@ -690,6 +694,9 @@ class ControllerGUI(ctk.CTk):
             elif isinstance(widget, list):  # Multiple choice checkboxes
                 selected = [choice for choice, var in widget if var.get()]
                 params[param_name] = selected
+
+        command_name = self.command_var.get()
+        self.append_log(f"Running {command_name} with parameters: {params}", "debug")
 
         self.param_frame.run_button.configure(state="disabled")
         self.param_frame.cancel_button.configure(state="normal")
