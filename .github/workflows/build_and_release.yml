@@ -33,12 +33,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
-          pip install pyinstaller scrcpy
-          pip show scrcpy
+          pip install pyinstaller
+          pip show scrcpy-client
 
       - name: Build Executable
         run: |
-          $scrcpyPath = (pip show scrcpy | Select-String "Location:").ToString().Split(" ")[-1] + "\scrcpy"
+          $scrcpyPath = (pip show scrcpy-client | Select-String "Location:").ToString().Split(" ")[-1] + "\scrcpy"
           Write-Host "scrcpy path: $scrcpyPath"
           if (Test-Path $scrcpyPath) {
             Write-Host "scrcpy directory exists"
