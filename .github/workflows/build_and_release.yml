@@ -40,7 +40,7 @@ jobs:
           pyinstaller --noconfirm --onefile --windowed --icon "./compiling/favicon.ico" --add-data "site-packages\scrcpy;scrcpy" ${{ matrix.script }} -n ${{ matrix.name }}.exe
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.name }}
           path: dist/${{ matrix.name }}.exe
@@ -52,7 +52,7 @@ jobs:
       - uses: actions/checkout@v2
       
       - name: Download all artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           path: dist
 
