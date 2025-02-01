@@ -28,6 +28,12 @@ jobs:
           python -m pip install -r requirements.txt
           pip install pyinstaller
 
+      - name: List initial directory structure
+        run: |
+          echo "Root directory:"
+          dir
+          echo "--------------------"
+
       - name: Install Inno Setup
         run: |
           curl -L -o is.exe "https://files.jrsoftware.org/is/6/innosetup-6.2.2.exe"
@@ -36,10 +42,28 @@ jobs:
       - name: Build Main Executable
         run: |
           pyinstaller --noconfirm --onefile --windowed --icon "./compiling/favicon.ico" main.py -n AutoMonster.exe
+          echo "After main build:"
+          dir dist
+          echo "--------------------"
+
+      - name: Build Launcher Executable
+        run: |
+          pyinstaller --noconfirm --onefile --windowed --icon "./compiling/favicon.ico" launcher.py -n LauncherAutoMonster.exe
+          echo "After launcher build:"
+          dir dist
+          echo "--------------------"
 
       - name: Build Installer
         run: |
+          echo "Before installer build:"
+          dir
+          echo "Dist folder contents:"
+          dir dist
+          echo "--------------------"
           & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' installer.iss
+          echo "After installer build:"
+          dir installer
+          echo "--------------------"
 
       - name: Get version
         id: get_version

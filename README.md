@@ -10,8 +10,7 @@ enjoyable and efficient.
 - [🎯 Introduction](#-introduction)
 - [⚙️ Features](#-features)
 - [💻 Installation](#-installation)
-    - [🐍 Using Python](#-using-python)
-    - [🚀 Using the Executable](#-using-the-executable)
+- [🔄 Updates](#-updates)
 - [🕹️ Setting Up an Emulator](#-setting-up-an-emulator)
 - [💬 Usage and Commands](#-usage-and-commands)
 - [🚨 Disclaimer](#-disclaimer)
@@ -39,25 +38,28 @@ Mobile compatibility is still under development and may vary depending on the de
 
 ## 💻 Installation
 
-Note: It is better to create a folder for the program. It will download files to the folder where the program is
-located.
+To install AutoMonster:
 
-### 🐍 Using Python
+1. Go to the [Releases page](../../releases/latest)
+2. Download the **AutoMonster_Setup.exe** installer
+3. Run the installer
+4. Launch AutoMonster from your Start Menu or desktop shortcut
 
-To install and run the Auto Monster Project with Python:
+The installer will:
+- Install the program to your local AppData folder
+- Create start menu shortcuts
+- Optionally create a desktop shortcut
+- Handle automatic updates
 
-1. Ensure you have Python and pip installed on your system.
-2. Clone the repository to your local machine.
-3. Navigate to the project directory in your terminal.
-4. Run the following command to install the necessary dependencies:
+## 🔄 Updates
 
-> pip install -r requirements.txt
+AutoMonster includes an automatic update system that will:
+- Check for new versions on startup
+- Download and install updates automatically
+- Maintain your settings and configurations
+- Clean up old files after updating
 
-After installing the dependencies, run the following command to start the automation process:
-
-> python main.py
-
-The Auto Monster Project is now running on your system, select which task you want to automate and enjoy the game.
+You don't need to download new versions manually - the program will handle everything for you!
 
 ## 🕹️ Setting Up an Emulator
 
