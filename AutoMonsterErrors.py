@@ -1,3 +1,7 @@
+class ExecutionFlag(Exception):
+    pass
+
+
 class AutoMonsterError(Exception):
     pass
 

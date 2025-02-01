@@ -1,17 +1,19 @@
 on:
   push:
     paths:
-      - '**.py'
-      - 'assets/**'
-      - '.github/workflows/build_and_release.yml'
+      - 'version.txt'
     branches:
       - master
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual trigger'
+        required: false
+        default: 'Manual build request'
 
 jobs:
   build:
-
     runs-on: windows-latest
-
     steps:
       - uses: actions/checkout@v2
 
@@ -26,45 +28,19 @@ jobs:
           python -m pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Build Executable
+      - name: Build Main Executable
         run: |
-          ls -l ./compiling
-          pyinstaller --noconfirm --onefile --console --icon "./compiling/favicon.ico" AutoMonster.py
+          pyinstaller --noconfirm --onefile --windowed --icon "./compiling/favicon.ico" main.py -n AutoMonster.exe
+
+      - name: Build Launcher Executable
+        run: |
+          pyinstaller --noconfirm --onefile --windowed --icon "./compiling/favicon.ico" launcher.py -n LauncherAutoMonster.exe
 
       - name: Get version
         id: get_version
-        run: echo "::set-output name=version::$(python -c 'from AutoMonster import __version__; print(__version__)')"
-
-      - name: Fetch and store download count
-        uses: actions/github-script@v3
-        with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
-          script: |
-            const fs = require('fs')
-            const { owner, repo } = context.repo
-            const releases = await github.repos.listReleases({ owner, repo })
-            let totalDownloadCount = 0
-            if (fs.existsSync('download_count.json')) {
-              totalDownloadCount = JSON.parse(fs.readFileSync('download_count.json', 'utf8')).downloads
-            }
-            for (const release of releases.data) {
-              for (const asset of release.assets) {
-                  totalDownloadCount += asset.download_count
-              }
-            }
-            fs.writeFileSync('download_count.json', JSON.stringify({ downloads: totalDownloadCount }))
-
-      - name: Commit and push download count
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add download_count.json
-          git commit -m "updated download count" -a
-          git push
-
-      - name: Zip Dist Folder
-        run: |
-          powershell -command "Compress-Archive -Path ./dist/* -DestinationPath AutoMonster.zip"
+          $version = Get-Content version.txt
+          echo "::set-output name=version::$version"
 
       - name: Delete old release
         uses: actions/github-script@v3
@@ -89,13 +65,22 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Upload Release Asset
-        id: upload-release-asset
+      - name: Upload Main Executable
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./AutoMonster.zip
-          asset_name: AutoMonster.zip
-          asset_content_type: application/zip
+          asset_path: ./dist/AutoMonster.exe
+          asset_name: AutoMonster.exe
+          asset_content_type: application/octet-stream
+
+      - name: Upload Launcher Executable
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./dist/LauncherAutoMonster.exe
+          asset_name: LauncherAutoMonster.exe
+          asset_content_type: application/octet-stream
