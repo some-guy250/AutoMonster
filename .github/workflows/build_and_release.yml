@@ -37,7 +37,7 @@ jobs:
 
       - name: Build Executable
         run: |
-          pyinstaller --noconfirm --onefile --windowed --icon "./compiling/favicon.ico" ${{ matrix.script }} -n ${{ matrix.name }}.exe
+          pyinstaller --noconfirm --onefile --windowed --icon "./compiling/favicon.ico" --add-data "site-packages\scrcpy;scrcpy" ${{ matrix.script }} -n ${{ matrix.name }}.exe
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
