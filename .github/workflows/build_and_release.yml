@@ -22,10 +22,10 @@ jobs:
           - name: LauncherAutoMonster
             script: launcher.py
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
@@ -40,7 +40,7 @@ jobs:
           pyinstaller --noconfirm --onefile --windowed --icon "./compiling/favicon.ico" --add-data "site-packages\scrcpy;scrcpy" ${{ matrix.script }} -n ${{ matrix.name }}.exe
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}
           path: dist/${{ matrix.name }}.exe
@@ -49,10 +49,10 @@ jobs:
     needs: build-executables
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       
       - name: Download all artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: dist
 
@@ -76,16 +76,15 @@ jobs:
         id: get_version
         run: |
           $version = Get-Content version.txt
-          echo "::set-output name=version::$version"
+          echo "version=$(Get-Content version.txt)" >> $env:GITHUB_OUTPUT
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+      - name: Create Release and Upload Assets
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: v-${{ steps.get_version.outputs.version }}
-          release_name: Version ${{ steps.get_version.outputs.version }}
+          name: Version ${{ steps.get_version.outputs.version }}
           body: |
             ## Installation Instructions
             1. Download **AutoMonster_Setup.exe**
@@ -93,36 +92,8 @@ jobs:
             3. Launch AutoMonster from your Start Menu
 
             > **Note:** Only download the Setup file. Other assets are used by the auto-updater.
-          draft: false
-          prerelease: false
-
-      - name: Upload Installer
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./installer/AutoMonster_Setup.exe
-          asset_name: AutoMonster_Setup.exe
-          asset_content_type: application/octet-stream
-
-      - name: Upload Main Executable
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./final_dist/AutoMonster.exe
-          asset_name: AutoMonster.exe
-          asset_content_type: application/octet-stream
-
-      - name: Upload Launcher Executable
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./final_dist/LauncherAutoMonster.exe
-          asset_name: LauncherAutoMonster.exe
-          asset_content_type: application/octet-stream
+          files: |
+            ./installer/AutoMonster_Setup.exe
+            ./final_dist/AutoMonster.exe
+            ./final_dist/LauncherAutoMonster.exe
 
