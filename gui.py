@@ -251,7 +251,7 @@ class DeviceSelectionDialog(ctk.CTkToplevel):
         # Refresh button at the bottom
         self.refresh_btn = ctk.CTkButton(
             self,
-            text="Refresh USB Devices",
+            text="Refresh Devices",
             command=self.refresh_devices
         )
         self.refresh_btn.grid(row=3, column=0, padx=20, pady=10, sticky="ew")

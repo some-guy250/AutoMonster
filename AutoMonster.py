@@ -971,7 +971,7 @@ class Controller:
                             for _ in range(2):
                                 if self.in_screen(ASSETS.EnterEraSaga):
                                     break
-                                self.client.control.input_swipe(500, 200, 100, 200, 200)
+                                self.client.control.swipe(500, 200, 100, 200)
                                 self.pause(.5)
                             if not self.click(ASSETS.EnterEraSaga):
                                 self.click_back()
