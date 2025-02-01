@@ -33,11 +33,20 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
-          pip install pyinstaller
+          pip install pyinstaller scrcpy
+          pip show scrcpy
 
       - name: Build Executable
         run: |
-          $scrcpyPath = python -c "import site; import os; print(os.path.join(site.getsitepackages()[0], 'scrcpy'))"
+          $scrcpyPath = (pip show scrcpy | Select-String "Location:").ToString().Split(" ")[-1] + "\scrcpy"
+          Write-Host "scrcpy path: $scrcpyPath"
+          if (Test-Path $scrcpyPath) {
+            Write-Host "scrcpy directory exists"
+            Get-ChildItem $scrcpyPath
+          } else {
+            Write-Host "scrcpy directory not found"
+            exit 1
+          }
           pyinstaller --noconfirm --onefile --windowed --icon "./compiling/favicon.ico" --add-data "$scrcpyPath;scrcpy" ${{ matrix.script }} -n ${{ matrix.name }}.exe
 
       - name: Upload artifact
