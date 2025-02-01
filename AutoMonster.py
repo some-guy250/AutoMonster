@@ -1003,7 +1003,7 @@ class Controller:
         errors = 0
         now = time.time()
 
-        while self.in_screen(ASSETS.PlayVideo):
+        while self.wait_for(ASSETS.PlayVideo, timeout=5):
             self.click(ASSETS.PlayVideo, screenshot=self.__last_screenshot)
 
             self.pause(2)
@@ -1120,7 +1120,7 @@ class Controller:
 
 def main():
     controller = Controller()
-    controller.debug_get_cords_in_image(ASSETS.PlayVideo)
+    controller.play_ads()
 
 
 if __name__ == '__main__':
