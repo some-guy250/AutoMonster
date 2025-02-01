@@ -55,4 +55,6 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChang
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\assets"
+Type: filesandordirs; Name: "{app}\version.txt"
+Type: filesandordirs; Name: "{app}\defaults.json"
 Type: dirifempty; Name: "{app}"
