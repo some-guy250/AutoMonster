@@ -91,6 +91,7 @@ def download_assets():
             os.makedirs(assets_folder)
 
         total_files = len(contents)
+        print(f"Downloading {total_files} assets...")
         for i, item in enumerate(contents):
             # Check if the item is a file
             if item["type"] == "file":
@@ -109,12 +110,6 @@ def download_assets():
                 # Save the file
                 with open(file_path, "wb") as f:
                     f.write(response.content)
-
-                # Update progress in GUI
-                progress = (i + 1) / total_files
-                if hasattr(ctk, '_running_app') and ctk._running_app:
-                    app = ctk._running_app
-                    app.update_progress(progress, f"Downloading assets: {i + 1}/{total_files}")
     else:
         print(f"Failed to retrieve contents. Status code: {response.status_code}")
     input("Assets downloaded successfully.")
@@ -129,6 +124,7 @@ def launch_main(updated=False):
                 os.remove(f"assets/{file}")
             os.rmdir("assets")
         download_assets()
+    input(f"Launching AutoMonster {'updated' if updated else ''}.exe")
     os.system(f"start AutoMonster.exe {'updated' if updated else ''}")
 
 
@@ -280,10 +276,6 @@ class UpdaterGUI(ctk.CTk):
             # Copy file to current directory
             current_dir = os.path.dirname(os.path.abspath(__file__))
             os.replace(temp_file, f"{current_dir}/AutoMonster.exe")
-
-            # Download assets after installing main executable
-            self.after(0, lambda: self.status_label.configure(text="Downloading assets..."))
-            download_assets()
 
             # Save version and complete
             save_version(self.latest_version)
