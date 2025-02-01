@@ -66,14 +66,30 @@ jobs:
         with:
           path: dist
 
-      - name: Delete previous releases
+      - name: Delete all releases and tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release list --limit 100 | ForEach-Object {
-            $release = $_.Split("`t")[0]
-            Write-Host "Deleting release: $release"
-            gh release delete $release --yes
+          # Delete all releases
+          $releases = gh release list --limit 100
+          if ($releases) {
+            Write-Host "Deleting all releases..."
+            gh release list --limit 100 | ForEach-Object {
+              $release = $_.Split("`t")[0]
+              Write-Host "Deleting release: $release"
+              gh release delete $release --yes --cleanup-tag
+            }
+          } else {
+            Write-Host "No releases found to delete"
+          }
+
+          # Delete any remaining tags
+          Write-Host "Cleaning up tags..."
+          git fetch --prune --unshallow
+          git tag | ForEach-Object {
+            Write-Host "Deleting tag: $_"
+            git push origin --delete $_ --force
+            git tag -d $_
           }
 
       - name: Reorganize files
@@ -115,4 +131,3 @@ jobs:
           files: |
             ./installer/AutoMonster_Setup.exe
             ./final_dist/AutoMonster.exe
-
