@@ -9,13 +9,15 @@ import time
 repo_url_api = "https://api.github.com/repos/some-guy250/AutoMonster"
 repo_url = "https://github.com/some-guy250/AutoMonster"
 
+
 def get_version():
     if os.path.isfile("version.txt"):
         with open("version.txt", "r") as file:
             return file.read().strip()
     return "0.0.0"
 
-__version__ = get_version()
+
+__version__ = get_version()  # This is now the main app version
 
 
 def download_with_progress(url, file_name, progress_bar=None, label=None):
@@ -76,6 +78,12 @@ def check_for_updates():
 
 def launch_main(updated=False):
     # run AutoMonster.exe and add updated flag to the command
+    # if updated is True delete the assets folder (if it exists) to remove old files that are no longer needed
+    if updated:
+        if os.path.exists("assets"):
+            for file in os.listdir("assets"):
+                os.remove(f"assets/{file}")
+            os.rmdir("assets")
     os.system(f"start AutoMonster.exe {'updated' if updated else ''}")
 
 
@@ -201,22 +209,21 @@ class UpdaterGUI(ctk.CTk):
             response = requests.get(f"{repo_url_api}/releases/latest")
             latest_release = response.json()
             assets = latest_release['assets']
-            
-            # Find main executable in assets
+
+            # Only look for main executable
             main_exe = next((asset for asset in assets if asset['name'] == 'AutoMonster.exe'), None)
-            
+
             if not main_exe:
-                raise Exception("Required executable not found in release")
+                raise Exception("AutoMonster.exe not found in release")
 
             temp_dir = gettempdir()
             temp_file = f"{temp_dir}/AutoMonster.exe"
-            
+
             # Download and install main exe
             self.download_file(main_exe['browser_download_url'], temp_file)
-            
+
             # Install update
-            install_text = "Installing files..." if __version__ == "0.0.0" else "Installing update..."
-            self.after(0, lambda: self.status_label.configure(text=install_text))
+            self.after(0, lambda: self.status_label.configure(text="Installing update..."))
 
             # Copy file to current directory
             current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -254,7 +261,7 @@ class UpdaterGUI(ctk.CTk):
 
                 if current_time - last_time >= 1:
                     self.update_download_progress(downloaded, total_size, last_downloaded,
-                                               current_time, last_time, status_format)
+                                                  current_time, last_time, status_format)
                     last_downloaded = downloaded
                     last_time = current_time
 

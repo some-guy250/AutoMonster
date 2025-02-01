@@ -1,14 +1,9 @@
 import os
 import time
 import cv2
-import ppadb.device
 import requests
 from PIL import Image
 from tqdm import tqdm
-
-# from Constants import Emulators
-
-# Emulator_Path: str | None = None
 
 repo_url_api = "https://api.github.com/repos/some-guy250/AutoMonster"
 repo_url = "https://github.com/some-guy250/AutoMonster"
@@ -28,12 +23,6 @@ def time_function(func, *args, **kwargs) -> any:
         delta = f"{delta:.2f}s"
     print(f"Time taken for {func.__name__} is {delta}, result is {result}")
     return result
-
-
-def get_size(device: ppadb.device.Device) -> tuple[int, ...]:
-    size = device.shell('wm size')
-    tuple_size = tuple(map(int, size.split("Physical size: ")[1].split("x")))
-    return tuple_size
 
 
 def compare_imgs(img1, img2, transform_to_black=False):
