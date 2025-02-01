@@ -190,6 +190,10 @@ class UpdaterGUI(ctk.CTk):
             # For initial install, start download automatically
             self.after(100, self.download_update)
         else:
+            # hide the progress bar and status label
+            self.progress.pack_forget()
+            self.status_label.pack_forget()
+
             # Show update options for normal updates
             update_btn = ctk.CTkButton(
                 btn_frame,

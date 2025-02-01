@@ -105,5 +105,4 @@ jobs:
           files: |
             ./installer/AutoMonster_Setup.exe
             ./final_dist/AutoMonster.exe
-            ./final_dist/LauncherAutoMonster.exe
 
