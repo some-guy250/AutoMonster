@@ -176,6 +176,10 @@ class DeviceSelectionDialog(ctk.CTkToplevel):
         self.geometry("400x400")  # Made taller to accommodate wireless option
         self.resizable(False, False)
 
+        # Set window icon
+        if os.path.exists("assets/favicon.ico"):
+            self.iconbitmap("assets/favicon.ico")
+
         # Make this window modal
         self.grab_set()
         self.transient()
@@ -310,6 +314,10 @@ class DeviceSelectionDialog(ctk.CTkToplevel):
 class ControllerGUI(ctk.CTk):
     def __init__(self):
         super().__init__()
+
+        # Set window icon
+        if os.path.exists("assets/favicon.ico"):
+            self.iconbitmap("assets/favicon.ico")
 
         # Show device selection dialog
         # self.withdraw()  # Hide main window temporarily
