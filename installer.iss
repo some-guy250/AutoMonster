@@ -42,8 +42,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "dist\LauncherAutoMonster.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "dist\AutoMonster.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "final_dist\LauncherAutoMonster.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "final_dist\AutoMonster.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "version.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
