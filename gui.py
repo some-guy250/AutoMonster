@@ -541,7 +541,7 @@ class ControllerGUI(ctk.CTk):
         self.log_text.tag_config("success", foreground="green")
         self.log_text.tag_config("warning", foreground="orange")
         self.log_text.tag_config("error", foreground="red")
-        self.log_text.tag_config("debug.ban", foreground="cyan")
+        self.log_text.tag_config("debug", foreground="cyan")
 
         # Bind scroll events
         self.log_text.bind("<MouseWheel>", self.on_log_scroll)
@@ -572,8 +572,8 @@ class ControllerGUI(ctk.CTk):
 
     def append_log(self, message: str, level: str = "info"):
         """Add a new message to the log with timestamp and color"""
-        # Skip debug.ban messages if debug.ban mode is off
-        if level == "debug.ban" and not self.debug_mode:
+        # Skip debug messages if debug mode is off
+        if level == "debug" and not self.debug_mode:
             return
 
         timestamp = datetime.now().strftime("%H:%M:%S")
@@ -719,7 +719,7 @@ class ControllerGUI(ctk.CTk):
         # Toggle screenshot button visibility
         if self.debug_mode:
             self.screenshot_btn.pack(fill="x", padx=5, pady=(0, 5))
-            self.append_log("Debug mode enabled", "debug.ban")
+            self.append_log("Debug mode enabled", "debug")
         else:
             self.screenshot_btn.pack_forget()
             self.append_log("Debug mode disabled", "success")
