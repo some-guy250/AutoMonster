@@ -73,7 +73,7 @@ class Controller:
             size = size[1], size[0]
             self.flipped_xy = True
         self.ratio = None
-        self.new_width = None
+        self.new_width = size[0]
         self.resized = False
         if size[0] != 1280 or size[1] != 720:
             self.resized = True

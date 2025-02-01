@@ -133,7 +133,7 @@ class CommandFrame(ctk.CTkFrame):
         # Cancel button
         self.cancel_button = ctk.CTkButton(
             action_buttons,
-            text="Cancel",
+            text="Stop",
             height=35,
             font=("Arial", 13, "bold"),
             fg_color="darkred",
@@ -474,7 +474,7 @@ class ControllerGUI(ctk.CTk):
         # Update initial info panel
         self.update_info_panel(self.command_var.get())
 
-        # Add debug mode state
+        # Add debug.ban mode state
         self.debug_mode = False
 
         # Bind F3 key
@@ -496,7 +496,7 @@ class ControllerGUI(ctk.CTk):
             font=self.fonts["button"],
             command=lambda: self.controller.save_screen(take_new=True)
         )
-        # Don't pack the button initially - it will be controlled by debug mode
+        # Don't pack the button initially - it will be controlled by debug.ban mode
 
         ratio = .55
         self.img_size = int(self.controller.new_width * ratio), int(720 * ratio)
@@ -542,7 +542,7 @@ class ControllerGUI(ctk.CTk):
         self.log_text.tag_config("success", foreground="green")
         self.log_text.tag_config("warning", foreground="orange")
         self.log_text.tag_config("error", foreground="red")
-        self.log_text.tag_config("debug", foreground="cyan")
+        self.log_text.tag_config("debug.ban", foreground="cyan")
 
         # Bind scroll events
         self.log_text.bind("<MouseWheel>", self.on_log_scroll)
@@ -555,6 +555,9 @@ class ControllerGUI(ctk.CTk):
             self.append_log(f"Updated to the latest version: v-{__version__}")
         else:
             self.append_log(f"AutoMonster v-{__version__} started")
+
+        if os.path.exists("debug.ban"):
+            self.toggle_debug_mode()
 
     def override_parameter_defaults(self):
         loaded_defaults = {}
@@ -570,8 +573,8 @@ class ControllerGUI(ctk.CTk):
 
     def append_log(self, message: str, level: str = "info"):
         """Add a new message to the log with timestamp and color"""
-        # Skip debug messages if debug mode is off
-        if level == "debug" and not self.debug_mode:
+        # Skip debug.ban messages if debug.ban mode is off
+        if level == "debug.ban" and not self.debug_mode:
             return
 
         timestamp = datetime.now().strftime("%H:%M:%S")
@@ -608,7 +611,7 @@ class ControllerGUI(ctk.CTk):
             self.append_log(error_msg, "error")
             logging.error(error_msg)
         except AutoMonsterErrors.ExecutionFlag:
-            self.append_log(f"Execution of {command_name} cancelled", "warning")
+            self.append_log(f"Execution of {command_name} stopped", "warning")
 
         self.param_frame.run_button.configure(state="normal")
         self.param_frame.cancel_button.configure(state="disabled")
@@ -703,13 +706,13 @@ class ControllerGUI(ctk.CTk):
         self.after(0, self.update_image, frame)
 
     def toggle_debug_mode(self, event=None):
-        """Toggle debug mode on/off"""
+        """Toggle debug.ban mode on/off"""
         self.debug_mode = not self.debug_mode
 
         # Toggle screenshot button visibility
         if self.debug_mode:
             self.screenshot_btn.pack(fill="x", padx=5, pady=(0, 5))
-            self.append_log("Debug mode enabled", "debug")
+            self.append_log("Debug mode enabled", "debug.ban")
         else:
             self.screenshot_btn.pack_forget()
             self.append_log("Debug mode disabled", "success")
