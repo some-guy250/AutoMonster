@@ -2,8 +2,7 @@
 
 [![Latest release](https://img.shields.io/github/v/release/some-guy250/AutoMonster?style=for-the-badge)](../../releases/latest)
 
-This project aims to automate some tedious tasks in the game Monster Legends, making the gaming experience more
-enjoyable and efficient.
+A Python-based automation tool for Monster Legends, designed to handle repetitive tasks efficiently.
 
 ## 📚 Table of Contents
 
@@ -12,7 +11,7 @@ enjoyable and efficient.
 - [💻 Installation](#-installation)
 - [🔄 Updates](#-updates)
 - [🕹️ Setting Up an Emulator](#-setting-up-an-emulator)
-- [💬 Usage and Commands](#-usage-and-commands)
+- [💬 Usage and Interface](#-usage-and-interface)
 - [🚨 Disclaimer](#-disclaimer)
 - [🤝 Contributing](#-contributing)
 - [📜 License](#-license)
@@ -23,118 +22,190 @@ The Auto Monster Project is a Python-based automation tool for the game Monster 
 repetitive tasks within the game, such as playing ads, doing dungeons, etc. Please note that while the project is
 functional, it is still in active development and may undergo changes and improvements.
 
-**Compatibility:** The Auto Monster Project can be used on both phones and tablets, although it is primarily designed
-for desktop use.
-Mobile compatibility is still under development and may vary depending on the device.
+**Compatibility:** The Auto Monster Project can be used on both phones and tablets via USB debugging, although it is primarily designed
+for desktop use with emulators. Mobile device compatibility requires:
+- USB debugging enabled in developer options
+- Device resolution support (may require testing)
+
+Note: Phone compatibility is still under development and not fully tested on all devices.
 
 ## ⚙️ Features
 
-- Automated playing for Monster-Wood: ✔️ Working
-- Era Saga automation: ✔️ Working
-- PVP automation: ⚠️ Some issues
-- Daily Dungeon automation (Gem and Rune): ✔️ Working
-- Cavern Dungeon automation: ✔️ Working
-- Maze automation: ❌ Not implemented
+Current implementation status of major features:
+
+✅ Fully Working:
+- Monster-Wood ad automation
+- Era Saga dungeon progression 
+- Daily Resource Dungeons:
+  - Gem Dungeon
+  - Rune Dungeon
+  - Maze Coin Dungeon
+- Cavern Dungeons:
+  - Ancestral Caverns (Evaris, Geneza, Jestin, etc.)
+  - Era Caverns (Historia, Multiverse, etc.)
+  - Automatic team management
+  - Multi-dungeon automation
+- PVP automation:
+  - Auto battles
+  - Box management
+  - Box timer reduction
+- Brightness controls for overnight runs
+
+⚠️ Partially Working:
+- Device connectivity:
+  - Real device support (USB and wireless)
 
 ## 💻 Installation
+Configure your emulator (see below)
+### Quick Install (Recommended)
+1. Download the [latest AutoMonster_Setup.exe](../../releases/latest)
+2. Run the installer and follow the prompts 
+3. Launch from Start Menu or desktop shortcut
 
-To install AutoMonster:
-
-1. Go to the [Releases page](../../releases/latest)
-2. Download the **AutoMonster_Setup.exe** installer
-3. Run the installer
-4. Launch AutoMonster from your Start Menu or desktop shortcut
-
-The installer will:
-- Install the program to your local AppData folder
-- Create start menu shortcuts
-- Optionally create a desktop shortcut
-- Handle automatic updates
+### Manual Installation 
+For developers or advanced users:
+1. Clone the repository
+2. Install dependencies: `pip install -r requirements.txt`
+3. Run `python main.py`
 
 ## 🔄 Updates
 
-AutoMonster includes an automatic update system that will:
-- Check for new versions on startup
-- Download and install updates automatically
-- Maintain your settings and configurations
-- Clean up old files after updating
+The application includes an automatic update system that:
+- Checks for updates on startup
+- Downloads and installs new versions
+- Preserves your settings
+- Handles asset management
 
-You don't need to download new versions manually - the program will handle everything for you!
+Updates are installed seamlessly without manual intervention.
 
-## 🕹️ Setting Up an Emulator
+## 🕹️ Device Setup
 
-To automate tasks in Monster Legends, you'll need to set up an emulator on your computer.
+### Using an Emulator (Recommended)
+- Resolution: 1280x720 (required)
+- DPI: 240
+- ADB enabled and accessible
 
-### Step 1: Choose, Download and Install the Emulator an Emulator
+### Recommended Emulators
+1. **BlueStacks** (Recommended)
+   - Best overall performance
+   - Easy ADB setup
+   - Stable with Monster Legends
 
-There are several emulators available for running Android apps on your computer. Some popular choices include:
+2. **LDPlayer**
+   - Good gaming performance
+   - Lower resource usage
+   - Simple configuration
 
-- **BlueStacks**: One of the most popular Android emulators, known for its stability and performance.
-- **NoxPlayer**: Another reliable emulator with a wide range of features.
-- **LDPlayer**: Optimized for gaming, LDPlayer offers smooth gameplay and customization options.
+### Setup Steps
+1. Install your chosen emulator
+2. Configure resolution and DPI settings
+3. Enable ADB in emulator settings
+4. Install Monster Legends APK (from APKPure recommended)
+5. Test the game runs smoothly
 
-Choose any emulator that has access to adb and can run Android apps on your computer.
+### Using a Physical Device
 
-### Step 2: Install Monster Legends
+#### USB Connection
+1. Enable Developer Options:
+   - Go to Settings > About Phone
+   - Tap Build Number 7 times
+   - Enter your device PIN if prompted
 
-After setting up the emulator, it is recommended to install Monster Legends using an APK file and not from the Google
-Play Store. APKPure is a good source for APK files since Google Play Store sometimes detects emulators and doesn't allow
-you to download the game.
+2. Enable USB Debugging:
+   - Go to Settings > Developer Options
+   - Enable USB Debugging
+   - Enable "Stay Awake" (prevents screen timeout)
 
-### Step 3: Configure Emulator Settings
+3. Connect Device:
+   - Use a quality USB cable
+   - Select "File Transfer" mode when prompted
+   - Accept USB debugging prompt on device
+   - Install device drivers if needed
 
-To ensure the script run, configure the emulator settings as follows:
+#### Wireless Connection
+1. First enable USB debugging as described above
 
-- **Resolution**: Set the resolution to 1280x720
-- **DPI**: Set the DPI to 240
-- **ADB Connection**: Enable ADB connection in the emulator settings to allow communication with the automation scripts.
+2. Enable Wireless Debugging:
+   - Keep device and computer on same network
+   - Go to Developer Options > Wireless Debugging
+   - Enable Wireless Debugging
+   - Tap "Pair device with pairing code"
+   - Note the IP address and port (e.g., 192.168.1.100:5555)
 
-## 💬 Usage and Commands
+3. Connect Device:
+   - Launch AutoMonster
+   - Enter the IP address and port in wireless connection field
+   - Click "Connect Wireless"
+   - Accept the debugging prompt on device
 
-While the Auto Monster Project is running, you can use the following commands:
+4. Test Connection:
+   - Verify preview window shows your device screen
+   - Check connection status in log window
+   - Ensure stable network connection for reliability
 
-- `era`: Goes through the Era Saga automatically.
-- `pvp`: Does PVP battles automatically
-- `rd`: Does the daily dungeons automatically (Gem and Rune).
-- `ads`: Plays and skips ads in Monster-Wood automatically.
-- `cavern`: Does the selected rank-up cavern dungeon automatically.
-- `update`: Checks for updates and updates the project if a new version is available. (Not implemented)
-- `version`: Displays the current version of the Auto Monster Project.
-- `help`: Displays the help menu, listing all available commands and their descriptions. You can also
-  use `help [command]` to get more details about a specific command.
+### Device Selection Interface
+When you first launch AutoMonster, you'll see the device selection screen:
+- Lists all available devices (emulators and phones)
+- Shows connection status and resolution
+- Allows testing connection before proceeding
+- Remembers last used device
 
-You can also chain commands using `&` or `&&`: ❌ Not implemented
+## 💬 Usage and Interface
 
-- Using `&` between commands will run them concurrently, regardless of the success or failure of the previous command.
-- Using `&&` between commands will run the next command only if the previous one succeeded without errors.
+### Device Connection
+1. Launch AutoMonster
+2. Connect your device via USB or wireless
 
-### 🚀 Using the Executable
+### Main Interface Layout
+The interface consists of three main panels:
 
-To use the Auto Monster Project with the executable:
+#### Left Panel - Command Controls
+- **Command Selection**: Dropdown menu to choose automation task
+- **Task Parameters**: Configurable settings for each command
+- **Control Buttons**: 
+  - Start: Begin automation
+  - Stop: Halt current task
+  - Save Settings: Store current parameters as defaults
 
-1. Download the executable file for the Auto Monster Project from the [release page](../../releases) on GitHub.
-2. After downloading, run the executable file to start the automation process.
+#### Center Panel - Preview
+- Live preview of your device screen
+- Brightness controls:
+  - Lower Brightness: Reduce screen brightness
+  - Reset Brightness: Return to auto brightness
 
-## 🚨 Disclaimer
+#### Right Panel - Information
+- Detailed descriptions of selected commands
+- Parameter explanations
+- Tips and requirements
 
-The Auto Monster Project is provided for educational and informational purposes only. While efforts have been made to
-ensure its reliability and safety, it's essential to understand that the use of automation tools, including this
-project, may violate the terms of service of the game Monster Legends.
 
-**Responsibility:** The creator of the Auto Monster Project is not responsible for any consequences that may arise from
-the use of this tool. This includes but is not limited to account suspension, banning, or other penalties imposed by the
-game developers.
+### Tips for Usage
+- Monitor the log window for status updates and errors
+- Use the preview window to verify automation is working correctly
+- For overnight runs, consider using brightness controls
 
-**Usage:** By using the Auto Monster Project, you acknowledge that you are solely responsible for your actions and any
-risks associated with using automated tools in online games. It's recommended to review and comply with the terms of
-service of Monster Legends and to use the Auto Monster Project responsibly and at your own risk.
+### Troubleshooting
+- If automation seems stuck, check the log window for errors
+- Use the Stop button to halt current operations
+- Refresh device connection if preview becomes unresponsive
+
+## 🚨 Disclaimer 
+
+This tool is for educational purposes. Usage may violate Monster Legends' terms of service. Use at your own risk and responsibility.
 
 ## 🤝 Contributing
 
-Contributions to the Auto Monster Project are welcome. If you encounter any bugs or have feature requests, please ask.
+Contributions welcome! Please:
+1. Fork the repository
+2. Create a feature branch
+3. Submit a pull request
+
+### 🐛 Bug Reports
+Found a bug? You can:
+- Message me on Reddit: [@some-guy250](https://reddit.com/user/some-guy250)
+- Open an issue on GitHub
 
 ## 📜 License
 
-This project is licensed under the MIT License. This allows others to use, modify, and distribute the project, subject
-to the terms of the license.
+Licensed under MIT License - see LICENSE file for details.
 
