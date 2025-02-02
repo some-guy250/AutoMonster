@@ -968,9 +968,11 @@ class Controller:
                         sub_dungeons: int = 0
                         while True:
                             for _ in range(3):
-                                if self.wait_for(ASSETS.EnterEraSaga, timeout=1.5):
+                                if self.wait_for(ASSETS.EnterEraSaga, timeout=2):
                                     break
-                                self.client.control.swipe(500, 200, 100, 200)
+                                self.client.control.swipe(self.scale_x(500), self.scale_y(200), self.scale_x(100),
+                                                          self.scale_y(200))
+                                self.pause(.5)
                             if not self.click(ASSETS.EnterEraSaga):
                                 self.click_back()
                                 if self.in_screen(ASSETS.EnterCavern):
