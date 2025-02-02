@@ -1,314 +1,26 @@
+import json
+import logging
+import os
 import sys
+import threading
+from datetime import datetime
 
 import customtkinter as ctk
-from PIL import Image
 import cv2
 import scrcpy
-import threading
-from typing import Dict, Any
-import logging
-from AutoMonster import Controller
+from PIL import Image
+
 import AutoMonsterErrors
-from adbutils import adb
-from datetime import datetime
+from AutoMonster import Controller
 from Constants import GUI_COMMANDS, GUI_COMMAND_DESCRIPTIONS
-import json
-import os
+from command_frame import CommandFrame
+from device_selection_frame import DeviceSelectionFrame
 
 DEFAULTS_FILE = "defaults.json"
 
 if os.path.isfile("version.txt"):
     with open("version.txt", "r") as file:
         __version__ = file.read().strip()
-
-
-class CommandFrame(ctk.CTkFrame):
-    def __init__(self, master, command_name: str, params: Dict[str, Any], callback):
-        super().__init__(master)
-
-        self.command_name = command_name
-        self.params = params
-        self.callback = callback
-        self.param_widgets = {}
-
-        # Configure frame to maintain size
-        self.grid_propagate(False)
-        self.pack_propagate(False)
-
-        # Create scrollable container for parameters
-        self.scroll_frame = ctk.CTkScrollableFrame(self)
-        self.scroll_frame.pack(expand=True, fill="both", padx=5, pady=5)
-
-        # Add a header for parameters
-        header = ctk.CTkLabel(self.scroll_frame, text="Parameters", font=("Arial", 14, "bold"))
-        header.pack(pady=(5, 10), anchor="w")
-
-        # Create parameter inputs
-        for param_name, param_config in params.items():
-            # Create parameter container frame
-            param_frame = ctk.CTkFrame(self.scroll_frame)
-            param_frame.pack(fill="x", padx=5, pady=2)
-            param_frame.grid_columnconfigure(0, weight=1)
-
-            label = ctk.CTkLabel(param_frame, text=param_name)
-            label.grid(row=0, column=0, padx=5, pady=(5, 1), sticky="w")
-
-            if param_config["type"] == "int":
-                value_label = ctk.CTkLabel(param_frame, text=str(param_config.get("default", 0)), width=30)
-                widget = ctk.CTkSlider(param_frame,
-                                       from_=param_config.get("min", 0),
-                                       to=param_config.get("max", 100),
-                                       command=lambda val, lbl=value_label: lbl.configure(text=str(int(val))))
-                widget.set(param_config.get("default", 0))
-                widget.grid(row=1, column=0, padx=5, pady=(0, 5), sticky="ew")
-                value_label.grid(row=1, column=1, padx=5, pady=(0, 5))
-            elif param_config["type"] == "bool":
-                widget = ctk.CTkCheckBox(param_frame, text="")
-                if param_config.get("default"):
-                    widget.select()
-                widget.grid(row=1, column=0, padx=5, pady=(0, 5), sticky="w")
-            elif param_config["type"] == "choice":
-                widget = ctk.CTkOptionMenu(param_frame, values=param_config["choices"], width=150)
-                widget.set(param_config.get("default", param_config["choices"][0]))
-                widget.grid(row=1, column=0, padx=5, pady=(0, 5), sticky="w")
-            elif param_config["type"] == "multiple_choice":
-                # Create a frame for checkboxes
-                checkbox_frame = ctk.CTkScrollableFrame(param_frame, height=150)
-                checkbox_frame.grid(row=1, column=0, padx=5, pady=(0, 5), sticky="nsew")
-
-                # Store checkboxes in a list
-                checkbox_vars = []
-                for choice in param_config["choices"]:
-                    if choice.startswith("--"):  # This is a separator/header
-                        label = ctk.CTkLabel(checkbox_frame, text=choice, font=("Arial", 12, "bold"))
-                        label.pack(anchor="w", padx=5, pady=(10, 2))
-                        continue
-
-                    var = ctk.BooleanVar(value=choice in param_config.get("default", []))
-                    checkbox = ctk.CTkCheckBox(checkbox_frame, text=choice, variable=var)
-                    checkbox.pack(anchor="w", padx=20, pady=2)  # Extra padding for indentation
-                    checkbox_vars.append((choice, var))
-                widget = checkbox_vars
-
-            self.param_widgets[param_name] = widget
-
-        # Create button container at the bottom of parameters
-        button_container = ctk.CTkFrame(self.scroll_frame)
-        button_container.pack(fill="x", padx=5, pady=(10, 5))
-
-        # If there are parameters, add the save defaults button first
-        if params:
-            save_button = ctk.CTkButton(
-                button_container,
-                text="Set Values as Defaults",
-                height=35,
-                font=("Arial", 13, "bold"),
-                fg_color="#1f538d",  # A nice blue color
-                hover_color="#2766b3",
-                command=lambda: self.save_params_as_defaults(command_name)
-            )
-            save_button.pack(fill="x", padx=5, pady=(0, 10))
-
-        # Container for run and cancel buttons
-        action_buttons = ctk.CTkFrame(button_container)
-        action_buttons.pack(fill="x", padx=5)
-        action_buttons.grid_columnconfigure(0, weight=1)
-        action_buttons.grid_columnconfigure(1, weight=1)
-
-        # Run button
-        self.run_button = ctk.CTkButton(
-            action_buttons,
-            text="Run",
-            height=35,
-            font=("Arial", 13, "bold"),
-            command=master.winfo_toplevel().run_command
-        )
-        self.run_button.grid(row=0, column=0, padx=(0, 5), sticky="ew")
-
-        def cancel_button_func():
-            master.winfo_toplevel().controller.cancel_flag = True
-            self.cancel_button.configure(state="disabled")
-
-        # Cancel button
-        self.cancel_button = ctk.CTkButton(
-            action_buttons,
-            text="Stop",
-            height=35,
-            font=("Arial", 13, "bold"),
-            fg_color="darkred",
-            hover_color="red",
-            command=cancel_button_func
-        )
-        self.cancel_button.grid(row=0, column=1, padx=(5, 0), sticky="ew")
-        self.cancel_button.configure(state="disabled")  # Disabled by default
-
-    def save_params_as_defaults(self, command_name: str):
-        current_params = {}
-        for param_name, widget in self.param_widgets.items():
-            if isinstance(widget, ctk.CTkSlider):
-                value = int(widget.get())
-            elif isinstance(widget, ctk.CTkCheckBox):
-                value = widget.get()
-            elif isinstance(widget, ctk.CTkOptionMenu):
-                value = widget.get()
-            elif isinstance(widget, list):  # Multiple choice checkboxes
-                value = [choice for choice, var in widget if var.get()]
-            current_params[param_name] = value
-
-        if os.path.isfile(DEFAULTS_FILE):
-            with open(DEFAULTS_FILE, "r") as f:
-                data = json.load(f)
-        else:
-            data = {}
-        data[command_name] = current_params
-        with open(DEFAULTS_FILE, "w") as f:
-            f.write(json.dumps(data, indent=4))
-        self.master.winfo_toplevel().append_log(f"Defaults saved for {command_name}", "success")
-        self.master.winfo_toplevel().override_parameter_defaults()
-
-
-class DeviceSelectionDialog(ctk.CTkToplevel):
-    def __init__(self):
-        super().__init__()
-
-        self.title("Device Selection")
-        self.geometry("400x400")  # Made taller to accommodate wireless option
-        self.resizable(False, False)
-
-        # Set window icon
-        if os.path.exists("assets/favicon.ico"):
-            self.iconbitmap("assets/favicon.ico")
-
-        # Make this window modal
-        self.grab_set()
-        self.transient()
-
-        # Center the window
-        self.update_idletasks()
-        width = self.winfo_width()
-        height = self.winfo_height()
-        x = (self.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.winfo_screenheight() // 2) - (height // 2)
-        self.geometry(f'{width}x{height}+{x}+{y}')
-
-        # Configure grid
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(2, weight=1)
-
-        # Title label
-        self.title_label = ctk.CTkLabel(
-            self,
-            text="Select a device:",
-            font=("Arial", 14, "bold")
-        )
-        self.title_label.grid(row=0, column=0, pady=(20, 10))
-
-        # Create frame for USB and wireless sections
-        self.content_frame = ctk.CTkFrame(self)
-        self.content_frame.grid(row=1, column=0, padx=20, sticky="nsew")
-        self.content_frame.grid_columnconfigure(0, weight=1)
-
-        # Wireless connection section
-        wireless_label = ctk.CTkLabel(
-            self.content_frame,
-            text="Wireless Connection:",
-            font=("Arial", 12)
-        )
-        wireless_label.grid(row=0, column=0, padx=5, pady=(5, 0), sticky="w")
-
-        # IP address entry with example placeholder
-        self.ip_entry = ctk.CTkEntry(
-            self.content_frame,
-            placeholder_text="192.168.1.100:5555",
-        )
-        self.ip_entry.bind("<Return>", lambda e: self.connect_wireless())
-        self.ip_entry.grid(row=1, column=0, padx=5, pady=(0, 5), sticky="ew")
-
-        # Connect wireless button
-        self.wireless_btn = ctk.CTkButton(
-            self.content_frame,
-            text="Connect Wireless",
-            command=self.connect_wireless
-        )
-        self.wireless_btn.grid(row=2, column=0, padx=5, pady=(0, 10), sticky="ew")
-
-        # Separator
-        separator = ctk.CTkFrame(self.content_frame, height=2, fg_color="gray30")
-        separator.grid(row=3, column=0, padx=5, pady=10, sticky="ew")
-
-        # USB Devices label
-        usb_label = ctk.CTkLabel(
-            self.content_frame,
-            text="Found Devices:",
-            font=("Arial", 12)
-        )
-        usb_label.grid(row=4, column=0, padx=5, pady=(5, 5), sticky="w")
-
-        # Create scrollable frame for USB devices
-        self.scroll_frame = ctk.CTkScrollableFrame(self)
-        self.scroll_frame.grid(row=2, column=0, padx=20, pady=(0, 10), sticky="nsew")
-
-        # Refresh button at the bottom
-        self.refresh_btn = ctk.CTkButton(
-            self,
-            text="Refresh Devices",
-            command=self.refresh_devices
-        )
-        self.refresh_btn.grid(row=3, column=0, padx=20, pady=10, sticky="ew")
-
-        # Status label at the bottom
-        self.status = ctk.CTkLabel(self, text="", text_color="orange")
-        self.status.grid(row=4, column=0, pady=10)
-
-        self.result = None
-        self.protocol("WM_DELETE_WINDOW", self.on_close)
-
-        # Initial device load
-        self.refresh_devices()
-
-    def connect_wireless(self):
-        address = self.ip_entry.get().strip()
-        if not address:
-            self.status.configure(text="Please enter an IP address", text_color="orange")
-            return
-
-        try:
-            self.result = adb.connect(address)
-            self.destroy()
-        except Exception as e:
-            self.status.configure(text=f"Connection failed: {str(e)}", text_color="red")
-
-    def refresh_devices(self):
-        # Clear existing device buttons
-        for widget in self.scroll_frame.winfo_children():
-            widget.destroy()
-
-        try:
-            devices = adb.device_list()
-            if devices:
-                self.status.configure(text="")
-                for device in devices:
-                    device_btn = ctk.CTkButton(
-                        self.scroll_frame,
-                        text=f"Connect to {device.serial}",
-                        command=lambda d=device.serial: self.connect_to_device(d)
-                    )
-                    device_btn.pack(fill="x", padx=5, pady=5)
-            else:
-                self.status.configure(
-                    text="No devices found\nMake sure your device is connected and USB debugging is enabled",
-                    text_color="orange"
-                )
-        except Exception as e:
-            self.status.configure(text=f"Error: {str(e)}", text_color="red")
-
-    def connect_to_device(self, serial):
-        self.result = adb.connect(serial)
-        self.destroy()
-
-    def on_close(self):
-        self.result = None
-        self.destroy()
 
 
 class ControllerGUI(ctk.CTk):
@@ -319,34 +31,68 @@ class ControllerGUI(ctk.CTk):
         if os.path.exists("assets/favicon.ico"):
             self.iconbitmap("assets/favicon.ico")
 
-        # Show device selection dialog
-        # self.withdraw()  # Hide main window temporarily
-        dialog = DeviceSelectionDialog()
-        self.wait_window(dialog)
-        self.all_good = True
+        self.title("AutoMonster")
+        self.minsize(400, 450)  # Smaller initial size for device selection
+        # stop resizing
+        self.resizable(False, False)
 
-        if (dialog.result is None):
-            self.destroy()
-            self.all_good = False
-            return
+        # Initialize frames
+        self.device_frame = DeviceSelectionFrame(self, self.on_device_selected)
+        self.main_frame = ctk.CTkFrame(self)  # Will contain all the main UI elements
 
-        self.controller = Controller()
+        # Show device selection first
+        self.show_device_selection()
 
-        ctk.set_default_color_theme("dark-blue")
+    def show_device_selection(self):
+        self.main_frame.pack_forget()
+        self.device_frame.pack(expand=True, fill="both", padx=20, pady=20)
+        self.center_window()
 
-        # Define font configurations
+    def show_main_interface(self):
+        self.device_frame.pack_forget()
+        self.main_frame.pack(expand=True, fill="both")
+        self.geometry("1200x800")  # Set size for main interface
+        self.state("zoomed")  # Maximize window
+        self.resizable(True, True)  
+
+    def center_window(self):
+        self.update_idletasks()
+        width = self.winfo_width()
+        height = self.winfo_height()
+        x = (self.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.winfo_screenheight() // 2) - (height // 2)
+        self.geometry(f'{width}x{height}+{x}+{y}')
+
+    def on_device_selected(self, device):
+        # Show loading progress
+        self.device_frame.diable_connect_btns()
+        self.device_frame.show_loading()
+
+        def set_controller():
+            self.controller = Controller()
+            
+        thread = threading.Thread(target=set_controller, daemon=True)
+        thread.start()
+
+        # Wait for controller to be initialized
+        while thread.is_alive():
+            self.update()
+            
+        # Hide loading progress
+        self.device_frame.hide_loading()
+
+        self.init_main_interface()
+        self.show_main_interface()
+
+    def init_main_interface(self):
+        # Move all the main interface initialization code here
+        # (Everything that was previously in __init__ after device selection)
         self.fonts = {
             "header": ("Arial", 16, "bold"),
             "subheader": ("Arial", 14, "bold"),
             "normal": ("Arial", 12),
             "button": ("Arial", 13, "bold"),
         }
-
-        self.title("AutoMonster")
-        # self.geometry("1200x800")
-
-        # Set minimum window size
-        self.minsize(900, 700)
 
         # Define panel width
         self.panel_width = 300
@@ -359,13 +105,13 @@ class ControllerGUI(ctk.CTk):
         self.override_parameter_defaults()
 
         # Create main layout
-        self.grid_columnconfigure(0, weight=0, minsize=30)  # Left toggle button
-        self.grid_columnconfigure(1, weight=0, minsize=self.panel_width)  # Command frame
-        self.grid_columnconfigure(2, weight=1)  # Preview
-        self.grid_columnconfigure(3, weight=0, minsize=self.panel_width)  # Info frame
-        self.grid_columnconfigure(4, weight=0, minsize=30)  # Right toggle button
-        self.grid_rowconfigure(0, weight=3)  # Row for main content
-        self.grid_rowconfigure(1, weight=1)  # Row for logs
+        self.main_frame.grid_columnconfigure(0, weight=0, minsize=30)  # Left toggle button
+        self.main_frame.grid_columnconfigure(1, weight=0, minsize=self.panel_width)  # Command frame
+        self.main_frame.grid_columnconfigure(2, weight=1)  # Preview
+        self.main_frame.grid_columnconfigure(3, weight=0, minsize=self.panel_width)  # Info frame
+        self.main_frame.grid_columnconfigure(4, weight=0, minsize=30)  # Right toggle button
+        self.main_frame.grid_rowconfigure(0, weight=3)  # Row for main content
+        self.main_frame.grid_rowconfigure(1, weight=1)  # Row for logs
 
         # Add panel visibility states
         self.panel_visible = True
@@ -373,7 +119,7 @@ class ControllerGUI(ctk.CTk):
 
         # Create left toggle button
         self.toggle_button = ctk.CTkButton(
-            self,
+            self.main_frame,
             text="≪",
             width=30,
             height=24,
@@ -383,7 +129,7 @@ class ControllerGUI(ctk.CTk):
 
         # Create right toggle button for info panel
         self.info_toggle_button = ctk.CTkButton(
-            self,
+            self.main_frame,
             text="≫",
             width=30,
             height=24,
@@ -392,7 +138,7 @@ class ControllerGUI(ctk.CTk):
         self.info_toggle_button.grid(row=0, column=4, sticky="ns", padx=(0, 2), pady=10)
 
         # Info panel - Move this before command frame initialization
-        self.info_frame = ctk.CTkFrame(self, width=self.panel_width)
+        self.info_frame = ctk.CTkFrame(self.main_frame, width=self.panel_width)
         self.info_frame.grid(row=0, column=3, padx=10, pady=10, sticky="nsew")
         self.info_frame.grid_propagate(False)
 
@@ -410,7 +156,7 @@ class ControllerGUI(ctk.CTk):
         self.info_description.configure(state="disabled")
 
         # Command selection frame with fixed width
-        self.command_frame = ctk.CTkFrame(self, width=self.panel_width)
+        self.command_frame = ctk.CTkFrame(self.main_frame, width=self.panel_width)
         self.command_frame.grid(row=0, column=1, padx=(0, 10), pady=10, sticky="nsew")
         self.command_frame.grid_propagate(False)  # Prevent frame from shrinking
 
@@ -467,7 +213,7 @@ class ControllerGUI(ctk.CTk):
         self.on_command_change(self.command_var.get())
 
         # Preview frame (update column position)
-        self.preview_frame = ctk.CTkFrame(self)
+        self.preview_frame = ctk.CTkFrame(self.main_frame)
         self.preview_frame.grid(row=0, column=2, padx=10, pady=10, sticky="nsew")
 
         # Update initial info panel
@@ -487,15 +233,45 @@ class ControllerGUI(ctk.CTk):
         self.preview_label = ctk.CTkLabel(preview_container, text="")
         self.preview_label.pack(expand=True, fill="both", pady=(0, 10))
 
-        # Screenshot button (hidden by default)
+        # Button container for brightness controls and screenshot
+        button_container = ctk.CTkFrame(preview_container)
+        button_container.pack(fill="x", padx=5, pady=(0, 5), side="bottom")
+
+        # Row for screenshot button (on top)
+        screenshot_row = ctk.CTkFrame(button_container)
+        screenshot_row.pack(fill="x", pady=(0, 2))
+
         self.screenshot_btn = ctk.CTkButton(
-            preview_container,
+            screenshot_row,
             text="Take Screenshot",
             height=35,
             font=self.fonts["button"],
             command=lambda: self.controller.save_screen(take_new=True)
         )
-        # Don't pack the button initially - it will be controlled by debug.ban mode
+        # Screenshot button will be managed by debug mode toggle
+
+        # Row for brightness controls (at bottom)
+        brightness_row = ctk.CTkFrame(button_container)
+        brightness_row.pack(fill="x", pady=(2, 0))
+
+        # Brightness control buttons
+        self.low_brightness_btn = ctk.CTkButton(
+            brightness_row,
+            text="Lower Brightness",
+            height=35,
+            font=self.fonts["button"],
+            command=self.lower_brightness
+        )
+        self.low_brightness_btn.pack(side="left", fill="x", expand=True, padx=2)
+
+        self.reset_brightness_btn = ctk.CTkButton(
+            brightness_row,
+            text="Reset Brightness",
+            height=35,
+            font=self.fonts["button"],
+            command=self.reset_brightness
+        )
+        self.reset_brightness_btn.pack(side="left", fill="x", expand=True, padx=2)
 
         ratio = .55
         self.img_size = int(self.controller.new_width * ratio), int(720 * ratio)
@@ -504,7 +280,7 @@ class ControllerGUI(ctk.CTk):
         self.controller.client.add_listener(scrcpy.EVENT_FRAME, lambda frame: self.update_image_safe(frame))
 
         # Log frame
-        self.log_frame = ctk.CTkFrame(self)
+        self.log_frame = ctk.CTkFrame(self.main_frame)
         self.log_frame.grid(row=1, column=0, columnspan=4, padx=10, pady=10, sticky="nsew")
 
         # Log header with auto-scroll toggle
@@ -620,13 +396,13 @@ class ControllerGUI(ctk.CTk):
         if self.panel_visible:
             self.command_frame.grid_remove()
             self.toggle_button.configure(text="≫")
-            self.grid_columnconfigure(1, weight=0, minsize=0)  # Remove minsize when hidden
-            self.grid_columnconfigure(2, weight=1)
+            self.main_frame.grid_columnconfigure(1, weight=0, minsize=0)  # Remove minsize when hidden
+            self.main_frame.grid_columnconfigure(2, weight=1)
         else:
             self.command_frame.grid()
             self.toggle_button.configure(text="≪")
-            self.grid_columnconfigure(1, weight=0, minsize=self.panel_width)  # Restore minsize
-            self.grid_columnconfigure(2, weight=1)
+            self.main_frame.grid_columnconfigure(1, weight=0, minsize=self.panel_width)  # Restore minsize
+            self.main_frame.grid_columnconfigure(2, weight=1)
         self.panel_visible = not self.panel_visible
         # Keep log frame visible in both states
         self.log_frame.grid(row=1, column=0, columnspan=4, padx=10, pady=10, sticky="nsew")
@@ -635,13 +411,13 @@ class ControllerGUI(ctk.CTk):
         if self.info_visible:
             self.info_frame.grid_forget()  # Changed from grid_remove() to grid_forget()
             self.info_toggle_button.configure(text="≪")
-            self.grid_columnconfigure(3, weight=0, minsize=0)
-            self.grid_columnconfigure(2, weight=1)  # Give more weight to preview when info is hidden
+            self.main_frame.grid_columnconfigure(3, weight=0, minsize=0)
+            self.main_frame.grid_columnconfigure(2, weight=1)  # Give more weight to preview when info is hidden
         else:
             self.info_frame.grid(row=0, column=3, padx=10, pady=10, sticky="nsew")
             self.info_toggle_button.configure(text="≫")
-            self.grid_columnconfigure(3, weight=0, minsize=self.panel_width)
-            self.grid_columnconfigure(2, weight=1)  # Reset preview weight
+            self.main_frame.grid_columnconfigure(3, weight=0, minsize=self.panel_width)
+            self.main_frame.grid_columnconfigure(2, weight=1)  # Reset preview weight
         self.info_visible = not self.info_visible
 
     def on_command_change(self, command_name):
@@ -712,13 +488,23 @@ class ControllerGUI(ctk.CTk):
     def update_image_safe(self, frame):
         self.after(0, self.update_image, frame)
 
+    def lower_brightness(self):
+        """Lower the device brightness"""
+        self.controller.lower_brightness()
+        self.append_log("Lowered device brightness", "info")
+
+    def reset_brightness(self):
+        """Reset the device brightness to auto mode"""
+        self.controller.set_auto_brightness()
+        self.append_log("Reset device brightness to auto mode", "info")
+
     def toggle_debug_mode(self, event=None):
         """Toggle debug.ban mode on/off"""
         self.debug_mode = not self.debug_mode
 
-        # Toggle screenshot button visibility
+        # Toggle debug buttons visibility
         if self.debug_mode:
-            self.screenshot_btn.pack(fill="x", padx=5, pady=(0, 5))
+            self.screenshot_btn.pack(fill="x", expand=True, padx=2)
             self.append_log("Debug mode enabled", "debug")
         else:
             self.screenshot_btn.pack_forget()

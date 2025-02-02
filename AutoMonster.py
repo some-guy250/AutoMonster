@@ -20,8 +20,6 @@ class CustomFormatter(logging.Formatter):
     red = "\x1b[31;20m"
     bold_red = "\x1b[31;1m"
     reset = "\x1b[0m"
-    # format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
-    # format levelname message
     format = "%(levelname)s: %(message)s"
 
     FORMATS = {
@@ -49,7 +47,7 @@ os.system('color')
 
 
 class Controller:
-    def __init__(self, save_screen: bool = False, set_brightness=False):
+    def __init__(self, save_screen: bool = False):
         self.gui_logger = None
         self.cancel_flag = False
         self.pause = time.sleep
@@ -62,16 +60,9 @@ class Controller:
         self.launch_game()
         time.sleep(2)
 
-        if set_brightness:
-            self.client.device.shell("settings put system screen_brightness 0")
-
         logger.info(f'Device connected')
 
         size = self.client.resolution
-        self.flipped_xy = False
-        if size[0] < size[1]:
-            size = size[1], size[0]
-            self.flipped_xy = True
         self.ratio = None
         self.new_width = size[0]
         self.resized = False
@@ -104,6 +95,37 @@ class Controller:
             self.save_screen(take_new=True)
         self.open_game(force_close=False)
 
+    def get_orientation(self):
+        if self.client.device.shell(r"dumpsys input | grep SurfaceOrientation").strip() in ["SurfaceOrientation: 1",
+                                                                                            "SurfaceOrientation: 3"]:
+            return "portrait"
+        return "landscape"
+
+    def lower_brightness(self):
+        self.client.device.shell("settings put system screen_brightness_mode 0")
+        self.client.device.shell("settings put system screen_brightness 0")
+
+    def set_auto_brightness(self):
+        self.client.device.shell("settings put system screen_brightness_mode 1")
+
+    def get_brightness_info(self):
+        return self.client.device.shell("settings get system screen_brightness_mode"), self.client.device.shell(
+            "settings get system screen_brightness")
+
+    def enable_show_taps(self):
+        self.client.device.shell("settings put system show_touches 1")
+
+    def disable_show_taps(self):
+        self.client.device.shell("settings put system show_touches 0")
+
+    def get_device_info(self):
+        # return cpu usage, memory usage and temperature
+        print(self.client.device.shell("dumpsys cpuinfo"))
+        print(self.client.device.shell("dumpsys meminfo"))
+        print(self.client.device.shell("dumpsys battery"))
+        return self.client.device.shell("dumpsys cpuinfo | grep TOTAL"), self.client.device.shell(
+            "dumpsys meminfo | grep TOTAL"), self.client.device.shell("dumpsys battery | grep temperature")
+
     def log_gui(self, msg, level="info"):
         if self.gui_logger is not None:
             self.gui_logger(msg, level)
@@ -117,7 +139,10 @@ class Controller:
         self.__last_screenshot = self.client.last_frame
         if self.resized:
             image = self.__last_screenshot
-            resized_image = cv2.resize(image, (self.new_width, 720))
+            new_size = (self.new_width, 720)
+            if image.shape[0] > image.shape[1]:
+                new_size = (720, self.new_width)
+            resized_image = cv2.resize(image, new_size)
             self.__last_screenshot = resized_image
         return self.__last_screenshot
 
@@ -417,24 +442,12 @@ class Controller:
                     self.click_back(skip_ad_check=True)
             return self.in_game()
 
-        def get_orientation():
-            def _get_orientation():
-                if self.client.device.shell(r"dumpsys input | grep SurfaceOrientation").strip() in [
-                    "SurfaceOrientation: 1",
-                    "SurfaceOrientation: 3"]:
-                    return "portrait"
-                return "landscape"
-
-            ori = _get_orientation()
-            if self.flipped_xy:
-                return "portrait" if ori == "landscape" else "landscape"
-
         if self.in_game():
             return False
 
         counter = 0
         index = 0
-        orientation = get_orientation()
+        orientation = self.get_orientation()
         max_it = max(len(AdLocationsVertical), len(AdLocationsHorizontal)) * 4
 
         while not self.in_game():
@@ -454,11 +467,12 @@ class Controller:
                 return True
 
             ad_locations = AdLocationsHorizontal
-            if orientation == "portrait":
+            if orientation == "landscape":
                 ad_locations = AdLocationsVertical
+                logger.debug(logging.DEBUG, "Switched to vertical ad locations")
 
-            if orientation != get_orientation():
-                orientation = get_orientation()
+            if orientation != self.get_orientation():
+                orientation = self.get_orientation()
                 index = 0
             elif index > len(ad_locations) - 1:
                 index = 0
@@ -486,10 +500,9 @@ class Controller:
     def _check_for_change(self, t: float = 0):
         sc = self.take_screenshot()
         self.pause(t)
-        return compare_imgs(sc, self.take_screenshot())
+        return compare_imgs(sc, self.take_screenshot(), transform_to_black=True)
 
     def _ad_wait_out(self, max_time=18):
-        # check if dic ad/i exist increment counter until ./ads/i doesn't exist
         ban = False
         for tick in range(max_time // 2):
             if not ban:
@@ -502,6 +515,7 @@ class Controller:
                     logger.info("Skipped common ad in wait")
                     return
                 if self._check_for_change(.5):
+                    logger.debug("Ad is not moving")
                     return
 
     def reduce_time(self, max_times: int = 0) -> bool:
@@ -773,7 +787,7 @@ class Controller:
         count = 0
         while not self.in_screen(asset):
             self.client.control.swipe(self.scale_x(600), self.scale_y(400), self.scale_x(100), self.scale_y(400))
-            self.pause(.25)
+            self.pause(.1)
             count += 1
             if count > 10:
                 raise AutoMonsterErrors.GoToError(f"Failed to scroll to {asset}")
@@ -951,7 +965,7 @@ class Controller:
         self._goto_cavern()
         while self.in_screen(ASSETS.RightArrow) and num_dungeons > 0:
             for dungeon in dungeons_to_do:
-                if dungeon in dungeons_done or not self.in_screen(dungeon, gray_img=True, threshold=.85):
+                if dungeon in dungeons_done or not self.in_screen(dungeon, gray_img=True, threshold=.75):
                     continue
 
                 num_dungeons -= 1
@@ -997,7 +1011,11 @@ class Controller:
                 else:
                     logger.info(f"Finished {dungeon.replace('.png', '')}, {num_dungeons} left")
                 dungeons_done.append(dungeon)
-            self.click(ASSETS.RightArrow, pause=5)
+            if self.in_screen(ASSETS.DungeonNotAvailable):
+                logger.info("Dungeon not available time might be up")
+                self.open_game(True)
+                break
+            self.follow_sequence(ASSETS.RightArrow, ASSETS.EnterCavern)
 
     def play_ads(self):
         played_ads = 0
@@ -1024,13 +1042,12 @@ class Controller:
 
             self._ad_wait_out(18)
             self._skip_ad()
+            self.pause(1)
 
-            if self.spin_wheel():
-                self.pause(1)
-                self.take_screenshot()
+            self.spin_wheel()
+            self.pause(1)
 
-            if self.in_screen(ASSETS.CollectAd, screenshot=self.__last_screenshot):
-                self.click(ASSETS.CollectAd, screenshot=self.__last_screenshot)
+            self.click(ASSETS.CollectAd)
 
         if played_ads == 0:
             logger.info("Didn't play any ads")
@@ -1121,6 +1138,7 @@ class Controller:
 
 def main():
     controller = Controller()
+    print(controller.get_device_info())
 
 
 if __name__ == '__main__':

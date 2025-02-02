@@ -12,6 +12,7 @@ class ASSETS:
     EnterDungeons = "enterdungeons.png"
     ResourceDungeon = "resourcedungeon.png"
     EnterDungeons2 = "enterdungeons2.png"
+    DungeonNotAvailable = "dungeonnotavailable.png"
     EnterEraSaga = "entersaga.png"
     EraSagaDone = "erasagadone.png"
     SagaComplete = "sagacomplete.png"
@@ -90,6 +91,8 @@ class ASSETS:
     CommonAd16 = "commonad16.png"
     CommonAd17 = "commonad17.png"
     CommonAd18 = "commonad18.png"
+    CommonAd19 = "commonad19.png"
+    CommonAd20 = "commonad20.png"
     ResumeAd = "resumead.png"
     NoAds = "noads.png"
     NotFullTeam = "notfullteam.png"
@@ -182,7 +185,7 @@ All_Cavers = (
 AdLocations = [[1240, 45], [1240, 35], [1250, 85], [630, 50], [666, 80], [680, 25]]
 AdLocationsHorizontal = ((1165, 75), (1240, 45), (1240, 35), (1250, 85))
 AdLocationsVertical = ((630, 50), (666, 80), (680, 25))
-NumberOfCommonAds = 18
+NumberOfCommonAds = 20
 
 CAVERN_TO_ASSETS = {
     'historia': ASSETS.CavernHistoria,
