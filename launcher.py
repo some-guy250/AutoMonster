@@ -315,7 +315,7 @@ def download_main_exe(progress_window=None):
         raise Exception("AutoMonster.exe not found in release")
 
     temp_dir = gettempdir()
-    temp_file = os.path.join(temp_dir, "AutoMonster.exe")
+    temp_file = os.path.join(temp_dir, "AutoMonster_new.exe")  # Changed temp filename
     exe_data = requests.get(main_exe['browser_download_url'], stream=True)
     total_size = int(exe_data.headers.get('content-length', 0))
 
@@ -355,7 +355,20 @@ def download_main_exe(progress_window=None):
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
     try:
-        os.replace(temp_file, os.path.join(current_dir, "AutoMonster.exe"))
+        # Use os.path.join for path construction
+        batch_path = os.path.join(current_dir, "replace.bat")
+        target_path = os.path.join(current_dir, "AutoMonster.exe")
+        
+        # Use subprocess instead of os.system for better control
+        import subprocess
+        process = subprocess.run([batch_path, temp_file, target_path], 
+                                 shell=True,
+                                 capture_output=True,
+                                 text=True)
+        
+        if process.returncode != 0:
+            raise Exception(f"Failed to replace executable file: {process.stderr}")
+            
     except Exception as e:
         import tkinter.messagebox as msg
         msg.showerror("Error", f"Error replacing main executable: {e}")

@@ -101,6 +101,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path final_dist
           Move-Item -Path "dist/AutoMonster/AutoMonster.exe" -Destination "final_dist/AutoMonster.exe" -Force
           Move-Item -Path "dist/LauncherAutoMonster/LauncherAutoMonster.exe" -Destination "final_dist/LauncherAutoMonster.exe" -Force
+          Copy-Item -Path "replace.bat" -Destination "final_dist/replace.bat" -Force
           Get-ChildItem final_dist
 
       - name: Install Inno Setup

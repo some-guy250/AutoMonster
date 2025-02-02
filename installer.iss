@@ -43,7 +43,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "final_dist\LauncherAutoMonster.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "final_dist\AutoMonster.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "replace.bat"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
@@ -55,6 +55,7 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChang
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\assets"
+Type: filesandordirs; Name: "{app}\AutoMonster.exe"
 Type: filesandordirs; Name: "{app}\version.txt"
 Type: filesandordirs; Name: "{app}\defaults.json"
 Type: filesandordirs; Name: "{app}\macros.json"
