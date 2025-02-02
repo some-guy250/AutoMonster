@@ -110,12 +110,19 @@ class DeviceSelectionFrame(ctk.CTkFrame):
         # Initial device load
         self.refresh_devices()
 
-    def diable_connect_btns(self):
+    def disable_connect_btns(self):
         self.wireless_btn.configure(state="disabled")
         self.connect_btn.configure(state="disabled")
         self.device_dropdown.configure(state="disabled")
         self.refresh_btn.configure(state="disabled")
         self.ip_entry.configure(state="disabled")
+
+    def enable_connect_btns(self):
+        self.wireless_btn.configure(state="normal")
+        self.connect_btn.configure(state="normal")
+        self.device_dropdown.configure(state="normal")
+        self.refresh_btn.configure(state="normal")
+        self.ip_entry.configure(state="normal")
 
     def connect_wireless(self):
         address = self.ip_entry.get().strip()
@@ -128,6 +135,7 @@ class DeviceSelectionFrame(ctk.CTkFrame):
             self.on_device_selected(result)
         except Exception as e:
             self.status.configure(text=f"Connection failed: {str(e)}", text_color="red")
+            print(e)
 
     def connect_selected_device(self):
         selection = self.device_var.get()
@@ -161,7 +169,7 @@ class DeviceSelectionFrame(ctk.CTkFrame):
                 self.device_dropdown.set("No devices found")
                 self.connect_btn.configure(state="disabled")  # Disable connect button
                 self.status.configure(
-                    text="No devices found\nMake sure your device is connected and USB debugging is enabled",
+                    text="No devices found\nMake sure your device is connected\nAnd USB debugging is enabled",
                     text_color="orange"
                 )
         except Exception as e:

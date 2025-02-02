@@ -56,7 +56,7 @@ class ControllerGUI(ctk.CTk):
         self.main_frame.pack(expand=True, fill="both")
         self.geometry("1200x800")  # Set size for main interface
         self.state("zoomed")  # Maximize window
-        self.resizable(True, True)  
+        self.resizable(True, True)
 
     def center_window(self):
         self.update_idletasks()
@@ -68,19 +68,29 @@ class ControllerGUI(ctk.CTk):
 
     def on_device_selected(self, device):
         # Show loading progress
-        self.device_frame.diable_connect_btns()
+        self.device_frame.disable_connect_btns()
         self.device_frame.show_loading()
 
         def set_controller():
-            self.controller = Controller()
-            
+            self.controller = None
+            try:
+                self.controller = Controller()
+            except IndexError:
+                pass
+
         thread = threading.Thread(target=set_controller, daemon=True)
         thread.start()
 
         # Wait for controller to be initialized
         while thread.is_alive():
             self.update()
-            
+
+        if self.controller is None:
+            self.device_frame.enable_connect_btns()
+            self.device_frame.hide_loading()
+            self.device_frame.status.configure(text="Failed to connect to device", text_color="red")
+            return
+
         # Hide loading progress
         self.device_frame.hide_loading()
 
