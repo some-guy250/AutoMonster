@@ -951,11 +951,11 @@ class Controller:
         self._goto_cavern()
         while self.in_screen(ASSETS.RightArrow) and num_dungeons > 0:
             for dungeon in dungeons_to_do:
-                if dungeon in dungeons_done or not self.in_screen(dungeon):
+                if dungeon in dungeons_done or not self.in_screen(dungeon, gray_img=True, threshold=.85):
                     continue
 
                 num_dungeons -= 1
-                if self.click(ASSETS.EnterCavern):
+                if self.click(ASSETS.EnterCavern, pause=2):
                     if dungeon in Ancestral_Cavers:
                         if self.wait_for(ASSETS.FlashRaid, timeout=2):
                             logger.info("Ancestral dungeon was already done")
@@ -968,11 +968,11 @@ class Controller:
                         sub_dungeons: int = 0
                         while True:
                             for _ in range(3):
-                                if self.wait_for(ASSETS.EnterEraSaga, timeout=2):
+                                if self.wait_for(ASSETS.EnterEraSaga, timeout=3):
                                     break
                                 self.client.control.swipe(self.scale_x(500), self.scale_y(200), self.scale_x(100),
                                                           self.scale_y(200))
-                                self.pause(.5)
+                                self.pause(1)
                             if not self.click(ASSETS.EnterEraSaga):
                                 self.click_back()
                                 if self.in_screen(ASSETS.EnterCavern):
@@ -997,7 +997,7 @@ class Controller:
                 else:
                     logger.info(f"Finished {dungeon.replace('.png', '')}, {num_dungeons} left")
                 dungeons_done.append(dungeon)
-            self.click(ASSETS.RightArrow, pause=2)
+            self.click(ASSETS.RightArrow, pause=5)
 
     def play_ads(self):
         played_ads = 0
