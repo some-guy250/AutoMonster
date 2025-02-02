@@ -355,16 +355,16 @@ def download_main_exe(progress_window=None):
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
     try:
-        # Use os.path.join for path construction
-        batch_path = os.path.join(current_dir, "replace.bat")
-        target_path = os.path.join(current_dir, "AutoMonster.exe")
+        # Ensure we use correct paths
+        batch_path = "replace.bat"  # Use relative path since it's in the same directory
+        target_path = "AutoMonster.exe"  # Use relative path
         
-        # Use subprocess instead of os.system for better control
+        # Use subprocess with simplified paths
         import subprocess
         process = subprocess.run([batch_path, temp_file, target_path], 
-                                 shell=True,
-                                 capture_output=True,
-                                 text=True)
+                               shell=True,
+                               capture_output=True,
+                               text=True)
         
         if process.returncode != 0:
             raise Exception(f"Failed to replace executable file: {process.stderr}")
