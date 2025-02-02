@@ -77,7 +77,11 @@ jobs:
             gh release list --limit 100 | ForEach-Object {
               $release = $_.Split("`t")[0]
               Write-Host "Deleting release: $release"
-              gh release delete $release --yes --cleanup-tag
+              # Added -if-present flag and error handling
+              gh release delete $release --yes --cleanup-tag -if-present
+              if ($LASTEXITCODE -ne 0) {
+                Write-Host "Release $release not found or already deleted"
+              }
             }
           } else {
             Write-Host "No releases found to delete"
@@ -88,8 +92,8 @@ jobs:
           git fetch --prune --unshallow
           git tag | ForEach-Object {
             Write-Host "Deleting tag: $_"
-            git push origin --delete $_ --force
-            git tag -d $_
+            git push origin --delete $_ --force 2>$null
+            git tag -d $_ 2>$null
           }
 
       - name: Reorganize files
