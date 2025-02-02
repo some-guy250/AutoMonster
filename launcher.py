@@ -237,7 +237,7 @@ def format_size(size):
 def download_assets(progress_window=None):
     if progress_window:
         progress_window.update_progress(0, "Preparing to download assets...", "Fetching file information...")
-        
+
     if os.path.exists("assets"):
         for fname in os.listdir("assets"):
             os.remove(f"assets/{fname}")
@@ -253,7 +253,7 @@ def download_assets(progress_window=None):
         # Calculate total size with progress updates
         if progress_window:
             progress_window.update_progress(0, "Preparing download...", "Calculating total size...")
-        
+
         total_size = 0
         for idx, item in enumerate(files_to_download):
             if progress_window:
@@ -354,7 +354,12 @@ def download_main_exe(progress_window=None):
                     last_update = current_percent
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    os.replace(temp_file, os.path.join(current_dir, "AutoMonster.exe"))
+    try:
+        os.replace(temp_file, os.path.join(current_dir, "AutoMonster.exe"))
+    except Exception as e:
+        import tkinter.messagebox as msg
+        msg.showerror("Error", f"Error replacing main executable: {e}")
+        raise e
 
 
 def launch_main(updated=False):
@@ -375,7 +380,7 @@ def update_process(progress_window, latest_version):
             save_version(latest_version)
         progress_window.update_progress(100, "Update completed!", "Starting AutoMonster...")
         time.sleep(1)
-        # Setup the launch before closing
+        # Set up the launch before closing
         launch_main(True)
         # Signal the main thread to close the window
         progress_window.close()
