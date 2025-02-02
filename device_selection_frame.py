@@ -167,7 +167,7 @@ class DeviceSelectionFrame(ctk.CTkFrame):
         except Exception as e:
             self.status.configure(text=f"Error: {str(e)}", text_color="red")
 
-    def show_loading(self, message="Opening game..."):
+    def show_loading(self, message="Opening game and connecting..."):
         """Show loading progress bar and message"""
         self.status.configure(text=message, text_color="white")
         self.progress_bar.grid()  # Show progress bar

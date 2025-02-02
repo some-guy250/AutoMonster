@@ -212,7 +212,7 @@ class ControllerGUI(ctk.CTk):
             text="Macros",
             command=self.open_macro_dialog
         )
-        self.macro_button.pack(pady=10)
+        # self.macro_button.pack(pady=10)
 
         # Parameter frame container with fixed height
         self.param_container = ctk.CTkFrame(self.command_inner_frame)
