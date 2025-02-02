@@ -160,4 +160,5 @@ cython_debug/
 .idea/
 sc/
 defaults.json
+macros.json
 debug.ban

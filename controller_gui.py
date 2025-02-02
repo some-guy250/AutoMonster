@@ -17,6 +17,7 @@ from command_frame import CommandFrame
 from device_selection_frame import DeviceSelectionFrame
 
 DEFAULTS_FILE = "defaults.json"
+MACROS_FILE = "macros.json"
 
 if os.path.isfile("version.txt"):
     with open("version.txt", "r") as file:
@@ -42,6 +43,8 @@ class ControllerGUI(ctk.CTk):
 
         # Show device selection first
         self.show_device_selection()
+
+        self.macros = self.load_macros()  # Add this line near the start of __init__
 
     def show_device_selection(self):
         self.main_frame.pack_forget()
@@ -202,6 +205,14 @@ class ControllerGUI(ctk.CTk):
             anchor="center"
         )
         self.command_dropdown.pack(fill="x", padx=5)
+
+        # Place the macro button under the dropdown
+        self.macro_button = ctk.CTkButton(
+            command_select_frame,
+            text="Macros",
+            command=self.open_macro_dialog
+        )
+        self.macro_button.pack(pady=10)
 
         # Parameter frame container with fixed height
         self.param_container = ctk.CTkFrame(self.command_inner_frame)
@@ -505,9 +516,11 @@ class ControllerGUI(ctk.CTk):
         # Toggle debug buttons visibility
         if self.debug_mode:
             self.screenshot_btn.pack(fill="x", expand=True, padx=2)
+            self.macro_button.pack(pady=10)
             self.append_log("Debug mode enabled", "debug")
         else:
             self.screenshot_btn.pack_forget()
+            self.macro_button.pack_forget()
             self.append_log("Debug mode disabled", "success")
 
     def update_info_panel(self, command_name):
@@ -532,6 +545,78 @@ class ControllerGUI(ctk.CTk):
 
         self.info_description.insert("1.0", text)
         self.info_description.configure(state="disabled")
+
+    def load_macros(self):
+        """Load macros from JSON file"""
+        if os.path.isfile(MACROS_FILE):
+            with open(MACROS_FILE, "r") as f:
+                return json.load(f)
+        return {}
+
+    def run_macro(self, name):
+        """Execute macro by name"""
+        if name in self.macros:
+            for step in self.macros[name]:
+                command = step["command"]
+                params = step["params"]
+                callback = self.get_command_callback(command)
+                if callback:
+                    try:
+                        self.append_log(f"Running macro step: {command}", "info")
+                        callback(**params)
+                    except Exception as e:
+                        self.append_log(f"Error in macro step {command}: {str(e)}", "error")
+                        break
+
+    def load_macros(self):
+        """Load macros from JSON file."""
+        if os.path.isfile(MACROS_FILE):
+            with open(MACROS_FILE, "r") as f:
+                self.macros = json.load(f)
+        else:
+            self.macros = {}
+
+    def save_macros(self):
+        """Persist macros to JSON file."""
+        with open(MACROS_FILE, "w") as f:
+            json.dump(self.macros, f, indent=4)
+
+    def create_macro(self, name):
+        """Create a new macro with no steps yet."""
+        self.macros[name] = []
+        self.save_macros()
+
+    def add_step_to_macro(self, macro_name, command, params):
+        """Append a step with command and parameters."""
+        if macro_name in self.macros:
+            self.macros[macro_name].append({"command": command, "params": params})
+            self.save_macros()
+
+    def delete_macro(self, name):
+        """Remove macro by name."""
+        if name in self.macros:
+            del self.macros[name]
+            self.save_macros()
+
+    def update_macro(self, name, new_steps):
+        """Replace macro steps."""
+        if name in self.macros:
+            self.macros[name] = new_steps
+            self.save_macros()
+
+    def run_macro(self, name):
+        """Execute each step by delegating to controller command callbacks."""
+        if name in self.macros:
+            for step in self.macros[name]:
+                command = step["command"]
+                params = step["params"]
+                callback = self.get_command_callback(command)
+                if callback:
+                    callback(**params)
+
+    def open_macro_dialog(self):
+        from macro_dialog import MacroDialog
+        MacroDialog(self, self.commands)
 
     def __del__(self):
         self.controller.client.remove_listener(scrcpy.EVENT_FRAME)

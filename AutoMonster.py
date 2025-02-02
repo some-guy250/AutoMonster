@@ -118,14 +118,6 @@ class Controller:
     def disable_show_taps(self):
         self.client.device.shell("settings put system show_touches 0")
 
-    def get_device_info(self):
-        # return cpu usage, memory usage and temperature
-        print(self.client.device.shell("dumpsys cpuinfo"))
-        print(self.client.device.shell("dumpsys meminfo"))
-        print(self.client.device.shell("dumpsys battery"))
-        return self.client.device.shell("dumpsys cpuinfo | grep TOTAL"), self.client.device.shell(
-            "dumpsys meminfo | grep TOTAL"), self.client.device.shell("dumpsys battery | grep temperature")
-
     def log_gui(self, msg, level="info"):
         if self.gui_logger is not None:
             self.gui_logger(msg, level)
@@ -1138,7 +1130,6 @@ class Controller:
 
 def main():
     controller = Controller()
-    print(controller.get_device_info())
 
 
 if __name__ == '__main__':

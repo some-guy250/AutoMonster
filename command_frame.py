@@ -7,13 +7,14 @@ DEFAULTS_FILE = "defaults.json"
 
 
 class CommandFrame(ctk.CTkFrame):
-    def __init__(self, master, command_name: str, params: Dict[str, Any], callback):
+    def __init__(self, master, command_name: str, params: Dict[str, Any], callback, mode="normal"):
         super().__init__(master)
 
         self.command_name = command_name
         self.params = params
         self.callback = callback
         self.param_widgets = {}
+        self.mode = mode
 
         # Configure frame to maintain size
         self.grid_propagate(False)
@@ -80,8 +81,8 @@ class CommandFrame(ctk.CTkFrame):
         button_container = ctk.CTkFrame(self.scroll_frame)
         button_container.pack(fill="x", padx=5, pady=(10, 5))
 
-        # If there are parameters, add the save defaults button first
-        if params:
+        # If there are parameters and we're in normal mode, add the save defaults button
+        if params and mode == "normal":
             save_button = ctk.CTkButton(
                 button_container,
                 text="Set Values as Defaults",
@@ -93,38 +94,50 @@ class CommandFrame(ctk.CTkFrame):
             )
             save_button.pack(fill="x", padx=5, pady=(0, 10))
 
-        # Container for run and cancel buttons
+        # Container for action buttons
         action_buttons = ctk.CTkFrame(button_container)
         action_buttons.pack(fill="x", padx=5)
         action_buttons.grid_columnconfigure(0, weight=1)
         action_buttons.grid_columnconfigure(1, weight=1)
 
-        # Run button
-        self.run_button = ctk.CTkButton(
-            action_buttons,
-            text="Run",
-            height=35,
-            font=("Arial", 13, "bold"),
-            command=master.winfo_toplevel().run_command
-        )
-        self.run_button.grid(row=0, column=0, padx=(0, 5), sticky="ew")
+        # Configure buttons based on mode
+        if mode == "normal":
+            # Run button
+            self.run_button = ctk.CTkButton(
+                action_buttons,
+                text="Run",
+                height=35,
+                font=("Arial", 13, "bold"),
+                command=master.winfo_toplevel().run_command
+            )
+            self.run_button.grid(row=0, column=0, padx=(0, 5), sticky="ew")
 
-        def cancel_button_func():
-            master.winfo_toplevel().controller.cancel_flag = True
-            self.cancel_button.configure(state="disabled")
+            def cancel_button_func():
+                master.winfo_toplevel().controller.cancel_flag = True
+                self.cancel_button.configure(state="disabled")
 
-        # Cancel button
-        self.cancel_button = ctk.CTkButton(
-            action_buttons,
-            text="Stop",
-            height=35,
-            font=("Arial", 13, "bold"),
-            fg_color="darkred",
-            hover_color="red",
-            command=cancel_button_func
-        )
-        self.cancel_button.grid(row=0, column=1, padx=(5, 0), sticky="ew")
-        self.cancel_button.configure(state="disabled")  # Disabled by default
+            # Cancel button
+            self.cancel_button = ctk.CTkButton(
+                action_buttons,
+                text="Stop",
+                height=35,
+                font=("Arial", 13, "bold"),
+                fg_color="darkred",
+                hover_color="red",
+                command=cancel_button_func
+            )
+            self.cancel_button.grid(row=0, column=1, padx=(5, 0), sticky="ew")
+            self.cancel_button.configure(state="disabled")  # Disabled by default
+        else:
+            # Add Step button for macro mode
+            self.add_button = ctk.CTkButton(
+                action_buttons,
+                text="Add Step",
+                height=35,
+                font=("Arial", 13, "bold"),
+                command=callback
+            )
+            self.add_button.grid(row=0, column=0, columnspan=2, sticky="ew")
 
     def save_params_as_defaults(self, command_name: str):
         current_params = {}
@@ -149,3 +162,18 @@ class CommandFrame(ctk.CTkFrame):
             f.write(json.dumps(data, indent=4))
         self.master.winfo_toplevel().append_log(f"Defaults saved for {command_name}", "success")
         self.master.winfo_toplevel().override_parameter_defaults()
+
+    def get_current_params(self):
+        """Get current parameter values"""
+        current_params = {}
+        for param_name, widget in self.param_widgets.items():
+            if isinstance(widget, ctk.CTkSlider):
+                value = int(widget.get())
+            elif isinstance(widget, ctk.CTkCheckBox):
+                value = widget.get()
+            elif isinstance(widget, ctk.CTkOptionMenu):
+                value = widget.get()
+            elif isinstance(widget, list):  # Multiple choice checkboxes
+                value = [choice for choice, var in widget if var.get()]
+            current_params[param_name] = value
+        return current_params

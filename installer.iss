@@ -57,4 +57,5 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChang
 Type: filesandordirs; Name: "{app}\assets"
 Type: filesandordirs; Name: "{app}\version.txt"
 Type: filesandordirs; Name: "{app}\defaults.json"
+Type: filesandordirs; Name: "{app}\macros.json"
 Type: filesandordirs; Name: "{app}"
