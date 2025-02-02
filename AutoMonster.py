@@ -561,7 +561,6 @@ class Controller:
     def do_node(self, *, has_wheel: bool, has_cutscene: bool, change_team: bool = False) -> Optional[bool]:
         result = True
         skip_part = False
-        # timeout = 5
         timeout = 12
 
         if has_cutscene:
@@ -569,7 +568,8 @@ class Controller:
                 while True:
                     if not self.follow_sequence(ASSETS.PlayCutscene, ASSETS.Skip,
                                                 (ASSETS.StartBattle, ASSETS.PlayCutscene, ASSETS.EraSagaDone,
-                                                 ASSETS.EnterEraSaga, ASSETS.StartBattleRankUp), timeout=timeout):
+                                                 ASSETS.EnterEraSaga, ASSETS.StartBattleRankUp)):
+                        self.wait_for(ASSETS.StartBattleRankUp, ASSETS.StartBattle, timeout=10)
                         if self.in_screen(ASSETS.EraSagaDone, ASSETS.EnterEraSaga):
                             logger.debug("Saved by the bell")
                             return True
