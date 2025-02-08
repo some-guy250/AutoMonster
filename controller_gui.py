@@ -202,7 +202,7 @@ class ControllerGUI(ctk.CTk):
         # Macro button frame
         macro_frame = ctk.CTkFrame(self.command_inner_frame)
         macro_frame.pack(fill="x", padx=10, pady=(0, 10))
-        
+
         # Add label for macros
         macro_label = ctk.CTkLabel(
             macro_frame,
@@ -503,7 +503,7 @@ class ControllerGUI(ctk.CTk):
         command_name = self.command_var.get()
         self.append_log(f"Running {command_name} with parameters: {params}", "debug")
 
-        #self.param_frame.run_button.configure(state="disabled")
+        # self.param_frame.run_button.configure(state="disabled")
         self.param_frame.pause_button.configure(state="normal")
         threading.Thread(target=self._run_thread, args=(params,), daemon=True).start()
 
@@ -574,6 +574,10 @@ class ControllerGUI(ctk.CTk):
                 max_rooms=kwargs.pop("max_rooms", 3),
                 change_team=kwargs.pop("change_team", True)
             )
+        elif command_name == "Close Game":
+            return self.controller.close_game
+        else:
+            raise ValueError(f"Unknown command: {command_name}")
 
     def update_image(self, frame):
         resized_frame = cv2.resize(frame, self.img_size)
@@ -634,7 +638,10 @@ class ControllerGUI(ctk.CTk):
         """Load macros from JSON file."""
         if os.path.isfile(MACROS_FILE):
             with open(MACROS_FILE, "r") as f:
-                return json.load(f)
+                data = json.load(f)
+                self.macro_options = data.get("options", {})
+                return data["macros"]
+        self.macro_options = {}
         return {}
 
     def run_macro(self, name):
@@ -644,10 +651,10 @@ class ControllerGUI(ctk.CTk):
     def open_macro_dialog(self):
         """Open the macro dialog and update the macro list when closed"""
         dialog = MacroDialog(self, self.commands)
-        
+
         # Wait for dialog to close
         self.wait_window(dialog)
-        
+
         # Update macros
         self.macros = self.load_macros()
         self.update_macro_list()
@@ -686,15 +693,25 @@ class ControllerGUI(ctk.CTk):
             self.command_dropdown.configure(state="disabled")
             if self.param_frame:
                 self.param_frame.run_button.configure(state="disabled")
-            
+
             # Start macro thread
             threading.Thread(target=self._run_macro_thread, args=(macro_name,), daemon=True).start()
 
     def _run_macro_thread(self, name):
         """Execute macro steps in a separate thread"""
         try:
+            # Handle pre-macro options
+            lowered_brightness = False
+            if self.macro_options.get("lower_brightness", False):
+                lowered_brightness = True
+                self.append_log("Lowering brightness before macro execution", "info")
+                self.controller.lower_brightness()
+
+            forced_finish = False
+
             for step in self.macros[name]:
                 if self.stop_macro:
+                    forced_finish = True
                     self.append_log("Macro execution stopped by user", "warning")
                     break
 
@@ -711,6 +728,16 @@ class ControllerGUI(ctk.CTk):
                     except Exception as e:
                         self.append_log(f"Error in macro step {command}: {str(e)}", "error")
                         break
+
+            # Handle post-macro options
+            if not forced_finish and self.macro_options.get("lock_device", False):
+                self.append_log("Locking device after macro completion", "info")
+                self.controller.lock_device()
+
+            if lowered_brightness:
+                self.controller.set_auto_brightness()
+                self.append_log("Reset device brightness to auto mode", "info")
+
         finally:
             # Reset UI state
             self.macro_running = False

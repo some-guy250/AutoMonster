@@ -256,6 +256,7 @@ GUI_COMMANDS = {
         "reduce_box_time": {"type": "bool", "default": True} 
     },
     "Era Saga": {},
+    "Close Game": {}
 }
 
 GUI_COMMAND_DESCRIPTIONS = {
@@ -303,5 +304,10 @@ GUI_COMMAND_DESCRIPTIONS = {
             "max_rooms": "Maximum number of rooms to explore",
             "change_team": "Enable team switching to use selected monsters"
         }
+    },
+    "Close Game": {
+        "title": "Close Game",
+        "description": "Closes the game gracefully.",
+        "parameters": {}
     }
 }

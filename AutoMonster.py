@@ -102,6 +102,9 @@ class Controller:
     def unfreeze(self):
         self._paused = False
 
+    def lock_device(self):
+        self.client.device.shell("input keyevent 26")
+
     def get_orientation(self):
         if self.client.device.shell(r"dumpsys input | grep SurfaceOrientation").strip() in ["SurfaceOrientation: 1",
                                                                                             "SurfaceOrientation: 3"]:

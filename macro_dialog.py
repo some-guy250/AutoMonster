@@ -11,6 +11,12 @@ class MacroDialog(ctk.CTkToplevel):
         self.title("Macro Manager")
         self.parent = parent
         self.commands = commands
+        
+        # Initialize variables for options before loading macros
+        self.lower_brightness = ctk.BooleanVar(value=False)
+        self.lock_device = ctk.BooleanVar(value=False)
+        
+        # Now load macros which will set the option values
         self.macros = self.load_macros()
         self.param_widgets = {}  # Initialize param_widgets dictionary
         
@@ -185,6 +191,25 @@ class MacroDialog(ctk.CTkToplevel):
             text="Save & Close",
             command=self.save_and_close
         ).pack(side="right", padx=5)
+
+        # Add macro options frame
+        options_frame = ctk.CTkFrame(bottom_frame)
+        options_frame.pack(fill="x", padx=5, pady=(0, 5))
+
+        # Add options toggles
+        brightness_toggle = ctk.CTkCheckBox(
+            options_frame,
+            text="Lower Brightness",
+            variable=self.lower_brightness
+        )
+        brightness_toggle.pack(side="left", padx=5)
+
+        lock_toggle = ctk.CTkCheckBox(
+            options_frame,
+            text="Lock Device After",
+            variable=self.lock_device
+        )
+        lock_toggle.pack(side="left", padx=5)
 
         # Create the initial command frame
         self.update_command_frame(next(iter(self.commands)))
@@ -408,14 +433,28 @@ class MacroDialog(ctk.CTkToplevel):
             self.on_macro_selected(name)  # Refresh steps display
 
     def save_and_close(self):
+        """Save macros and options to file"""
+        macro_data = {
+            "macros": self.macros,
+            "options": {
+                "lower_brightness": self.lower_brightness.get(),
+                "lock_device": self.lock_device.get()
+            }
+        }
         with open(DEFAULT_MACROS_FILE, "w") as f:
-            json.dump(self.macros, f, indent=4)
-        self.destroy()  # Only destroy the dialog window, don't quit the application
+            json.dump(macro_data, f, indent=4)
+        self.destroy()
 
     def load_macros(self):
+        """Load macros and options from file"""
         if os.path.isfile(DEFAULT_MACROS_FILE):
             with open(DEFAULT_MACROS_FILE, "r") as f:
-                return json.load(f)
+                data = json.load(f)
+                # Load options if present
+                options = data.get("options", {})
+                self.lower_brightness.set(options.get("lower_brightness", False))
+                self.lock_device.set(options.get("lock_device", False))
+                return data["macros"]
         return {}
 
     def save_macros(self):
