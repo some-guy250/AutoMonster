@@ -137,6 +137,7 @@ class ASSETS:
     Selected2 = "selected2.png"
     Selected3 = "selected3.png"
     ActivityHub = "acthub.png"
+    ClaimDaily = "claimdaily.png"
 
 
 IN_GAME_ASSETS = (

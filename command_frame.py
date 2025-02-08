@@ -15,6 +15,7 @@ class CommandFrame(ctk.CTkFrame):
         self.callback = callback
         self.param_widgets = {}
         self.mode = mode
+        self.is_paused = False
 
         # Configure frame to maintain size
         self.grid_propagate(False)
@@ -99,35 +100,31 @@ class CommandFrame(ctk.CTkFrame):
         action_buttons.pack(fill="x", padx=5)
         action_buttons.grid_columnconfigure(0, weight=1)
         action_buttons.grid_columnconfigure(1, weight=1)
+        action_buttons.grid_columnconfigure(2, weight=1)
 
         # Configure buttons based on mode
         if mode == "normal":
-            # Run button
+            # Run/Cancel toggle button
+            self.is_running = False
             self.run_button = ctk.CTkButton(
                 action_buttons,
-                text="Run",
+                text="▶ Run",
                 height=35,
                 font=("Arial", 13, "bold"),
-                command=master.winfo_toplevel().run_command
+                command=self.toggle_execution
             )
             self.run_button.grid(row=0, column=0, padx=(0, 5), sticky="ew")
 
-            def cancel_button_func():
-                master.winfo_toplevel().controller.cancel_flag = True
-                self.cancel_button.configure(state="disabled")
-
-            # Cancel button
-            self.cancel_button = ctk.CTkButton(
+            # Pause button
+            self.pause_button = ctk.CTkButton(
                 action_buttons,
-                text="Stop",
+                text="Pause",
                 height=35,
                 font=("Arial", 13, "bold"),
-                fg_color="darkred",
-                hover_color="red",
-                command=cancel_button_func
+                command=self.on_pause,
+                state="disabled"
             )
-            self.cancel_button.grid(row=0, column=1, padx=(5, 0), sticky="ew")
-            self.cancel_button.configure(state="disabled")  # Disabled by default
+            self.pause_button.grid(row=0, column=1, padx=5, sticky="ew")
         else:
             # Add Step button for macro mode
             self.add_button = ctk.CTkButton(
@@ -137,7 +134,34 @@ class CommandFrame(ctk.CTkFrame):
                 font=("Arial", 13, "bold"),
                 command=callback
             )
-            self.add_button.grid(row=0, column=0, columnspan=2, sticky="ew")
+            self.add_button.grid(row=0, column=0, columnspan=3, sticky="ew")
+
+    def toggle_execution(self):
+        """Toggle between running and stopping the command"""
+        if not self.is_running:
+            # Start execution
+            self.is_running = True
+            self.run_button.configure(text="⬛ Stop", fg_color="red")
+            self.pause_button.configure(state="normal")
+            self.master.winfo_toplevel().run_command()
+        else:
+            # Stop execution
+            self.is_running = False
+            self.run_button.configure(text="▶ Run", fg_color=["#3B8ED0", "#1F6AA5"])
+            self.pause_button.configure(state="disabled")
+            self.master.winfo_toplevel().stop_command()
+            # Force unpause if paused
+            if self.is_paused:
+                self.on_pause()
+
+    def on_pause(self):
+        if self.is_paused:
+            self.master.winfo_toplevel().controller.unfreeze()
+            self.pause_button.configure(text="Pause")
+        else:
+            self.master.winfo_toplevel().controller.freeze()
+            self.pause_button.configure(text="Resume")
+        self.is_paused = not self.is_paused
 
     def save_params_as_defaults(self, command_name: str):
         current_params = {}

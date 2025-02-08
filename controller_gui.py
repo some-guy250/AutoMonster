@@ -15,6 +15,7 @@ from AutoMonster import Controller
 from Constants import GUI_COMMANDS, GUI_COMMAND_DESCRIPTIONS
 from command_frame import CommandFrame
 from device_selection_frame import DeviceSelectionFrame
+from macro_dialog import MacroDialog
 
 DEFAULTS_FILE = "defaults.json"
 MACROS_FILE = "macros.json"
@@ -37,14 +38,22 @@ class ControllerGUI(ctk.CTk):
         # stop resizing
         self.resizable(False, False)
 
+        # Initialize macros before creating frames
+        self.macros = self.load_macros()
+
+        # Add macro execution state
+        self.macro_running = False
+        self.stop_macro = False
+
+        # Add command running state
+        self.command_running = False
+
         # Initialize frames
         self.device_frame = DeviceSelectionFrame(self, self.on_device_selected)
         self.main_frame = ctk.CTkFrame(self)  # Will contain all the main UI elements
 
         # Show device selection first
         self.show_device_selection()
-
-        self.macros = self.load_macros()  # Add this line near the start of __init__
 
     def show_device_selection(self):
         self.main_frame.pack_forget()
@@ -183,12 +192,69 @@ class ControllerGUI(ctk.CTk):
         header_frame.pack(fill="x", padx=5, pady=5)
 
         # Title
-        title = ctk.CTkLabel(header_frame, text="Commands", font=self.fonts["header"])
+        title = ctk.CTkLabel(header_frame, text="Actions", font=self.fonts["header"])
         title.pack(side="left", padx=10, pady=5)
 
         # Add separator
         separator = ctk.CTkFrame(self.command_inner_frame, height=2)
         separator.pack(fill="x", padx=10, pady=(0, 10))
+
+        # Macro button frame
+        macro_frame = ctk.CTkFrame(self.command_inner_frame)
+        macro_frame.pack(fill="x", padx=10, pady=(0, 10))
+        
+        # Add label for macros
+        macro_label = ctk.CTkLabel(
+            macro_frame,
+            text="Select Macro:",
+            font=self.fonts["normal"]
+        )
+        macro_label.pack(side="top", anchor="w", padx=5, pady=(0, 5))
+
+        # Create a horizontal frame for macro controls
+        macro_controls = ctk.CTkFrame(macro_frame)
+        macro_controls.pack(fill="x", padx=5, pady=(0, 5))
+
+        # Add macro dropdown and edit button in horizontal layout
+        dropdown_container = ctk.CTkFrame(macro_controls)
+        dropdown_container.pack(fill="x", pady=(0, 5))
+
+        # Add macro dropdown
+        self.macro_names = ["No macros"] if not self.macros else list(self.macros.keys())
+        self.selected_macro = ctk.StringVar(value=self.macro_names[0])
+        self.macro_dropdown = ctk.CTkOptionMenu(
+            dropdown_container,
+            values=self.macro_names,
+            variable=self.selected_macro,
+            width=200,  # Adjusted to make room for edit button
+            height=32,
+            font=self.fonts["normal"]
+        )
+        self.macro_dropdown.pack(side="left", padx=(5, 5))
+
+        # Add edit button with pencil symbol
+        self.edit_macro_btn = ctk.CTkButton(
+            dropdown_container,
+            text="✎",  # Pencil symbol
+            width=32,
+            height=32,
+            command=self.open_macro_dialog,
+            font=self.fonts["normal"]
+        )
+        self.edit_macro_btn.pack(side="left")
+
+        # Add run button below
+        self.run_macro_btn = ctk.CTkButton(
+            macro_controls,
+            text="▶ Run Macro",
+            height=32,
+            command=self.toggle_macro,
+            font=self.fonts["normal"]
+        )
+        self.run_macro_btn.pack(fill="x", padx=5)
+
+        # Update button states
+        self.update_macro_buttons()
 
         # Command selection container
         command_select_frame = ctk.CTkFrame(self.command_inner_frame)
@@ -215,14 +281,6 @@ class ControllerGUI(ctk.CTk):
             anchor="center"
         )
         self.command_dropdown.pack(fill="x", padx=5)
-
-        # Place the macro button under the dropdown
-        self.macro_button = ctk.CTkButton(
-            command_select_frame,
-            text="Macros",
-            command=self.open_macro_dialog
-        )
-        # self.macro_button.pack(pady=10)
 
         # Parameter frame container with fixed height
         self.param_container = ctk.CTkFrame(self.command_inner_frame)
@@ -393,8 +451,11 @@ class ControllerGUI(ctk.CTk):
             self.log_text.see("end")
 
     def _run_thread(self, params):
-        # disable the dropdown
+        self.command_running = True
         self.command_dropdown.configure(state="disabled")
+        self.run_macro_btn.configure(state="disabled")  # Disable macro controls
+        self.macro_dropdown.configure(state="disabled")
+        self.edit_macro_btn.configure(state="disabled")
 
         command_name = self.command_var.get()
         try:
@@ -408,10 +469,48 @@ class ControllerGUI(ctk.CTk):
             logging.error(error_msg)
         except AutoMonsterErrors.ExecutionFlag:
             self.append_log(f"Execution of {command_name} stopped", "warning")
+        finally:
+            # Reset UI state
+            self.command_running = False
+            self.param_frame.is_running = False
+            self.param_frame.run_button.configure(text="▶ Run", fg_color=["#3B8ED0", "#1F6AA5"])
+            self.param_frame.pause_button.configure(state="disabled")
+            self.param_frame.is_paused = False
+            self.param_frame.pause_button.configure(text="Pause")
+            self.command_dropdown.configure(state="normal")
+            # Re-enable macro controls if no macro is running
+            if not self.macro_running:
+                self.update_macro_buttons()
+                self.macro_dropdown.configure(state="normal")
+                self.edit_macro_btn.configure(state="normal")
 
-        self.param_frame.run_button.configure(state="normal")
-        self.param_frame.cancel_button.configure(state="disabled")
-        self.command_dropdown.configure(state="normal")
+    def run_command(self):
+        if not self.param_frame:
+            return
+
+        params = {}
+        for param_name, widget in self.param_frame.param_widgets.items():
+            if isinstance(widget, ctk.CTkSlider):
+                params[param_name] = int(widget.get())
+            elif isinstance(widget, ctk.CTkCheckBox):
+                params[param_name] = widget.get()
+            elif isinstance(widget, ctk.CTkOptionMenu):
+                params[param_name] = widget.get()
+            elif isinstance(widget, list):  # Multiple choice checkboxes
+                selected = [choice for choice, var in widget if var.get()]
+                params[param_name] = selected
+
+        command_name = self.command_var.get()
+        self.append_log(f"Running {command_name} with parameters: {params}", "debug")
+
+        #self.param_frame.run_button.configure(state="disabled")
+        self.param_frame.pause_button.configure(state="normal")
+        threading.Thread(target=self._run_thread, args=(params,), daemon=True).start()
+
+    def stop_command(self):
+        """Stop the current command execution"""
+        self.controller.cancel_flag = True
+        self.append_log("Stopping command...", "warning")
 
     def toggle_panel(self):
         if self.panel_visible:
@@ -476,29 +575,6 @@ class ControllerGUI(ctk.CTk):
                 change_team=kwargs.pop("change_team", True)
             )
 
-    def run_command(self):
-        if not self.param_frame:
-            return
-
-        params = {}
-        for param_name, widget in self.param_frame.param_widgets.items():
-            if isinstance(widget, ctk.CTkSlider):
-                params[param_name] = int(widget.get())
-            elif isinstance(widget, ctk.CTkCheckBox):
-                params[param_name] = widget.get()
-            elif isinstance(widget, ctk.CTkOptionMenu):
-                params[param_name] = widget.get()
-            elif isinstance(widget, list):  # Multiple choice checkboxes
-                selected = [choice for choice, var in widget if var.get()]
-                params[param_name] = selected
-
-        command_name = self.command_var.get()
-        self.append_log(f"Running {command_name} with parameters: {params}", "debug")
-
-        self.param_frame.run_button.configure(state="disabled")
-        self.param_frame.cancel_button.configure(state="normal")
-        threading.Thread(target=self._run_thread, args=(params,), daemon=True).start()
-
     def update_image(self, frame):
         resized_frame = cv2.resize(frame, self.img_size)
         image = Image.fromarray(cv2.cvtColor(resized_frame, cv2.COLOR_BGR2RGB))
@@ -526,11 +602,9 @@ class ControllerGUI(ctk.CTk):
         # Toggle debug buttons visibility
         if self.debug_mode:
             self.screenshot_btn.pack(fill="x", expand=True, padx=2)
-            self.macro_button.pack(pady=10)
             self.append_log("Debug mode enabled", "debug")
         else:
             self.screenshot_btn.pack_forget()
-            self.macro_button.pack_forget()
             self.append_log("Debug mode disabled", "success")
 
     def update_info_panel(self, command_name):
@@ -557,16 +631,73 @@ class ControllerGUI(ctk.CTk):
         self.info_description.configure(state="disabled")
 
     def load_macros(self):
-        """Load macros from JSON file"""
+        """Load macros from JSON file."""
         if os.path.isfile(MACROS_FILE):
             with open(MACROS_FILE, "r") as f:
                 return json.load(f)
         return {}
 
     def run_macro(self, name):
-        """Execute macro by name"""
-        if name in self.macros:
+        """Legacy method - use start_macro instead"""
+        self.start_macro()
+
+    def open_macro_dialog(self):
+        """Open the macro dialog and update the macro list when closed"""
+        dialog = MacroDialog(self, self.commands)
+        
+        # Wait for dialog to close
+        self.wait_window(dialog)
+        
+        # Update macros
+        self.macros = self.load_macros()
+        self.update_macro_list()
+
+    def update_macro_list(self):
+        """Update the macro dropdown with current macros"""
+        self.macros = self.load_macros()
+        self.macro_names = list(self.macros.keys()) if self.macros else ["No macros"]
+        self.macro_dropdown.configure(values=self.macro_names)
+        self.selected_macro.set(self.macro_names[0])
+        self.update_macro_buttons()
+
+    def update_macro_buttons(self):
+        """Enable/disable macro buttons based on macro existence"""
+        state = "normal" if self.macro_names != ["No macros"] else "disabled"
+        self.run_macro_btn.configure(state=state)
+
+    def toggle_macro(self):
+        """Toggle between running and stopping the macro"""
+        if not self.macro_running:
+            self.start_macro()
+        else:
+            self.stop_macro = True
+            self.controller.cancel_flag = True
+
+    def start_macro(self):
+        """Start running the selected macro in a thread"""
+        macro_name = self.selected_macro.get()
+        if macro_name and macro_name != "No macros":
+            self.macro_running = True
+            self.stop_macro = False
+            self.run_macro_btn.configure(text="⬛ Stop Macro", fg_color="red")
+            self.macro_dropdown.configure(state="disabled")
+            self.edit_macro_btn.configure(state="disabled")
+            # Disable command controls
+            self.command_dropdown.configure(state="disabled")
+            if self.param_frame:
+                self.param_frame.run_button.configure(state="disabled")
+            
+            # Start macro thread
+            threading.Thread(target=self._run_macro_thread, args=(macro_name,), daemon=True).start()
+
+    def _run_macro_thread(self, name):
+        """Execute macro steps in a separate thread"""
+        try:
             for step in self.macros[name]:
+                if self.stop_macro:
+                    self.append_log("Macro execution stopped by user", "warning")
+                    break
+
                 command = step["command"]
                 params = step["params"]
                 callback = self.get_command_callback(command)
@@ -574,59 +705,32 @@ class ControllerGUI(ctk.CTk):
                     try:
                         self.append_log(f"Running macro step: {command}", "info")
                         callback(**params)
+                    except AutoMonsterErrors.ExecutionFlag:
+                        self.append_log(f"Macro step {command} stopped", "warning")
+                        break
                     except Exception as e:
                         self.append_log(f"Error in macro step {command}: {str(e)}", "error")
                         break
+        finally:
+            # Reset UI state
+            self.macro_running = False
+            self.stop_macro = False
+            self.run_macro_btn.configure(text="▶ Run Macro", fg_color=["#3B8ED0", "#1F6AA5"])
+            self.macro_dropdown.configure(state="normal")
+            self.edit_macro_btn.configure(state="normal")
+            # Re-enable command controls if no command is running
+            if not self.command_running:
+                self.command_dropdown.configure(state="normal")
+                if self.param_frame:
+                    self.param_frame.run_button.configure(state="normal")
 
-    def load_macros(self):
-        """Load macros from JSON file."""
-        if os.path.isfile(MACROS_FILE):
-            with open(MACROS_FILE, "r") as f:
-                self.macros = json.load(f)
-        else:
-            self.macros = {}
-
-    def save_macros(self):
-        """Persist macros to JSON file."""
-        with open(MACROS_FILE, "w") as f:
-            json.dump(self.macros, f, indent=4)
-
-    def create_macro(self, name):
-        """Create a new macro with no steps yet."""
-        self.macros[name] = []
-        self.save_macros()
-
-    def add_step_to_macro(self, macro_name, command, params):
-        """Append a step with command and parameters."""
-        if macro_name in self.macros:
-            self.macros[macro_name].append({"command": command, "params": params})
-            self.save_macros()
-
-    def delete_macro(self, name):
-        """Remove macro by name."""
-        if name in self.macros:
-            del self.macros[name]
-            self.save_macros()
-
-    def update_macro(self, name, new_steps):
-        """Replace macro steps."""
-        if name in self.macros:
-            self.macros[name] = new_steps
-            self.save_macros()
-
-    def run_macro(self, name):
-        """Execute each step by delegating to controller command callbacks."""
-        if name in self.macros:
-            for step in self.macros[name]:
-                command = step["command"]
-                params = step["params"]
-                callback = self.get_command_callback(command)
-                if callback:
-                    callback(**params)
-
-    def open_macro_dialog(self):
-        from macro_dialog import MacroDialog
-        MacroDialog(self, self.commands)
+    def run_selected_macro(self):
+        """Run the currently selected macro"""
+        macro_name = self.selected_macro.get()
+        if macro_name and macro_name != "No macros":
+            self.run_macro(macro_name)
 
     def __del__(self):
-        self.controller.client.remove_listener(scrcpy.EVENT_FRAME)
+        if hasattr(self, "controller"):
+            self.controller.client.remove_listener(scrcpy.EVENT_FRAME)
+            self.controller.client.stop()

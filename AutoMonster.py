@@ -51,6 +51,7 @@ class Controller:
         self.gui_logger = None
         self.cancel_flag = False
         self.pause = time.sleep
+        self._paused = False
         self.__last_screenshot: Optional[np.ndarray] = None
         # connect to the device
         self.template_dict = {}
@@ -95,6 +96,12 @@ class Controller:
             self.save_screen(take_new=True)
         self.open_game(force_close=False)
 
+    def freeze(self):
+        self._paused = True
+
+    def unfreeze(self):
+        self._paused = False
+
     def get_orientation(self):
         if self.client.device.shell(r"dumpsys input | grep SurfaceOrientation").strip() in ["SurfaceOrientation: 1",
                                                                                             "SurfaceOrientation: 3"]:
@@ -127,6 +134,13 @@ class Controller:
             self.cancel_flag = False
             logger.info("Cancelled current operation")
             raise AutoMonsterErrors.ExecutionFlag
+
+        while self._paused:
+            self.pause(5)
+            if self.cancel_flag:
+                self.cancel_flag = False
+                logger.info("Cancelled current operation")
+                raise AutoMonsterErrors.ExecutionFlag
 
         self.__last_screenshot = self.client.last_frame
         if self.resized:
@@ -757,6 +771,9 @@ class Controller:
         while not self.in_screen(ASSETS.QuitGame):
             if self.in_screen(ASSETS.HavingFun):
                 self.click(ASSETS.No)
+                self.click_back()
+            if self.in_screen(ASSETS.ClaimDaily):
+                self.click(ASSETS.ClaimDaily)
                 self.click_back()
             self.click(ASSETS.Cancel, ASSETS.CancelSmall, ASSETS.Exit, screenshot=self.__last_screenshot)
             self.click_back()
