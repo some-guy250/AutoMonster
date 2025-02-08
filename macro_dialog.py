@@ -196,20 +196,77 @@ class MacroDialog(ctk.CTkToplevel):
         options_frame = ctk.CTkFrame(bottom_frame)
         options_frame.pack(fill="x", padx=5, pady=(0, 5))
 
-        # Add options toggles
+        # Add options toggles with tooltips
         brightness_toggle = ctk.CTkCheckBox(
             options_frame,
-            text="Lower Brightness",
+            text="Lower Brightness During Macro",
             variable=self.lower_brightness
         )
         brightness_toggle.pack(side="left", padx=5)
+        
+        # Create tooltip label for brightness
+        brightness_tooltip = ctk.CTkLabel(
+            options_frame,
+            text="ⓘ",
+            font=("Arial", 12),
+            text_color="gray70"
+        )
+        brightness_tooltip.pack(side="left")
+        
+        def show_brightness_tooltip(e):
+            tooltip = ctk.CTkToplevel(self)
+            tooltip.geometry(f"+{e.x_root+10}+{e.y_root+10}")
+            tooltip.wm_overrideredirect(True)
+            tooltip.attributes('-topmost', True)
+            ctk.CTkLabel(
+                tooltip,
+                text="Reduces screen brightness while the macro is running\n"
+                     "to minimize battery consumption and heat generation.",
+                justify="left",
+                wraplength=200
+            ).pack(padx=5, pady=5)
+            return tooltip
+            
+        def hide_tooltip(tooltip, e):
+            if tooltip:
+                tooltip.destroy()
+                
+        current_tooltip = None
+        brightness_tooltip.bind("<Enter>", lambda e: setattr(self, 'current_tooltip', show_brightness_tooltip(e)))
+        brightness_tooltip.bind("<Leave>", lambda e: hide_tooltip(self.current_tooltip, e))
 
         lock_toggle = ctk.CTkCheckBox(
             options_frame,
-            text="Lock Device After",
+            text="Lock Device After Completion",
             variable=self.lock_device
         )
-        lock_toggle.pack(side="left", padx=5)
+        lock_toggle.pack(side="left", padx=(20, 5))
+        
+        # Create tooltip label for lock
+        lock_tooltip = ctk.CTkLabel(
+            options_frame,
+            text="ⓘ",
+            font=("Arial", 12),
+            text_color="gray70"
+        )
+        lock_tooltip.pack(side="left")
+        
+        def show_lock_tooltip(e):
+            tooltip = ctk.CTkToplevel(self)
+            tooltip.geometry(f"+{e.x_root+10}+{e.y_root+10}")
+            tooltip.wm_overrideredirect(True)
+            tooltip.attributes('-topmost', True)
+            ctk.CTkLabel(
+                tooltip,
+                text="Automatically locks your device once the macro\n"
+                     "has finished executing all its steps.",
+                justify="left",
+                wraplength=200
+            ).pack(padx=5, pady=5)
+            return tooltip
+            
+        lock_tooltip.bind("<Enter>", lambda e: setattr(self, 'current_tooltip', show_lock_tooltip(e)))
+        lock_tooltip.bind("<Leave>", lambda e: hide_tooltip(self.current_tooltip, e))
 
         # Create the initial command frame
         self.update_command_frame(next(iter(self.commands)))
@@ -395,15 +452,61 @@ class MacroDialog(ctk.CTkToplevel):
     def delete_macro(self):
         name = self.selected_macro.get()
         if name and name in self.macros:
-            del self.macros[name]
-            self.macro_names.remove(name)
-            if not self.macro_names:
-                self.macro_names = ["No macros"]
-                self.delete_btn.configure(state="disabled")
-            self.macro_dropdown.configure(values=self.macro_names)
-            self.selected_macro.set(self.macro_names[0])
-            self.update_button_states()
-            self.on_macro_selected(self.selected_macro.get())
+            # Create confirmation dialog
+            confirm_dialog = ctk.CTkToplevel(self)
+            confirm_dialog.title("Confirm Delete")
+            confirm_dialog.geometry("300x150")
+            confirm_dialog.transient(self)  # Set parent-child relationship
+            confirm_dialog.grab_set()  # Make window modal
+            
+            # Center the confirmation dialog
+            self.update_idletasks()
+            x = self.winfo_x() + (self.winfo_width() - 300) // 2
+            y = self.winfo_y() + (self.winfo_height() - 150) // 2
+            confirm_dialog.geometry(f"+{x}+{y}")
+            
+            # Add message
+            message = ctk.CTkLabel(
+                confirm_dialog, 
+                text=f"Are you sure you want to delete\nthe macro '{name}'?",
+                font=("Arial", 12)
+            )
+            message.pack(pady=20)
+            
+            # Buttons frame
+            button_frame = ctk.CTkFrame(confirm_dialog)
+            button_frame.pack(pady=10)
+            
+            def confirm():
+                # Delete the macro
+                del self.macros[name]
+                self.macro_names.remove(name)
+                if not self.macro_names:
+                    self.macro_names = ["No macros"]
+                    self.delete_btn.configure(state="disabled")
+                self.macro_dropdown.configure(values=self.macro_names)
+                self.selected_macro.set(self.macro_names[0])
+                self.update_button_states()
+                self.on_macro_selected(self.selected_macro.get())
+                confirm_dialog.destroy()
+            
+            def cancel():
+                confirm_dialog.destroy()
+            
+            # Add buttons
+            ctk.CTkButton(
+                button_frame, 
+                text="Yes", 
+                command=confirm,
+                width=100
+            ).pack(side="left", padx=10)
+            
+            ctk.CTkButton(
+                button_frame, 
+                text="No", 
+                command=cancel,
+                width=100
+            ).pack(side="left", padx=10)
 
     def on_command_changed(self, command_name):
         self.update_command_frame(command_name)
