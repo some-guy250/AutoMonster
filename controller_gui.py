@@ -707,11 +707,8 @@ class ControllerGUI(ctk.CTk):
                 self.append_log("Lowering brightness before macro execution", "info")
                 self.controller.lower_brightness()
 
-            forced_finish = False
-
             for step in self.macros[name]:
                 if self.stop_macro:
-                    forced_finish = True
                     self.append_log("Macro execution stopped by user", "warning")
                     break
 
@@ -729,8 +726,7 @@ class ControllerGUI(ctk.CTk):
                         self.append_log(f"Error in macro step {command}: {str(e)}", "error")
                         break
 
-            # Handle post-macro options
-            if not forced_finish and self.macro_options.get("lock_device", False):
+            if not self.stop_macro and self.macro_options.get("lock_device", False):
                 self.append_log("Locking device after macro completion", "info")
                 self.controller.lock_device()
 
