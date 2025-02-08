@@ -115,6 +115,8 @@ class ControllerGUI(ctk.CTk):
             "normal": ("Arial", 12),
             "button": ("Arial", 13, "bold"),
         }
+        self.battery = self.controller.get_battery_level()
+        self.last_check_battery = datetime.now()
 
         # Define panel width
         self.panel_width = 300
@@ -581,7 +583,19 @@ class ControllerGUI(ctk.CTk):
 
     def update_image(self, frame):
         resized_frame = cv2.resize(frame, self.img_size)
+
+        # check for the battery level every 60 seconds
+        if (datetime.now() - self.last_check_battery).seconds > 60:
+            self.battery = self.controller.get_battery_level()
+            self.last_check_battery = datetime.now()
+
+        # Add battery level to the image if the debug mode is enabled
+        if self.debug_mode:
+            cv2.putText(resized_frame, f"Battery: {self.battery}%", (int(resized_frame.shape[1] * .85), 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
+
         image = Image.fromarray(cv2.cvtColor(resized_frame, cv2.COLOR_BGR2RGB))
+
         ctk_image = ctk.CTkImage(light_image=image, dark_image=image, size=self.img_size)
         self.preview_label.configure(image=ctk_image)
         self.preview_label.image = ctk_image

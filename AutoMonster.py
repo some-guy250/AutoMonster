@@ -96,6 +96,9 @@ class Controller:
             self.save_screen(take_new=True)
         self.open_game(force_close=False)
 
+    def get_battery_level(self):
+        return self.client.device.shell("dumpsys battery | grep level").strip().replace("level: ", "")
+
     def freeze(self):
         self._paused = True
 
