@@ -588,11 +588,9 @@ class Controller:
                                                  ASSETS.EnterEraSaga, ASSETS.StartBattleRankUp)):
                         self.wait_for(ASSETS.StartBattleRankUp, ASSETS.StartBattle, timeout=10)
                         if self.in_screen(ASSETS.EraSagaDone, ASSETS.EnterEraSaga):
-                            logger.debug("Saved by the bell")
                             return True
-                        if not self.in_screen(ASSETS.StartBattle, ASSETS.PlayCutscene):
+                        if not self.in_screen(ASSETS.StartBattle, ASSETS.StartBattleRankUp, ASSETS.PlayCutscene):
                             raise AutoMonsterErrors.BattleError("Failed to skip cutscene")
-                        logger.debug("Saved by the bell 2")
                     self.pause(3)
                     if self.in_screen(ASSETS.StartBattle, ASSETS.StartBattleRankUp):
                         skip_part = True
