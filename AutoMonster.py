@@ -1150,7 +1150,7 @@ class Controller:
 
 
 def main():
-    controller = Controller()
+    controller = Controller(1)
 
 
 if __name__ == '__main__':
