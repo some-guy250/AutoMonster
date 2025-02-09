@@ -582,7 +582,12 @@ class ControllerGUI(ctk.CTk):
             raise ValueError(f"Unknown command: {command_name}")
 
     def update_image(self, frame):
-        resized_frame = cv2.resize(frame, self.img_size)
+        img_size = self.img_size
+        if frame.shape[0] > frame.shape[1]:
+            img_size = img_size[::-1]
+        resized_frame = cv2.resize(frame, img_size)
+        if frame.shape[0] > frame.shape[1]:
+            resized_frame = cv2.rotate(resized_frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
         # check for the battery level every 60 seconds
         if (datetime.now() - self.last_check_battery).seconds > 60:
