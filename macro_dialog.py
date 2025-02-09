@@ -196,44 +196,13 @@ class MacroDialog(ctk.CTkToplevel):
         options_frame = ctk.CTkFrame(bottom_frame)
         options_frame.pack(fill="x", padx=5, pady=(0, 5))
 
-        # Add options toggles with tooltips
+        # Add options toggles without tooltips
         brightness_toggle = ctk.CTkCheckBox(
             options_frame,
             text="Lower Brightness During Macro",
             variable=self.lower_brightness
         )
         brightness_toggle.pack(side="left", padx=5)
-        
-        # Create tooltip label for brightness
-        brightness_tooltip = ctk.CTkLabel(
-            options_frame,
-            text="ⓘ",
-            font=("Arial", 12),
-            text_color="gray70"
-        )
-        brightness_tooltip.pack(side="left")
-        
-        def show_brightness_tooltip(e):
-            tooltip = ctk.CTkToplevel(self)
-            tooltip.geometry(f"+{e.x_root+10}+{e.y_root+10}")
-            tooltip.wm_overrideredirect(True)
-            tooltip.attributes('-topmost', True)
-            ctk.CTkLabel(
-                tooltip,
-                text="Reduces screen brightness while the macro is running\n"
-                     "to minimize battery consumption and heat generation.",
-                justify="left",
-                wraplength=200
-            ).pack(padx=5, pady=5)
-            return tooltip
-            
-        def hide_tooltip(tooltip, e):
-            if tooltip:
-                tooltip.destroy()
-                
-        current_tooltip = None
-        brightness_tooltip.bind("<Enter>", lambda e: setattr(self, 'current_tooltip', show_brightness_tooltip(e)))
-        brightness_tooltip.bind("<Leave>", lambda e: hide_tooltip(self.current_tooltip, e))
 
         lock_toggle = ctk.CTkCheckBox(
             options_frame,
@@ -241,32 +210,6 @@ class MacroDialog(ctk.CTkToplevel):
             variable=self.lock_device
         )
         lock_toggle.pack(side="left", padx=(20, 5))
-        
-        # Create tooltip label for lock
-        lock_tooltip = ctk.CTkLabel(
-            options_frame,
-            text="ⓘ",
-            font=("Arial", 12),
-            text_color="gray70"
-        )
-        lock_tooltip.pack(side="left")
-        
-        def show_lock_tooltip(e):
-            tooltip = ctk.CTkToplevel(self)
-            tooltip.geometry(f"+{e.x_root+10}+{e.y_root+10}")
-            tooltip.wm_overrideredirect(True)
-            tooltip.attributes('-topmost', True)
-            ctk.CTkLabel(
-                tooltip,
-                text="Automatically locks your device once the macro\n"
-                     "has finished executing all its steps.",
-                justify="left",
-                wraplength=200
-            ).pack(padx=5, pady=5)
-            return tooltip
-            
-        lock_tooltip.bind("<Enter>", lambda e: setattr(self, 'current_tooltip', show_lock_tooltip(e)))
-        lock_tooltip.bind("<Leave>", lambda e: hide_tooltip(self.current_tooltip, e))
 
         # Create the initial command frame
         self.update_command_frame(next(iter(self.commands)))

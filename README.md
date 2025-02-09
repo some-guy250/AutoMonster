@@ -178,6 +178,31 @@ The interface consists of three main panels:
 - Parameter explanations
 - Tips and requirements
 
+### Macro System
+
+The macro system allows you to create automated sequences of commands that can be run consecutively.
+
+#### Creating Macros
+1. Click "Macro Manager" in the main interface
+2. Click "New Macro" and enter a name
+3. Select commands and configure their parameters
+4. Click "Add Step" to add each command to the macro
+5. Use arrow buttons to reorder steps if needed
+
+#### Managing Macros
+- Steps can be reordered using ▲▼ buttons
+- Individual steps can be removed with ✕ button
+- Entire macros can be deleted using "Delete Macro"
+
+#### Macro Options
+- **Lower Brightness**: Reduces screen brightness during macro execution
+- **Lock Device**: Automatically locks device after macro completion
+
+#### Example Macro: Daily Tasks
+1. Run Monster-Wood ads
+2. Complete Gem Dungeon
+3. Complete Rune Dungeon
+4. Run Era Saga battles
 
 ### Tips for Usage
 - Monitor the log window for status updates and errors
