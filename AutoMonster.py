@@ -1028,7 +1028,7 @@ class Controller:
                 logger.info("Dungeon not available time might be up")
                 self.open_game(True)
                 break
-            self.follow_sequence(ASSETS.RightArrow, ASSETS.EnterCavern)
+            self.click(ASSETS.RightArrow, pause=3)
 
     def play_ads(self):
         played_ads = 0
