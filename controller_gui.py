@@ -255,6 +255,16 @@ class ControllerGUI(ctk.CTk):
         )
         self.run_macro_btn.pack(fill="x", padx=5)
 
+        # Add progress bar for macro execution
+        self.macro_progress = ctk.CTkProgressBar(
+            macro_controls,
+            height=10,
+            mode="determinate"
+        )
+        self.macro_progress.pack(fill="x", padx=5, pady=(5, 0))
+        self.macro_progress.set(0)
+        self.macro_progress.grid_remove()  # Hide initially
+
         # Update button states
         self.update_macro_buttons()
 
@@ -721,6 +731,11 @@ class ControllerGUI(ctk.CTk):
     def _run_macro_thread(self, name):
         """Execute macro steps in a separate thread"""
         try:
+            # Show and reset progress bar
+            self.macro_progress.grid()
+            self.macro_progress.set(0)
+            total_steps = len(self.macros[name])
+            
             # Handle pre-macro options
             lowered_brightness = False
             if self.macro_options.get("lower_brightness", False):
@@ -728,7 +743,7 @@ class ControllerGUI(ctk.CTk):
                 self.append_log("Lowering brightness before macro execution", "info")
                 self.controller.lower_brightness()
 
-            for step in self.macros[name]:
+            for i, step in enumerate(self.macros[name]):
                 if self.stop_macro:
                     self.append_log("Macro execution stopped by user", "warning")
                     break
@@ -738,8 +753,11 @@ class ControllerGUI(ctk.CTk):
                 callback = self.get_command_callback(command)
                 if callback:
                     try:
-                        self.append_log(f"Running macro step: {command}", "info")
+                        self.append_log(f"Running macro step: {command} ({i+1}/{total_steps})", "info")
                         callback(**params)
+                        # Update progress bar
+                        progress = (i + 1) / total_steps
+                        self.macro_progress.set(progress)
                     except AutoMonsterErrors.ExecutionFlag:
                         self.append_log(f"Macro step {command} stopped", "warning")
                         break
@@ -762,6 +780,8 @@ class ControllerGUI(ctk.CTk):
             self.run_macro_btn.configure(text="▶ Run Macro", fg_color=["#3B8ED0", "#1F6AA5"])
             self.macro_dropdown.configure(state="normal")
             self.edit_macro_btn.configure(state="normal")
+            # Hide progress bar
+            self.macro_progress.grid_remove()
             # Re-enable command controls if no command is running
             if not self.command_running:
                 self.command_dropdown.configure(state="normal")
