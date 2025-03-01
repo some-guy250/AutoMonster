@@ -215,7 +215,9 @@ CAVERN_TO_ASSETS = {
 }
 
 GUI_COMMANDS = {
-    "Resource Dungeons": {},
+    "Resource Dungeons": {
+        "wait_for_stamina": {"type": "bool", "default": False}
+    },
     "Ads": {},
     "Cavern": {
         "ancestral": {
@@ -286,7 +288,9 @@ GUI_COMMAND_DESCRIPTIONS = {
         "title": "Resource Dungeons",
         "description": "Automatically do all important dungeons.\n\n"
                        "Goes through Gem, Rune and Coin dungeons and finishes them.",
-        "parameters": {}
+        "parameters": {
+            "wait_for_stamina": "Wait for stamina to refill when empty. The program will pause for 10 minutes to wait for stamina to refill"
+        }
     },
     "Ads": {
         "title": "Watch Ads",

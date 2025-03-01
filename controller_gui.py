@@ -567,7 +567,9 @@ class ControllerGUI(ctk.CTk):
         elif command_name == "Era Saga":
             return self.controller.do_era_saga
         elif command_name == "Resource Dungeons":
-            return self.controller.do_resource_dungeons
+            return lambda **kwargs: self.controller.do_resource_dungeons(
+                wait_for_stamina_to_refill=kwargs.pop("wait_for_stamina", False)
+            )
         elif command_name == "Ads":
             return self.controller.play_ads
         elif command_name == "Cavern":

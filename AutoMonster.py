@@ -1068,7 +1068,7 @@ class Controller:
             delta = time.time() - now
             print(f"Finished auto play ads ({played_ads}) {delta // 60}m {delta % 60:.2f}s")
 
-    def do_resource_dungeons(self):
+    def do_resource_dungeons(self, wait_for_stamina_to_refill=False):
         self._goto_resource_dungeons()
 
         while True:
@@ -1080,73 +1080,11 @@ class Controller:
                 elif self.in_screen(ASSETS.MazeCoinDungeon):
                     logger.info("Entering maze coin dungeon")
                 self.click(ASSETS.EnterCavern)
-                print(self.do_dungeon(True, False, True, max_losses=0))
+                print(self.do_dungeon(True, False, True, max_losses=0,
+                                      wait_for_stamina_to_refill=wait_for_stamina_to_refill))
             if not self.click(ASSETS.RightArrow, pause=2):
                 break
         logger.info("Finished all resource dungeons")
-
-    def seasonal_era_saga(self):
-        self.do_dungeon(True, True, False)
-
-    def token_dungeon(self):
-        self.do_dungeon(True, False, True)
-
-    def main_loop(self):
-        def print_help(cmd: str = None):
-            if cmd is None:
-                print(Constants.HELP_STRING)
-            else:
-                if cmd in callable_functions.keys():
-                    print(f"\t{Constants.SPECIFIC_HELP_DIC[cmd]}")
-                else:
-                    print(f"Invalid argument: '{cmd}' for help")
-
-        callable_functions = {
-            'era': self.do_era_saga,
-            'pvp': self.do_pvp,
-            'rd': self.do_resource_dungeons,
-            'ads': self.play_ads,
-            'cavern': self.do_cavern,
-            'help': print_help,
-            'version.txt': lambda: print(f"Version: {__version__}"),
-        }
-
-        def run_command():
-            try:
-                callable_functions[command](*args)
-                return True
-            except AutoMonsterErrors.AutoMonsterError as e:
-                print("Error:", e)
-                return False
-
-        while True:
-            options = ['era', 'pvp', 'resource dungeons', 'ads', 'cavern', 'help', 'version.txt', 'exit']
-
-            # made the options a bit more user-friendly
-            print("\nWelcome to AutoMonsters!")
-            print("Available commands:")
-            for i in options:
-                print(f"- {i}")
-
-            raw_command = input("Enter command: ").lower()
-
-            # made a check in case user enters nothing, keep asking until they enter something
-            if len(raw_command) == 0:
-                print("Please enter a command")
-                continue
-
-            command, *args = raw_command.split()
-
-            if command == 'exit':
-                break
-
-            if command not in callable_functions.keys():
-                print(f"Invalid command: '{command}' type 'help' for a list of commands")
-                continue
-            try:
-                run_command()
-            except KeyboardInterrupt:
-                print("Command interrupted")
 
 
 def main():
