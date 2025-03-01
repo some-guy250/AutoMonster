@@ -263,7 +263,7 @@ class ControllerGUI(ctk.CTk):
         )
         self.macro_progress.pack(fill="x", padx=5, pady=(5, 0))
         self.macro_progress.set(0)
-        self.macro_progress.grid_remove()  # Hide initially
+        self.macro_progress.pack_forget()
 
         # Update button states
         self.update_macro_buttons()
@@ -732,7 +732,7 @@ class ControllerGUI(ctk.CTk):
         """Execute macro steps in a separate thread"""
         try:
             # Show and reset progress bar
-            self.macro_progress.grid()
+            self.macro_progress.pack(fill="x", padx=5, pady=(5, 0))
             self.macro_progress.set(0)
             total_steps = len(self.macros[name])
             
@@ -781,7 +781,7 @@ class ControllerGUI(ctk.CTk):
             self.macro_dropdown.configure(state="normal")
             self.edit_macro_btn.configure(state="normal")
             # Hide progress bar
-            self.macro_progress.grid_remove()
+            self.macro_progress.pack_forget()
             # Re-enable command controls if no command is running
             if not self.command_running:
                 self.command_dropdown.configure(state="normal")
