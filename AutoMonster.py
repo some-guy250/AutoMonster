@@ -859,7 +859,7 @@ class Controller:
             return False
         return self.in_screen(ASSETS.BoxToUnlock, threshold=.85, gray_img=True, screenshot=screenshot)
 
-    def do_pvp(self, num_battles: int, handle_boxes: bool = True, reduce_box_time: bool = True):
+    def do_pvp(self, num_battles: int, handle_boxes: bool = True, reduce_box_time: bool = True, progress_callback=None):
         wins = 0
         losses = 0
 
@@ -893,9 +893,14 @@ class Controller:
                     self._start_unlocking_box()
 
             if wins + losses >= num_battles:
+                if progress_callback:
+                    progress_callback(1.0)
                 logger.info(f"Finished PVP, Wins: {wins}, Losses: {losses}")
                 self.log_gui(f"Finished PVP, Wins: {wins}, Losses: {losses}")
                 return
+
+            if progress_callback:
+                progress_callback((wins + losses) / num_battles)
 
             if self.in_screen(ASSETS.PVPNoPoints):
                 logger.warning("No PVP points stopping early")
@@ -942,7 +947,7 @@ class Controller:
         else:
             raise AutoMonsterErrors.GoToError("Failed to enter cavern")
 
-    def do_cavern(self, *dungeons_to_do: str, change_team: bool = False, max_rooms: int = 0):
+    def do_cavern(self, *dungeons_to_do: str, change_team: bool = False, max_rooms: int = 0, progress_callback=None):
         def handle_error_ending(ancestral: bool) -> bool:
             if self.in_screen(ASSETS.NotFullTeam, ASSETS.NoMonsterLeft, ASSETS.NoUndefeated, ASSETS.StartBattleGray,
                               screenshot=self.__last_screenshot):
@@ -975,20 +980,24 @@ class Controller:
 
         num_dungeons = len(dungeons_to_do)
         dungeons_done = []
+        total_rooms_done = 0
+        total_expected_rooms = max_rooms * num_dungeons  # Calculate total expected rooms
+
         self._goto_cavern()
         while self.in_screen(ASSETS.RightArrow) and num_dungeons > 0:
             for dungeon in dungeons_to_do:
                 if dungeon in dungeons_done or not self.in_screen(dungeon, gray_img=True, threshold=.75):
                     continue
 
-                num_dungeons -= 1
                 if self.click(ASSETS.EnterCavern, pause=2):
                     if dungeon in Ancestral_Cavers:
                         if self.wait_for(ASSETS.FlashRaid, timeout=2):
                             logger.info("Ancestral dungeon was already done")
                             self.click(ASSETS.Cancel)
+                            total_rooms_done += max_rooms  # Count all rooms for completed ancestral
                         else:
                             self.do_dungeon(False, False, False, change_team=change_team)
+                            total_rooms_done += 1  # Count ancestral as 1 room
                         if handle_error_ending(True):
                             break
                     else:
@@ -1008,27 +1017,45 @@ class Controller:
                                 self._goto_cavern()
                                 break
                             self.do_dungeon(False, False, False, change_team=change_team)
+                            sub_dungeons += 1
+                            total_rooms_done += 1
+                            if progress_callback:
+                                progress_callback(min(total_rooms_done / total_expected_rooms, 1.0))
                             if handle_error_ending(False):
                                 break
-                            sub_dungeons += 1
                             if 0 < max_rooms <= sub_dungeons:
                                 logger.info("Reached max rooms")
                                 self.click_back()
                                 break
                 else:
                     logger.warning("Failed to enter cavern")
+
+                num_dungeons -= 1
+                if progress_callback:
+                    # Ensure progress shows at least the completion of current dungeon
+                    min_progress = (len(dungeons_done) + 1) / len(dungeons_to_do)
+                    actual_progress = total_rooms_done / total_expected_rooms
+                    progress_callback(max(min_progress, actual_progress))
+
                 self.gui_logger(f"Finished dungeon, {num_dungeons} left")
                 if num_dungeons == 0:
                     logger.info("All dungeons done")
+                    if progress_callback:
+                        progress_callback(1.0)
                     return
                 else:
                     logger.info(f"Finished {dungeon.replace('.png', '')}, {num_dungeons} left")
                 dungeons_done.append(dungeon)
+
             if self.in_screen(ASSETS.DungeonNotAvailable):
                 logger.info("Dungeon not available time might be up")
                 self.open_game(True)
                 break
             self.click(ASSETS.RightArrow, pause=3)
+
+        # Ensure progress shows complete even if we finish early
+        if progress_callback:
+            progress_callback(1.0)
 
     def play_ads(self):
         played_ads = 0

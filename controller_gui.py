@@ -324,12 +324,12 @@ class ControllerGUI(ctk.CTk):
         self.preview_label = ctk.CTkLabel(preview_container, text="")
         self.preview_label.pack(expand=True, fill="both", pady=(0, 10))
 
-        # Button container for brightness controls and screenshot
-        button_container = ctk.CTkFrame(preview_container)
-        button_container.pack(fill="x", padx=5, pady=(0, 5), side="bottom")
+        # Create a separate frame for all buttons
+        all_buttons_frame = ctk.CTkFrame(preview_container)
+        all_buttons_frame.pack(fill="x", padx=5, pady=(0, 5))
 
         # Row for screenshot button (on top)
-        screenshot_row = ctk.CTkFrame(button_container)
+        screenshot_row = ctk.CTkFrame(all_buttons_frame)
         screenshot_row.pack(fill="x", pady=(0, 2))
 
         self.screenshot_btn = ctk.CTkButton(
@@ -342,7 +342,7 @@ class ControllerGUI(ctk.CTk):
         # Screenshot button will be managed by debug mode toggle
 
         # Row for brightness controls (at bottom)
-        brightness_row = ctk.CTkFrame(button_container)
+        brightness_row = ctk.CTkFrame(all_buttons_frame)
         brightness_row.pack(fill="x", pady=(2, 0))
 
         # Brightness control buttons
@@ -363,6 +363,30 @@ class ControllerGUI(ctk.CTk):
             command=self.reset_brightness
         )
         self.reset_brightness_btn.pack(side="left", fill="x", expand=True, padx=2)
+
+        # Add progress tracking frame below all buttons
+        self.progress_frame = ctk.CTkFrame(preview_container)
+        self.progress_frame.pack(fill="x", padx=5, pady=(5, 0))
+        
+        # Add progress label
+        self.progress_label = ctk.CTkLabel(
+            self.progress_frame, 
+            text="Progress:",
+            font=self.fonts["normal"]
+        )
+        self.progress_label.pack(anchor="w", padx=5)
+
+        # Add progress bar
+        self.command_progress = ctk.CTkProgressBar(
+            self.progress_frame,
+            height=15,
+            mode="determinate"
+        )
+        self.command_progress.pack(fill="x", padx=5, pady=(5, 5))
+        self.command_progress.set(0)
+        
+        # Hide progress frame initially
+        self.progress_frame.pack_forget()
 
         ratio = .55
         self.img_size = int(self.controller.new_width * ratio), int(720 * ratio)
@@ -471,6 +495,11 @@ class ControllerGUI(ctk.CTk):
 
         command_name = self.command_var.get()
         try:
+            # Reset progress bar only for PVP and Cavern
+            if command_name in ["PVP", "Cavern"]:
+                self.update_command_progress(0)
+            if self.param_frame and hasattr(self.param_frame, 'progress'):
+                self.param_frame.progress.set(0)
             callback = self.get_command_callback(command_name)
             self.append_log(f"Starting {command_name}...", "info")
             callback(**params)
@@ -495,6 +524,9 @@ class ControllerGUI(ctk.CTk):
                 self.update_macro_buttons()
                 self.macro_dropdown.configure(state="normal")
                 self.edit_macro_btn.configure(state="normal")
+            # Hide progress bar if visible
+            if command_name in ["PVP", "Cavern"]:
+                self.progress_frame.pack_forget()
 
     def run_command(self):
         if not self.param_frame:
@@ -572,7 +604,8 @@ class ControllerGUI(ctk.CTk):
             return lambda **kwargs: self.controller.do_pvp(
                 kwargs.pop("num_battles", 2),
                 kwargs.pop("handle_boxes", True),
-                kwargs.pop("reduce_box_time", True)
+                kwargs.pop("reduce_box_time", True),
+                progress_callback=self.update_command_progress
             )
         elif command_name == "Era Saga":
             return self.controller.do_era_saga
@@ -586,12 +619,33 @@ class ControllerGUI(ctk.CTk):
             return lambda **kwargs: self.controller.do_cavern(
                 *kwargs.pop("ancestral", []) + kwargs.pop("era", []),
                 max_rooms=kwargs.pop("max_rooms", 3),
-                change_team=kwargs.pop("change_team", True)
+                change_team=kwargs.pop("change_team", True),
+                progress_callback=self.update_command_progress
             )
         elif command_name == "Close Game":
             return self.controller.close_game
         else:
             raise ValueError(f"Unknown command: {command_name}")
+
+    def update_command_progress(self, progress: float):
+        """Update the progress bar in the preview frame"""
+        command = self.command_var.get()
+        # Only show progress for PVP and Cavern commands
+        if command not in ["PVP", "Cavern"]:
+            return
+
+        if progress == 0:
+            # Show and setup progress at start
+            self.progress_label.configure(text=f"{command} Progress:")
+            self.progress_frame.pack(fill="x", padx=5, pady=(0, 5))
+            # force an update to show the progress bar
+            self.command_progress.update()
+        
+        self.command_progress.set(progress)
+        
+        if progress >= 1:
+            # Hide progress when complete
+            self.progress_frame.pack_forget()
 
     def update_image(self, frame):
         img_size = self.img_size
