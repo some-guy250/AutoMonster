@@ -788,7 +788,6 @@ class ControllerGUI(ctk.CTk):
             # Show and reset progress bar
             self.macro_progress.pack(fill="x", padx=5, pady=(5, 0))
             self.macro_progress.set(0)
-            self.macros_progress.update()
             total_steps = len(self.macros[name])
             
             # Handle pre-macro options
@@ -809,10 +808,21 @@ class ControllerGUI(ctk.CTk):
                 if callback:
                     try:
                         self.append_log(f"Running macro step: {command} ({i+1}/{total_steps})", "info")
+                        
+                        # Reset command progress bar for PVP and Cavern commands
+                        if command in ["PVP", "Cavern"]:
+                            self.update_command_progress(0)
+                            
                         callback(**params)
-                        # Update progress bar
+                        
+                        # Hide command progress after completion
+                        if command in ["PVP", "Cavern"]:
+                            self.progress_frame.pack_forget()
+                            
+                        # Update macro progress bar
                         progress = (i + 1) / total_steps
                         self.macro_progress.set(progress)
+                        
                     except AutoMonsterErrors.ExecutionFlag:
                         self.append_log(f"Macro step {command} stopped", "warning")
                         break
