@@ -787,6 +787,7 @@ class ControllerGUI(ctk.CTk):
         try:
             # Show and reset progress bar
             self.macro_progress.pack(fill="x", padx=5, pady=(5, 0))
+            self.macros_progress.update()
             self.macro_progress.set(0)
             total_steps = len(self.macros[name])
             
