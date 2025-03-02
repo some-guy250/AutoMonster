@@ -630,22 +630,32 @@ class ControllerGUI(ctk.CTk):
     def update_command_progress(self, progress: float):
         """Update the progress bar in the preview frame"""
         command = self.command_var.get()
+        
+        # For macros, get the current command from the step being executed
+        if self.macro_running and hasattr(self, 'current_macro_command'):
+            command = self.current_macro_command
+            
         # Only show progress for PVP and Cavern commands
         if command not in ["PVP", "Cavern"]:
             return
 
-        if progress == 0:
-            # Show and setup progress at start
-            self.progress_label.configure(text=f"{command} Progress:")
-            self.progress_frame.pack(fill="x", padx=5, pady=(0, 5))
-            # force an update to show the progress bar
-            self.command_progress.update()
-        
-        self.command_progress.set(progress)
-        
-        if progress >= 1:
-            # Hide progress when complete
-            self.progress_frame.pack_forget()
+        def show_progress():
+            if progress == 0:
+                # Show and setup progress at start
+                self.progress_label.configure(text=f"{command} Progress:")
+                self.progress_frame.pack(fill="x", padx=5, pady=(5, 0))
+                # force an update to show the progress bar
+                self.progress_frame.update()
+                self.command_progress.update()
+            
+            self.command_progress.set(progress)
+            
+            if progress >= 1:
+                # Hide progress when complete
+                self.progress_frame.pack_forget()
+
+        # Ensure UI updates happen in main thread
+        self.after(0, show_progress)
 
     def update_image(self, frame):
         img_size = self.img_size
@@ -803,6 +813,7 @@ class ControllerGUI(ctk.CTk):
                     break
 
                 command = step["command"]
+                self.current_macro_command = command  # Store current command
                 params = step["params"]
                 callback = self.get_command_callback(command)
                 if callback:
@@ -817,7 +828,7 @@ class ControllerGUI(ctk.CTk):
                         
                         # Hide command progress after completion
                         if command in ["PVP", "Cavern"]:
-                            self.progress_frame.pack_forget()
+                            self.after(0, self.progress_frame.pack_forget)
                             
                         # Update macro progress bar
                         progress = (i + 1) / total_steps
@@ -839,6 +850,10 @@ class ControllerGUI(ctk.CTk):
                 self.append_log("Reset device brightness to auto mode", "info")
 
         finally:
+            # Clear current macro command
+            if hasattr(self, 'current_macro_command'):
+                delattr(self, 'current_macro_command')
+                
             # Reset UI state
             self.macro_running = False
             self.stop_macro = False
