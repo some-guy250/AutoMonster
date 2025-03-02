@@ -8,8 +8,7 @@ from adbutils import adb
 
 import AutoMonsterErrors
 import Constants
-from Constants import ASSETS, Ancestral_Cavers, AdLocationsHorizontal, AdLocationsVertical, NumberOfCommonAds, \
-    IN_GAME_ASSETS
+from Constants import ASSETS, Ancestral_Cavers, AdLocationsHorizontal, AdLocationsVertical, IN_GAME_ASSETS, CommonAds
 from HelperFunctions import *
 
 
@@ -79,6 +78,10 @@ class Controller:
                         f"{self.new_width}x720 might cause some issues")
         self.scale_x = lambda x: int(x * self.ratio[0]) if self.resized else x
         self.scale_y = lambda y: int(y * self.ratio[1]) if self.resized else y
+
+        # insert the ad locations at the beginning of the list
+        if self.resized:
+            AdLocationsHorizontal.insert(0, (int((size[0] - 130) / self.ratio[0]), 85))
 
         pathlib.Path('assets').mkdir(parents=True, exist_ok=True)
         self.available_assets: List[str] = []
@@ -435,7 +438,7 @@ class Controller:
         logger.info("Ready to play")
 
     def _check_for_common_ads(self):
-        if self.click(*(f"commonad{i + 1}.png" for i in range(NumberOfCommonAds)), skip_ad_check=True):
+        if self.click(*CommonAds, skip_ad_check=True, threshold=.8):
             if self.click(ASSETS.ResumeAd, skip_ad_check=True):
                 return None
             return self.in_game()
@@ -491,16 +494,15 @@ class Controller:
 
             x, y = ad_locations[index]
             x = self.scale_x(x)
-            y = self.scale_y(y)
+            # y = self.scale_y(y)
 
             self.client.control.touch(x, y, scrcpy.ACTION_DOWN)
             self.pause(.1)
             self.client.control.touch(x, y, scrcpy.ACTION_UP)
 
             index += 1
-
             counter += 1
-            self.pause(1.5)
+            self.pause(.5)
 
         if counter:
             logger.info(f"Skipped ad in {counter} iterations")
@@ -799,10 +801,10 @@ class Controller:
     def scroll_hub(self, asset: str):
         count = 0
         while not self.in_screen(asset):
-            self.client.control.swipe(self.scale_x(600), self.scale_y(400), self.scale_x(100), self.scale_y(400))
+            self.client.control.swipe(self.scale_x(600), self.scale_y(400), self.scale_x(100), self.scale_y(400), 20)
             self.pause(.1)
             count += 1
-            if count > 10:
+            if count > 5:
                 raise AutoMonsterErrors.GoToError(f"Failed to scroll to {asset}")
 
     def _goto_pvp(self):
@@ -1037,7 +1039,7 @@ class Controller:
                     actual_progress = total_rooms_done / total_expected_rooms
                     progress_callback(max(min_progress, actual_progress))
 
-                self.gui_logger(f"Finished dungeon, {num_dungeons} left")
+                self.log_gui(f"Finished dungeon, {num_dungeons} left")
                 if num_dungeons == 0:
                     logger.info("All dungeons done")
                     if progress_callback:

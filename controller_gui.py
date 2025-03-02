@@ -615,6 +615,10 @@ class ControllerGUI(ctk.CTk):
             )
         elif command_name == "Ads":
             return self.controller.play_ads
+        elif command_name == "Reduce Time":
+            return lambda **kwargs: self.controller.reduce_time(
+                kwargs.pop("number_of_ads", 3)
+            )
         elif command_name == "Cavern":
             return lambda **kwargs: self.controller.do_cavern(
                 *kwargs.pop("ancestral", []) + kwargs.pop("era", []),

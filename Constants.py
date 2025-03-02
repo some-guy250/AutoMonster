@@ -96,6 +96,7 @@ class ASSETS:
     CommonAd21 = "commonad21.png"
     CommonAd22 = "commonad22.png"
     CommonAd23 = "commonad23.png"
+    CommonAd24 = "commonad24.png"
     ResumeAd = "resumead.png"
     NoAds = "noads.png"
     NotFullTeam = "notfullteam.png"
@@ -114,6 +115,7 @@ class ASSETS:
     ErrorPlayingVideo = "errorplayingvideo.png"
     FlashRaid = "flashraid.png"
     Cavern = "cavern.png"
+    CavernFeral = "cavernferal.png"
     CavernHistoria = "cavernhistoria.png"
     CavernMultiverse = "cavernmultiverse.png"
     CavernEvaris = "cavernevaris.png"
@@ -164,6 +166,7 @@ Ancestral_Cavers = (
 )
 
 All_Cavers = (
+    ASSETS.CavernFeral,
     ASSETS.CavernHistoria,
     ASSETS.CavernMultiverse,
     ASSETS.CavernEvaris,
@@ -187,11 +190,13 @@ All_Cavers = (
 )
 
 AdLocations = [[1240, 45], [1240, 35], [1250, 85], [630, 50], [666, 80], [680, 25]]
-AdLocationsHorizontal = ((1165, 75), (1240, 45), (1240, 35), (1250, 85))
-AdLocationsVertical = ((630, 50), (666, 80), (680, 25))
-NumberOfCommonAds = 23
+AdLocationsHorizontal = [(1165, 75), (1240, 45), (1240, 35), (1250, 85)]
+AdLocationsVertical = [(630, 50), (666, 80), (680, 25)]
+NumberOfCommonAds = 24
+CommonAds = tuple(f"commonad{i}.png" for i in range(1, NumberOfCommonAds + 1))
 
 CAVERN_TO_ASSETS = {
+    'feral': ASSETS.CavernFeral,
     'historia': ASSETS.CavernHistoria,
     'multiverse': ASSETS.CavernMultiverse,
     'evaris': ASSETS.CavernEvaris,
@@ -219,6 +224,9 @@ GUI_COMMANDS = {
         "wait_for_stamina": {"type": "bool", "default": False}
     },
     "Ads": {},
+    "Reduce Time": {
+        "number_of_ads": {"type": "int", "min": 1, "max": 3, "default": 3}
+    },
     "Cavern": {
         "ancestral": {
             "type": "multiple_choice",
@@ -238,6 +246,7 @@ GUI_COMMANDS = {
         "era": {
             "type": "multiple_choice",
             "choices": [
+                "feral",
                 "historia",
                 "multiverse",
                 "alpine",
@@ -258,7 +267,7 @@ GUI_COMMANDS = {
     "PVP": {
         "num_battles": {"type": "int", "min": 1, "max": 15, "default": 2},
         "handle_boxes": {"type": "bool", "default": True},
-        "reduce_box_time": {"type": "bool", "default": True} 
+        "reduce_box_time": {"type": "bool", "default": True}
     },
     "Era Saga": {},
     "Close Game": {}
@@ -298,6 +307,15 @@ GUI_COMMAND_DESCRIPTIONS = {
                        "Note: Open MonsterWood before running this command.",
         "parameters": {}
     },
+    "Reduce Time": {
+        "title": "Reduce Time",
+        "description": "Automatically watch as many selected ads as needed to reduce time.\n\n"
+                       "Features:\n"
+                       "• Select how many ads to watch to reduce time\n",
+        "parameters": {
+            "number_of_ads": "Number of ads to watch to reduce time (1-3)"
+        },
+    },
     "Cavern": {
         "title": "Cavern Dungeons",
         "description": "Automatically do selected cavern dungeons.\n\n"
@@ -306,8 +324,8 @@ GUI_COMMAND_DESCRIPTIONS = {
                        "• Control how many sub-dungeons to do\n"
                        "• Team management. Name '1', '2', '3' the monsters you want to use and the program will switch to them automatically",
         "parameters": {
-            "ancestral": "Select which ancestral cavern dungeons to explore",
-            "era": "Select which era cavern dungeons to explore",
+            "ancestral": "Select which ancestral cavern dungeons to complete",
+            "era": "Select which era cavern dungeons to complete",
             "max_rooms": "Maximum number of rooms to explore",
             "change_team": "Enable team switching to use selected monsters"
         }
