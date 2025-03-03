@@ -682,13 +682,15 @@ class Controller:
                 if self.in_screen(selected_team[index], gray_img=True, threshold=.8):
                     selected_team.pop(index)
                     non_selected_team.pop(index)
+                    non_selected_team_synergy.pop(index)
                     return True
             return False
 
         def check_and_select_team():
             if has_selected():
                 return True
-            self.click(*tuple(non_selected_team), gray_img=True, threshold=.8)
+            if not self.click(*non_selected_team, gray_img=True, threshold=.8):
+                self.click(*non_selected_team_synergy, gray_img=True, threshold=.8)
             return has_selected()
 
         def full_team_already_selected():
@@ -712,6 +714,8 @@ class Controller:
             ASSETS.RankUp1,
             ASSETS.RankUp2,
             ASSETS.RankUp3,
+        ]
+        non_selected_team_synergy = [
             ASSETS.RankUp1Synergy,
             ASSETS.RankUp2Synergy,
             ASSETS.RankUp3Synergy
@@ -727,6 +731,8 @@ class Controller:
                 ASSETS.RankUp4,
                 ASSETS.RankUp5,
                 ASSETS.RankUp6,
+            ]
+            non_selected_team_synergy = [
                 ASSETS.RankUp4Synergy,
                 ASSETS.RankUp5Synergy,
                 ASSETS.RankUp6Synergy
@@ -758,15 +764,14 @@ class Controller:
                         break
                     self.client.control.swipe(self.scale_x(300), self.scale_y(550), self.scale_x(300),
                                               self.scale_y(300))
-                    self.pause(1)
+                    self.pause(.5)
                     if compare_imgs(crop_img(sc), crop_img(self.take_screenshot()), True):
                         logger.warning("Could not find team")
+                        self.log_gui("Could not find team", "warning")
                         return False
             self.click_back()
 
         self.click_back()
-
-        self.pause(1)
         return True
 
     def _goto_islands(self):
