@@ -225,7 +225,7 @@ GUI_COMMANDS = {
     },
     "Ads": {},
     "Reduce Time": {
-        "number_of_ads": {"type": "int", "min": 1, "max": 3, "default": 3}
+        "number_of_ads": {"type": "int", "min": 1, "max": 4, "default": 4}
     },
     "Cavern": {
         "ancestral": {
@@ -313,7 +313,7 @@ GUI_COMMAND_DESCRIPTIONS = {
                        "Features:\n"
                        "• Select how many ads to watch to reduce time\n",
         "parameters": {
-            "number_of_ads": "Number of ads to watch to reduce time (1-3)"
+            "number_of_ads": "Number of ads to watch to reduce time"
         },
     },
     "Cavern": {
