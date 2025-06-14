@@ -32,25 +32,77 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # Install av first as precompiled wheel to avoid compilation issues
-          python -m pip install --prefer-binary av==9.2.0
-          # Then install the rest of the requirements
-          python -m pip install --prefer-binary -r requirements.txt
-          pip install --prefer-binary pyinstaller
+          
+          # First install common packages with binary preference
+          python -m pip install --prefer-binary pillow opencv-python requests numpy customtkinter wakepy
+          
+          # Try to install av from a known working binary source
+          python -m pip install --prefer-binary --find-links=https://github.com/PyAV-Org/PyAV/releases av==9.2.0
+          if ($LASTEXITCODE -ne 0) {
+            # Fallback to a compatible version if 9.2.0 fails
+            python -m pip install --prefer-binary av==8.0.1
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "Failed to install av package. Exiting."
+              exit 1
+            }
+          }
+          
+          # Install scrcpy-client explicitly - critical package
+          pip install scrcpy-client==0.4.7
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Failed to install scrcpy-client package. This is a critical dependency."
+            exit 1
+          }
+          
+          # Verify scrcpy-client installation
+          $scrcpyInstalled = python -c "import importlib.util; print(importlib.util.find_spec('scrcpy') is not None)"
+          if ($scrcpyInstalled -eq "False") {
+            Write-Host "ERROR: scrcpy-client installed but module not found. This is a critical dependency."
+            exit 1
+          }
+          
+          # Show package details
           pip show scrcpy-client
+          
+          # Install remaining requirements
+          python -m pip install --prefer-binary -r requirements.txt
+          
+          # Install PyInstaller
+          python -m pip install --prefer-binary pyinstaller
 
       - name: Build Executable
         run: |
-          $scrcpyPath = (pip show scrcpy-client | Select-String "Location:").ToString().Split(" ")[-1] + "\scrcpy"
-          Write-Host "scrcpy path: $scrcpyPath"
-          if (Test-Path $scrcpyPath) {
-            Write-Host "scrcpy directory exists"
-            Get-ChildItem $scrcpyPath
-          } else {
-            Write-Host "scrcpy directory not found"
+          # Get scrcpy module path - critical for packaging
+          $scrcpyPath = (python -c "import importlib.util, os; spec = importlib.util.find_spec('scrcpy'); print(os.path.dirname(spec.origin) if spec else '')")
+          
+          if (-not $scrcpyPath) {
+            Write-Host "ERROR: Could not locate scrcpy module path. This is required for packaging."
             exit 1
           }
-          pyinstaller --noconfirm --onefile --windowed --icon "./assets/favicon.ico" --add-data "$scrcpyPath;scrcpy" ${{ matrix.script }} -n ${{ matrix.name }}.exe
+          
+          Write-Host "scrcpy module found at: $scrcpyPath"
+          
+          # Find the actual scrcpy directory within the package
+          $scrcpyDir = Join-Path -Path $scrcpyPath -ChildPath "scrcpy"
+          if (-not (Test-Path $scrcpyDir)) {
+            # Try looking directly at the site-packages directory
+            $sitePackages = python -c "import site; print(site.getsitepackages()[0])"
+            $scrcpyDir = Join-Path -Path $sitePackages -ChildPath "scrcpy"
+          }
+          
+          Write-Host "scrcpy directory: $scrcpyDir"
+          if (Test-Path $scrcpyDir) {
+            Write-Host "Contents of scrcpy directory:"
+            Get-ChildItem $scrcpyDir -Recurse | ForEach-Object { Write-Host $_.FullName }
+          } else {
+            Write-Host "ERROR: scrcpy directory not found. This is required for packaging."
+            exit 1
+          }
+          
+          # Build with scrcpy data
+          $command = "pyinstaller --noconfirm --onefile --windowed --icon `"./assets/favicon.ico`" --add-data `"$scrcpyDir;scrcpy`" ${{ matrix.script }} -n ${{ matrix.name }}.exe"
+          Write-Host "Running: $command"
+          Invoke-Expression $command
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
