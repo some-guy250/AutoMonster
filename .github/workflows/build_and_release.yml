@@ -33,20 +33,14 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           
-          # First install common packages
+          # Install common packages first with binary preference
           python -m pip install --prefer-binary pillow opencv-python requests numpy customtkinter wakepy
           
-          # Skip av package if it's causing issues - it's optional on Windows
-          $env:PYTHONPATH = "."
-          # Explicitly set platform variable for the requirements file
-          $env:PYAV_SKIP_COMPATIBILITY_CHECK = "1"
+          # Install specific binary version of av first - downloading specific wheel
+          python -m pip install --only-binary :all: --index-url https://pypi.org/simple/ av==8.1.0
           
-          # Try to install scrcpy-client first (critical package)
-          pip install scrcpy-client==0.4.7
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "Failed to install scrcpy-client package. This is a critical dependency."
-            exit 1
-          }
+          # Now install scrcpy-client (which depends on av)
+          python -m pip install scrcpy-client==0.4.7
           
           # Verify scrcpy-client installation
           $scrcpyInstalled = python -c "import importlib.util; print(importlib.util.find_spec('scrcpy') is not None)"
@@ -57,14 +51,6 @@ jobs:
           
           # Install PyInstaller
           python -m pip install --prefer-binary pyinstaller
-          
-          # Try to install av but make it optional
-          try {
-            pip install av>=8.0.0 --no-build-isolation
-            Write-Host "Successfully installed av package"
-          } catch {
-            Write-Host "Skipping av package installation - it's optional and seems to have build issues"
-          }
 
       - name: Build Executable
         run: |
