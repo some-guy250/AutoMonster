@@ -46,7 +46,7 @@ jobs:
           python -m pip install --no-deps scrcpy-client==0.4.7
           
           # Install remaining dependencies for scrcpy-client
-          python -m pip install adbutils>=1.0.8,<2.0.0
+          python -m pip install adbutils
           
           # Verify scrcpy-client installation
           $scrcpyInstalled = python -c "import importlib.util; print(importlib.util.find_spec('scrcpy') is not None)"
