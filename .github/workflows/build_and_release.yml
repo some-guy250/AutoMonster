@@ -32,8 +32,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-          pip install pyinstaller
+          # Install av first as precompiled wheel to avoid compilation issues
+          python -m pip install --prefer-binary av==9.2.0
+          # Then install the rest of the requirements
+          python -m pip install --prefer-binary -r requirements.txt
+          pip install --prefer-binary pyinstaller
           pip show scrcpy-client
 
       - name: Build Executable
@@ -60,7 +63,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
