@@ -36,11 +36,17 @@ jobs:
           # Install common packages first with binary preference
           python -m pip install --prefer-binary pillow opencv-python requests numpy customtkinter wakepy
           
-          # Install specific binary version of av first - downloading specific wheel
-          python -m pip install --only-binary :all: --index-url https://pypi.org/simple/ av==8.1.0
+          # Download and install pre-built wheel for av package
+          Write-Host "Downloading pre-built av package from GitHub..."
+          $avWheelUrl = "https://github.com/PyAV-Org/PyAV/releases/download/v9.0.1/av-9.0.1-cp310-cp310-win_amd64.whl"
+          Invoke-WebRequest -Uri $avWheelUrl -OutFile "av-9.0.1-cp310-cp310-win_amd64.whl"
+          python -m pip install --no-deps "av-9.0.1-cp310-cp310-win_amd64.whl"
           
-          # Now install scrcpy-client (which depends on av)
-          python -m pip install scrcpy-client==0.4.7
+          # Now install scrcpy-client with --no-deps to avoid reinstalling av
+          python -m pip install --no-deps scrcpy-client==0.4.7
+          
+          # Install remaining dependencies for scrcpy-client
+          python -m pip install adbutils<2.0.0,>=1.0.8
           
           # Verify scrcpy-client installation
           $scrcpyInstalled = python -c "import importlib.util; print(importlib.util.find_spec('scrcpy') is not None)"
@@ -48,6 +54,11 @@ jobs:
             Write-Host "ERROR: scrcpy-client installed but module not found. This is a critical dependency."
             exit 1
           }
+          
+          # Show installed packages for debugging
+          pip list | findstr "av"
+          pip list | findstr "scrcpy"
+          pip list | findstr "adbutils"
           
           # Install PyInstaller
           python -m pip install --prefer-binary pyinstaller
