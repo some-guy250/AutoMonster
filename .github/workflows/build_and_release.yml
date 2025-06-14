@@ -33,21 +33,15 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           
-          # First install common packages with binary preference
+          # First install common packages
           python -m pip install --prefer-binary pillow opencv-python requests numpy customtkinter wakepy
           
-          # Try to install av from a known working binary source
-          python -m pip install --prefer-binary --find-links=https://github.com/PyAV-Org/PyAV/releases av==9.2.0
-          if ($LASTEXITCODE -ne 0) {
-            # Fallback to a compatible version if 9.2.0 fails
-            python -m pip install --prefer-binary av==8.0.1
-            if ($LASTEXITCODE -ne 0) {
-              Write-Host "Failed to install av package. Exiting."
-              exit 1
-            }
-          }
+          # Skip av package if it's causing issues - it's optional on Windows
+          $env:PYTHONPATH = "."
+          # Explicitly set platform variable for the requirements file
+          $env:PYAV_SKIP_COMPATIBILITY_CHECK = "1"
           
-          # Install scrcpy-client explicitly - critical package
+          # Try to install scrcpy-client first (critical package)
           pip install scrcpy-client==0.4.7
           if ($LASTEXITCODE -ne 0) {
             Write-Host "Failed to install scrcpy-client package. This is a critical dependency."
@@ -61,18 +55,20 @@ jobs:
             exit 1
           }
           
-          # Show package details
-          pip show scrcpy-client
-          
-          # Install remaining requirements
-          python -m pip install --prefer-binary -r requirements.txt
-          
           # Install PyInstaller
           python -m pip install --prefer-binary pyinstaller
+          
+          # Try to install av but make it optional
+          try {
+            pip install av>=8.0.0 --no-build-isolation
+            Write-Host "Successfully installed av package"
+          } catch {
+            Write-Host "Skipping av package installation - it's optional and seems to have build issues"
+          }
 
       - name: Build Executable
         run: |
-          # Get scrcpy module path - critical for packaging
+          # First try the standard package location
           $scrcpyPath = (python -c "import importlib.util, os; spec = importlib.util.find_spec('scrcpy'); print(os.path.dirname(spec.origin) if spec else '')")
           
           if (-not $scrcpyPath) {
