@@ -4,14 +4,16 @@ from tkinter import messagebox
 
 from controller_gui import ControllerGUI
 
+from wakepy import keep
 
 def main():
     try:
         # Check if app was launched after update
         updated = len(sys.argv) > 1 and sys.argv[1] == "updated"
 
-        app = ControllerGUI()
-        app.mainloop()
+        with keep.presenting():
+            app = ControllerGUI()
+            app.mainloop()
     except Exception as e:
         if e is KeyboardInterrupt:
             return
