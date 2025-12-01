@@ -1,7 +1,19 @@
+# NOTE: av and scrcpy-client have a version conflict:
+# - scrcpy-client requires av<10.0.0,>=9.0.0
+# - av 9.x fails to build on Python 3.10+ due to Cython errors
+# - av 16.0.1 has pre-built wheels and is API-compatible with scrcpy-client
+#
+# Installation order:
+# 1. Install av==16.0.1 first (pre-built binary)
+# 2. Install scrcpy-client with --no-deps
+# 3. Install remaining dependencies
+# See install_dependencies.bat for automated installation
+
 opencv-python>=4.9.0.80
 requests>=2.28.2
 pillow>=10.4.0
-scrcpy-client==0.4.7
+av==16.0.1
 customtkinter>=5.2.2
-numpy~=2.1.1
 wakepy>=0.10.2
+adbutils<2.0.0,>=1.0.8
+loguru

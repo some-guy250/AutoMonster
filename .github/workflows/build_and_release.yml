@@ -33,19 +33,38 @@ jobs:
         run: |
           python -m pip install --upgrade pip
 
-          # Install all dependencies except scrcpy-client first
-          python -m pip install --prefer-binary opencv-python requests pillow customtkinter numpy wakepy
+          # Step 1: Install av with pre-built binary (av 16.0.1 has wheels for Python 3.10)
+          Write-Host "Installing av 16.0.1 with pre-built binary..."
+          python -m pip install av==16.0.1 --only-binary=:all:
 
-          # Install av from PyPI with only binary (no source compilation)
-          python -m pip install --only-binary=av av
+          # Step 2: Install scrcpy-client without dependencies to avoid av conflict
+          # (scrcpy-client requires av<10.0.0, but av 16.0.1 is API-compatible)
+          Write-Host "Installing scrcpy-client without dependencies..."
+          python -m pip install --no-deps scrcpy-client>=0.4.7
 
-          # Install adbutils (scrcpy-client dependency)
+          # Step 3: Install remaining dependencies
+          Write-Host "Installing remaining dependencies..."
+          python -m pip install --prefer-binary pillow opencv-python requests numpy customtkinter wakepy loguru
           python -m pip install "adbutils<2.0.0,>=1.0.8"
 
-          # Install scrcpy-client
-          python -m pip install scrcpy-client==0.4.7
+          # Verify scrcpy-client installation
+          Write-Host "Verifying scrcpy-client installation..."
+          $scrcpyInstalled = python -c "import importlib.util; print(importlib.util.find_spec('scrcpy') is not None)"
+          if ($scrcpyInstalled -eq "False") {
+            Write-Host "ERROR: scrcpy-client installed but module not found. This is a critical dependency."
+            exit 1
+          }
+
+          # Show installed packages for debugging
+          Write-Host "Installed packages (av):"
+          pip list | findstr "av"
+          Write-Host "Installed packages (scrcpy):"
+          pip list | findstr "scrcpy"
+          Write-Host "Installed packages (adbutils):"
+          pip list | findstr "adbutils"
 
           # Install PyInstaller
+          Write-Host "Installing PyInstaller..."
           python -m pip install --prefer-binary pyinstaller
 
       - name: Build Executable
