@@ -69,9 +69,8 @@ jobs:
 
       - name: Build Executable
         run: |
-          # Get the scrcpy package location
-          $sitePackages = python -c "import site; print(site.getsitepackages()[0])"
-          $scrcpyDir = Join-Path -Path $sitePackages -ChildPath "scrcpy"
+          # Get the scrcpy package location using Python
+          $scrcpyDir = python -c "import scrcpy, os; print(os.path.dirname(scrcpy.__file__))"
 
           Write-Host "scrcpy directory: $scrcpyDir"
           if (Test-Path $scrcpyDir) {
