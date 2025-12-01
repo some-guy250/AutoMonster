@@ -69,35 +69,21 @@ jobs:
 
       - name: Build Executable
         run: |
-          # First try the standard package location
-          $scrcpyPath = (python -c "import importlib.util, os; spec = importlib.util.find_spec('scrcpy'); print(os.path.dirname(spec.origin) if spec else '')")
-          
-          if (-not $scrcpyPath) {
-            Write-Host "ERROR: Could not locate scrcpy module path. This is required for packaging."
-            exit 1
-          }
-          
-          Write-Host "scrcpy module found at: $scrcpyPath"
-          
-          # Find the actual scrcpy directory within the package
-          $scrcpyDir = Join-Path -Path $scrcpyPath -ChildPath "scrcpy"
-          if (-not (Test-Path $scrcpyDir)) {
-            # Try looking directly at the site-packages directory
-            $sitePackages = python -c "import site; print(site.getsitepackages()[0])"
-            $scrcpyDir = Join-Path -Path $sitePackages -ChildPath "scrcpy"
-          }
-          
+          # Get the scrcpy package location
+          $sitePackages = python -c "import site; print(site.getsitepackages()[0])"
+          $scrcpyDir = Join-Path -Path $sitePackages -ChildPath "scrcpy"
+
           Write-Host "scrcpy directory: $scrcpyDir"
           if (Test-Path $scrcpyDir) {
-            Write-Host "Contents of scrcpy directory:"
-            Get-ChildItem $scrcpyDir -Recurse | ForEach-Object { Write-Host $_.FullName }
+            Write-Host "scrcpy module found. Contents:"
+            Get-ChildItem $scrcpyDir | ForEach-Object { Write-Host $_.Name }
           } else {
-            Write-Host "ERROR: scrcpy directory not found. This is required for packaging."
+            Write-Host "ERROR: scrcpy directory not found at $scrcpyDir"
             exit 1
           }
-          
-          # Build with scrcpy data
-          $command = "pyinstaller --noconfirm --onefile --windowed --icon `"./assets/favicon.ico`" --add-data `"$scrcpyDir;scrcpy`" ${{ matrix.script }} -n ${{ matrix.name }}.exe"
+
+          # Build executable with scrcpy module included
+          $command = "pyinstaller --noconfirm --onefile --windowed --icon `"./assets/favicon.ico`" --add-data `"$scrcpyDir;scrcpy`" ${{ matrix.script }} -n ${{ matrix.name }}"
           Write-Host "Running: $command"
           Invoke-Expression $command
 
