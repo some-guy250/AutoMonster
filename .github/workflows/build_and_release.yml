@@ -36,10 +36,8 @@ jobs:
           # Install all dependencies except scrcpy-client first
           python -m pip install --prefer-binary opencv-python requests pillow customtkinter numpy wakepy
 
-          # Install av from pre-built wheel (scrcpy-client dependency)
-          $avWheelUrl = "https://github.com/PyAV-Org/PyAV/releases/download/v9.2.0/av-9.2.0-cp310-cp310-win_amd64.whl"
-          Invoke-WebRequest -Uri $avWheelUrl -OutFile "av-9.2.0-cp310-cp310-win_amd64.whl"
-          python -m pip install "av-9.2.0-cp310-cp310-win_amd64.whl"
+          # Install av from PyPI with only binary (no source compilation)
+          python -m pip install --only-binary=av av
 
           # Install adbutils (scrcpy-client dependency)
           python -m pip install "adbutils<2.0.0,>=1.0.8"
