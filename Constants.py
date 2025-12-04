@@ -29,7 +29,6 @@ class ASSETS:
     DoneAdventure = "share.png"
     EnterBattleRankUp = "enterbattlerankup.png"
     StartBattleRankUp = "startbattlerankup.png"
-    CancelHunt = "cancelhunt.png"
     PlayCutscene = "playcut.png"
     Skip = "skip.png"
     DailyBonus = "dailybonus.png"

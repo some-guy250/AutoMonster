@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 import threading
+import time
 from datetime import datetime
 
 import customtkinter as ctk
@@ -16,6 +17,7 @@ from Constants import GUI_COMMANDS, GUI_COMMAND_DESCRIPTIONS
 from command_frame import CommandFrame
 from device_selection_frame import DeviceSelectionFrame
 from macro_dialog import MacroDialog
+from debug_tool import DebugTool
 
 DEFAULTS_FILE = "defaults.json"
 MACROS_FILE = "macros.json"
@@ -78,16 +80,17 @@ class ControllerGUI(ctk.CTk):
     def on_device_selected(self, device):
         # Show loading progress
         self.device_frame.disable_connect_btns()
-        self.device_frame.show_loading()
+        self.device_frame.show_loading("Connecting to device...")
 
-        def set_controller():
+        def initialize_controller():
             self.controller = None
             try:
+                # Controller() handles everything: launch_game, wait, check resolution, open_game
                 self.controller = Controller()
             except IndexError:
                 pass
 
-        thread = threading.Thread(target=set_controller, daemon=True)
+        thread = threading.Thread(target=initialize_controller, daemon=True)
         thread.start()
 
         # Wait for controller to be initialized
@@ -134,6 +137,7 @@ class ControllerGUI(ctk.CTk):
         self.main_frame.grid_columnconfigure(2, weight=1)  # Preview
         self.main_frame.grid_columnconfigure(3, weight=0, minsize=self.panel_width)  # Info frame
         self.main_frame.grid_columnconfigure(4, weight=0, minsize=30)  # Right toggle button
+        self.main_frame.grid_columnconfigure(5, weight=0, minsize=self.panel_width)  # Debug panel (hidden by default)
         self.main_frame.grid_rowconfigure(0, weight=3)  # Row for main content
         self.main_frame.grid_rowconfigure(1, weight=1)  # Row for logs
 
@@ -394,15 +398,15 @@ class ControllerGUI(ctk.CTk):
         # Setup preview update
         self.controller.client.add_listener(scrcpy.EVENT_FRAME, lambda frame: self.update_image_safe(frame))
 
-        # Log frame
+        # Create logs frame (removed tabview for cleaner look)
         self.log_frame = ctk.CTkFrame(self.main_frame)
         self.log_frame.grid(row=1, column=0, columnspan=4, padx=10, pady=10, sticky="nsew")
 
         # Log header with auto-scroll toggle
         header_frame = ctk.CTkFrame(self.log_frame)
-        header_frame.pack(fill="x", padx=10, pady=(5, 0))
+        header_frame.pack(fill="x", padx=10, pady=(10, 0))
 
-        log_header = ctk.CTkLabel(header_frame, text="Logs", font=self.fonts["subheader"])
+        log_header = ctk.CTkLabel(header_frame, text="Execution Logs", font=self.fonts["subheader"])
         log_header.pack(side="left")
 
         self.auto_scroll = ctk.BooleanVar(value=True)
@@ -440,6 +444,9 @@ class ControllerGUI(ctk.CTk):
         self.log_text.bind("<Button-5>", self.on_log_scroll)  # Linux scroll down
 
         self.controller.gui_logger = self.append_log
+
+        # Debug tool will be created when debug mode is enabled
+        self.debug_tool = None
 
         if len(sys.argv) > 1:
             self.append_log(f"Updated to the latest version: v-{__version__}")
@@ -662,6 +669,14 @@ class ControllerGUI(ctk.CTk):
         self.after(0, show_progress)
 
     def update_image(self, frame):
+        try:
+            # Draw debug tool detections on the frame BEFORE resizing
+            if self.debug_mode and self.debug_tool is not None:
+                frame = self.debug_tool.draw_detections_on_frame(frame.copy())
+        except Exception as e:
+            # Ignore errors if video stream disconnects
+            pass
+
         img_size = self.img_size
         if frame.shape[0] > frame.shape[1]:
             img_size = img_size[::-1]
@@ -705,9 +720,16 @@ class ControllerGUI(ctk.CTk):
         # Toggle debug buttons visibility
         if self.debug_mode:
             self.screenshot_btn.pack(fill="x", expand=True, padx=2)
+            # Show Asset Debugger as side panel (spans both rows - main content and logs)
+            if self.debug_tool is None:
+                self.debug_tool = DebugTool(self.main_frame, self.controller)
+            self.debug_tool.grid(row=0, column=5, rowspan=2, padx=(0, 10), pady=10, sticky="nsew")
             self.append_log("Debug mode enabled", "debug")
         else:
             self.screenshot_btn.pack_forget()
+            # Hide Asset Debugger panel
+            if self.debug_tool is not None:
+                self.debug_tool.grid_forget()
             self.append_log("Debug mode disabled", "success")
 
     def update_info_panel(self, command_name):

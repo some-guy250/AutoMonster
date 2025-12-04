@@ -158,10 +158,12 @@ class DeviceSelectionFrame(ctk.CTkFrame):
                     f"Device {i + 1}: {d.serial}": d.serial
                     for i, d in enumerate(devices)
                 }
+                device_list = list(self.device_serials.keys())
                 self.device_dropdown.configure(
-                    values=list(self.device_serials.keys())
+                    values=device_list
                 )
-                self.device_dropdown.set("Select a device")
+                # Auto-select the first device
+                self.device_dropdown.set(device_list[0])
                 self.connect_btn.configure(state="normal")  # Enable connect button
             else:
                 self.device_serials = {}

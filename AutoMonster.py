@@ -46,7 +46,7 @@ os.system('color')
 
 
 class Controller:
-    def __init__(self, save_screen: bool = False):
+    def __init__(self, save_screen: bool = False, skip_game_launch: bool = False):
         self.gui_logger = None
         self.cancel_flag = False
         self.pause = time.sleep
@@ -57,8 +57,11 @@ class Controller:
         self.client = scrcpy.Client(max_fps=10, stay_awake=True, block_frame=True,
                                     device=adb.device_list()[0])
         self.client.start(True, True)
-        self.launch_game()
-        time.sleep(2)
+
+        # Only launch game if not skipping (for faster GUI startup)
+        if not skip_game_launch:
+            self.launch_game()
+            time.sleep(2)
 
         logger.info(f'Device connected')
 
@@ -68,7 +71,19 @@ class Controller:
         self.resized = False
         if size[0] != 1280 or size[1] != 720:
             self.resized = True
+            # Wait for a frame to be available before accessing it
             image = self.client.last_frame
+            max_attempts = 10
+            attempts = 0
+            while image is None and attempts < max_attempts:
+                time.sleep(0.1)
+                image = self.client.last_frame
+                attempts += 1
+
+            if image is None:
+                logger.error("Could not get frame from device after 1 second. Device may not be responding.")
+                raise Exception("Failed to get frame from device - device connection failed")
+
             self.new_width = int(720 * image.shape[1] / image.shape[0])
             resized_image = cv2.resize(image, (self.new_width, 720))
             width_original, height_original = image.shape[1], image.shape[0]
@@ -97,7 +112,24 @@ class Controller:
 
         if save_screen:
             self.save_screen(take_new=True)
-        self.open_game(force_close=False)
+
+        # Only open game if not skipping (GUI will handle this later)
+        if not skip_game_launch:
+            self.open_game(force_close=False)
+
+    def load_templates(self):
+        """Reload all templates from disk and Constants.py"""
+        self.template_dict = {}
+        pathlib.Path('assets').mkdir(parents=True, exist_ok=True)
+        for asset in dir(ASSETS):
+            if asset.startswith('__'):
+                continue
+            png_file = getattr(ASSETS, asset)
+            if pathlib.Path(f'assets/{png_file}').exists():
+                img = cv2.imread(f'assets/{png_file}')
+                self.template_dict[png_file] = (img, img.shape[0], img.shape[1])
+            else:
+                logger.warning(f'Asset {png_file} is missing')
 
     def get_battery_level(self):
         return self.client.device.shell("dumpsys battery | grep level").strip().replace("level: ", "")
