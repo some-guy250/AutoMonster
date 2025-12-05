@@ -110,7 +110,16 @@ class ModernProgressWindow:
         # Add smooth animation for progress updates
         self.target_progress = 0
         self.current_progress = 0
+        
+        # State for polling
+        self.pending_progress = 0
+        self.pending_text = ""
+        self.pending_details = ""
+        self.pending_eta = ""
+        self.needs_update = False
+        
         self.animate_progress()
+        self.poll_updates()
 
         self.is_closing = False
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -125,37 +134,53 @@ class ModernProgressWindow:
         if not self.is_closing:
             self.root.after(0, func)
 
+    def poll_updates(self):
+        """Periodically update UI from shared state"""
+        if self.needs_update:
+            self.target_progress = self.pending_progress
+            if self.pending_text:
+                self.label['text'] = self.pending_text
+            if self.pending_details:
+                self.details['text'] = self.pending_details
+            if self.pending_eta:
+                self.global_eta['text'] = self.pending_eta
+            self.needs_update = False
+        
+        if not self.is_closing:
+            self.root.after(50, self.poll_updates)  # Check every 50ms
+
     def animate_progress(self):
         if self.current_progress < self.target_progress:
-            self.current_progress += 0.2  # Smaller increment for smoother animation
+            self.current_progress += 0.5  # Faster animation
+            if self.current_progress > self.target_progress:
+                self.current_progress = self.target_progress
             self.progress['value'] = self.current_progress
         elif self.current_progress > self.target_progress:
             self.current_progress = self.target_progress
             self.progress['value'] = self.current_progress
 
-        self.root.after(5, self.animate_progress)  # More frequent updates (5ms)
+        if not self.is_closing:
+            self.root.after(10, self.animate_progress)
 
     def update_progress(self, value, text="", details=""):
-        def update():
-            self.target_progress = value
-            if text:
-                self.label['text'] = text
-            if details:
-                self.details['text'] = details
-
-        self.safe_update(update)
+        self.pending_progress = value
+        if text:
+            self.pending_text = text
+        if details:
+            self.pending_details = details
+        self.needs_update = True
 
     def update_version(self, current_ver, latest_ver=None):
-        if latest_ver:
-            self.version_label['text'] = f"Current: v{current_ver} → Latest: v{latest_ver}"
-        else:
-            self.version_label['text'] = f"Current Version: v{current_ver}"
+        def update():
+            if latest_ver:
+                self.version_label['text'] = f"Current: v{current_ver} → Latest: v{latest_ver}"
+            else:
+                self.version_label['text'] = f"Current Version: v{current_ver}"
+        self.safe_update(update)
 
     def update_eta(self, eta_text):
-        def update():
-            self.global_eta['text'] = eta_text
-
-        self.safe_update(update)
+        self.pending_eta = eta_text
+        self.needs_update = True
 
     def close(self):
         def do_close():
@@ -267,9 +292,10 @@ def download_assets(progress_window=None):
             response = requests.get(item["download_url"], stream=True)
 
             with open(file_path, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):
+                for chunk in response.iter_content(chunk_size=65536):
                     f.write(chunk)
                     total_downloaded += len(chunk)
+                    
                     if progress_window and total_size:
                         current_progress = (total_downloaded / total_size) * 50
                         eta = calculate_eta(start_time, total_downloaded, total_size)
@@ -292,7 +318,6 @@ def download_assets(progress_window=None):
                             status
                         )
                         progress_window.update_eta(global_status)
-                        progress_window.root.update_idletasks()
 
 
 def download_file(url, target_path, progress_window=None, progress_start=0, progress_end=100, label="Downloading..."):
@@ -301,31 +326,28 @@ def download_file(url, target_path, progress_window=None, progress_start=0, prog
     
     start_time = time.time()
     downloaded = 0
-    last_update = 0
     
     with open(target_path, "wb") as file:
-        for chunk in response.iter_content(chunk_size=8192):
+        for chunk in response.iter_content(chunk_size=65536):
             file.write(chunk)
             downloaded += len(chunk)
             
             if progress_window and total_size:
                 current_percent = (downloaded / total_size)
-                if current_percent - last_update >= 0.01:
-                    progress = progress_start + (current_percent * (progress_end - progress_start))
-                    eta = calculate_eta(start_time, downloaded, total_size)
-                    speed = downloaded / (time.time() - start_time) if (time.time() - start_time) > 0 else 0
-                    
-                    status = (
-                        f"{label}\n"
-                        f"{format_size(downloaded)} / {format_size(total_size)} ({int(current_percent * 100)}%)"
-                    )
-                    
-                    global_status = f"Speed: {format_size(speed)}/s | ETA: {eta}"
-                    
-                    progress_window.update_progress(progress, label, status)
-                    progress_window.update_eta(global_status)
-                    progress_window.root.update_idletasks()
-                    last_update = current_percent
+                
+                progress = progress_start + (current_percent * (progress_end - progress_start))
+                eta = calculate_eta(start_time, downloaded, total_size)
+                speed = downloaded / (time.time() - start_time) if (time.time() - start_time) > 0 else 0
+                
+                status = (
+                    f"{label}\n"
+                    f"{format_size(downloaded)} / {format_size(total_size)} ({int(current_percent * 100)}%)"
+                )
+                
+                global_status = f"Speed: {format_size(speed)}/s | ETA: {eta}"
+                
+                progress_window.update_progress(progress, label, status)
+                progress_window.update_eta(global_status)
 
 def get_launcher_version():
     if os.path.isfile("launcher_version.txt"):
