@@ -162,9 +162,15 @@ class Region:
 
 # Region definitions
 ASSET_REGIONS = {
+    ASSETS.Cancel: Region.TOP_RIGHT,
+
     ASSETS.ActivityHub: Region.TOP,
     ASSETS.Battles: Region.BOTTOM_LEFT,
-    
+    ASSETS.RightArrow: Region.RIGHT,
+    ASSETS.EnterBattleRankUp: Region.BOTTOM,
+    ASSETS.StartBattleRankUp: Region.BOTTOM_RIGHT,
+    ASSETS.AutoBattle: Region.TOP_LEFT,
+
     ASSETS.CavernMisery: Region.TOP_LEFT,
     ASSETS.CavernConspiracy: Region.TOP_LEFT,
     ASSETS.CavernFeral: Region.TOP_LEFT,
