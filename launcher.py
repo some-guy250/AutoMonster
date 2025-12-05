@@ -117,11 +117,11 @@ class ModernProgressWindow:
         self.pending_details = ""
         self.pending_eta = ""
         self.needs_update = False
+        self.is_closing = False
         
         self.animate_progress()
         self.poll_updates()
 
-        self.is_closing = False
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def on_closing(self):
