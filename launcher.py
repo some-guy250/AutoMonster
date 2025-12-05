@@ -6,6 +6,7 @@ import sys
 import subprocess
 from tempfile import gettempdir
 from tkinter import ttk
+import concurrent.futures
 
 import requests
 
@@ -284,40 +285,78 @@ def download_assets(progress_window=None):
         total_size = sum(item["size"] for item in files_to_download)
 
         start_time = time.time()
-        total_downloaded = 0
-
-        for idx, item in enumerate(files_to_download):
+        # Use a lock for thread-safe updates to total_downloaded
+        progress_lock = threading.Lock()
+        # We'll use a mutable container to share state across threads
+        shared_state = {'total_downloaded': 0, 'files_completed': 0}
+        
+        def download_single_asset(item):
             file_name = os.path.basename(item["download_url"])
             file_path = os.path.join("assets", file_name)
+            
+            # Use a session for potentially better performance (though new session per thread here)
+            # Ideally we pass a session, but requests.get is simple.
+            # Let's just use requests.get with a larger chunk size.
             response = requests.get(item["download_url"], stream=True)
-
+            
             with open(file_path, "wb") as f:
-                for chunk in response.iter_content(chunk_size=65536):
+                for chunk in response.iter_content(chunk_size=1048576): # 1MB chunks
                     f.write(chunk)
-                    total_downloaded += len(chunk)
+                    with progress_lock:
+                        shared_state['total_downloaded'] += len(chunk)
+                        
+                        # Throttle updates to shared state to avoid lock contention and excessive updates
+                        # Actually, we can just update the variables. The GUI polls.
+                        # But we need to calculate ETA/Speed based on global progress.
+                        
+                        current_downloaded = shared_state['total_downloaded']
+                        
+                        if progress_window and total_size:
+                            # Only update if we have significant change or enough time passed?
+                            # Since we are in a lock, let's be quick.
+                            pass
+
+            with progress_lock:
+                shared_state['files_completed'] += 1
+
+        # Monitor thread to update progress
+        def monitor_progress():
+            last_update_time = 0
+            while shared_state['files_completed'] < total_files:
+                current_time = time.time()
+                if current_time - last_update_time > 0.1:
+                    with progress_lock:
+                        downloaded = shared_state['total_downloaded']
+                        completed = shared_state['files_completed']
                     
                     if progress_window and total_size:
-                        current_progress = (total_downloaded / total_size) * 50
-                        eta = calculate_eta(start_time, total_downloaded, total_size)
-                        speed = total_downloaded / (time.time() - start_time)
-
-                        # Update main progress with current file info
+                        current_progress = (downloaded / total_size) * 50
+                        eta = calculate_eta(start_time, downloaded, total_size)
+                        speed = downloaded / (current_time - start_time) if (current_time - start_time) > 0 else 0
+                        
                         status = (
-                            f"File {idx + 1}/{total_files}: {file_name}\n"
-                            f"Total Progress: {format_size(total_downloaded)} / {format_size(total_size)}"
+                            f"Downloading assets... ({completed}/{total_files})\n"
+                            f"Total Progress: {format_size(downloaded)} / {format_size(total_size)}"
                         )
-
-                        # Update global ETA separately
-                        global_status = (
-                            f"Speed: {format_size(speed)}/s | ETA: {eta}"
-                        )
-
-                        progress_window.update_progress(
-                            current_progress,
-                            "Downloading assets...",
-                            status
-                        )
+                        
+                        global_status = f"Speed: {format_size(speed)}/s | ETA: {eta}"
+                        
+                        progress_window.update_progress(current_progress, "Downloading assets...", status)
                         progress_window.update_eta(global_status)
+                    
+                    last_update_time = current_time
+                time.sleep(0.05)
+
+        # Start monitor thread
+        monitor = threading.Thread(target=monitor_progress)
+        monitor.start()
+
+        # Run downloads in parallel
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            executor.map(download_single_asset, files_to_download)
+            
+        # Ensure monitor finishes
+        monitor.join()
 
 
 def download_file(url, target_path, progress_window=None, progress_start=0, progress_end=100, label="Downloading..."):
@@ -326,18 +365,22 @@ def download_file(url, target_path, progress_window=None, progress_start=0, prog
     
     start_time = time.time()
     downloaded = 0
+    last_update_time = 0
     
     with open(target_path, "wb") as file:
-        for chunk in response.iter_content(chunk_size=65536):
+        for chunk in response.iter_content(chunk_size=1048576): # 1MB chunks
             file.write(chunk)
             downloaded += len(chunk)
             
-            if progress_window and total_size:
+            current_time = time.time()
+            # Only update shared state every 0.1s
+            if progress_window and total_size and (current_time - last_update_time > 0.1 or downloaded == total_size):
+                last_update_time = current_time
                 current_percent = (downloaded / total_size)
                 
                 progress = progress_start + (current_percent * (progress_end - progress_start))
                 eta = calculate_eta(start_time, downloaded, total_size)
-                speed = downloaded / (time.time() - start_time) if (time.time() - start_time) > 0 else 0
+                speed = downloaded / (current_time - start_time) if (current_time - start_time) > 0 else 0
                 
                 status = (
                     f"{label}\n"
