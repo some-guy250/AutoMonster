@@ -11,13 +11,6 @@ from pathlib import Path
 import scrcpy
 from Constants import ASSET_REGIONS, Region, ASSETS
 
-# Try to import CTkListbox, fallback to a simple implementation if not available
-try:
-    from CTkListbox import CTkListbox
-    HAS_CTKLISTBOX = True
-except ImportError:
-    HAS_CTKLISTBOX = False
-
 
 class SimpleMultiSelectListbox(ctk.CTkFrame):
     """Simple multi-select listbox implementation using CTkScrollableFrame"""
@@ -63,7 +56,7 @@ class SimpleMultiSelectListbox(ctk.CTkFrame):
     def _create_item_widget(self, index, item):
         """Create a clickable label for an item"""
         frame = ctk.CTkFrame(self.scrollable_frame, fg_color="transparent")
-        frame.grid(row=index, column=0, sticky="ew", padx=2, pady=2)
+        frame.grid(row=index, column=0, sticky="ew", padx=0, pady=1)
         frame.grid_columnconfigure(0, weight=1)
 
         label = ctk.CTkLabel(
@@ -71,9 +64,13 @@ class SimpleMultiSelectListbox(ctk.CTkFrame):
             text=item,
             anchor="w",
             fg_color="#1f1f1f",
-            corner_radius=4
+            text_color="white",
+            corner_radius=4,
+            height=24,
+            padx=10,
+            width=50  # Allow shrinking/expanding without forcing width
         )
-        label.grid(row=0, column=0, sticky="ew", padx=5, pady=8)
+        label.grid(row=0, column=0, sticky="ew", padx=2, pady=0)
 
         # Bind click events - default multi-select (no Ctrl needed)
         def on_click(event, idx=index):
@@ -109,7 +106,14 @@ class SimpleMultiSelectListbox(ctk.CTkFrame):
                 widget = self.item_widgets[changed_index]
                 label = widget.winfo_children()[0]
                 if changed_index in self.selected_indices:
-                    label.configure(fg_color="#3498db", text_color="white")
+                    # Check if we have a specific color for this item
+                    item_name = self.items[changed_index]
+                    if asset_colors and item_name in asset_colors:
+                        b, g, r = asset_colors[item_name]
+                        hex_color = f"#{r:02x}{g:02x}{b:02x}"
+                        label.configure(fg_color=hex_color, text_color="white")
+                    else:
+                        label.configure(fg_color="#3498db", text_color="white")
                 else:
                     label.configure(fg_color="#1f1f1f", text_color="white")
             return
@@ -144,38 +148,6 @@ class SimpleMultiSelectListbox(ctk.CTkFrame):
     def selection_clear(self, start, end=None):
         """Clear selection"""
         self.selected_indices.clear()
-        self._update_colors()
-
-    def _sort_items(self):
-        """Move selected items to the top"""
-        if not self.selected_indices:
-            return
-
-        # Separate selected and unselected items
-        selected_items = []
-        unselected_items = []
-
-        for i, item in enumerate(self.items):
-            if i in self.selected_indices:
-                selected_items.append(item)
-            else:
-                unselected_items.append(item)
-
-        # Recreate items list with selected first
-        self.items = selected_items + unselected_items
-
-        # Update selected indices to match new positions
-        new_selected = set(range(len(selected_items)))
-        self.selected_indices = new_selected
-
-        # Recreate widgets
-        for widget in self.item_widgets:
-            widget.destroy()
-        self.item_widgets = []
-
-        for i, item in enumerate(self.items):
-            self._create_item_widget(i, item)
-
         self._update_colors()
 
     def _show_preview(self, asset_name):
@@ -362,20 +334,12 @@ class DebugTool(ctk.CTkFrame):
         )
         list_label.grid(row=5, column=0, sticky="w", padx=5, pady=(10, 5))
 
-        # Use custom or built-in listbox for multi-select
-        if HAS_CTKLISTBOX:
-            self.asset_listbox = CTkListbox(
-                left_panel,
-                font=("Arial", 10),
-                command=self.on_asset_selected,
-                multiple_select=True
-            )
-        else:
-            self.asset_listbox = SimpleMultiSelectListbox(
-                left_panel,
-                command=self.on_asset_selected,
-                asset_dict={}  # Will be populated in load_assets
-            )
+        # Use custom listbox for multi-select
+        self.asset_listbox = SimpleMultiSelectListbox(
+            left_panel,
+            command=self.on_asset_selected,
+            asset_dict={}  # Will be populated in load_assets
+        )
         self.asset_listbox.grid(row=6, column=0, sticky="nsew", padx=5, pady=(0, 10))
 
         # Control buttons
@@ -511,8 +475,7 @@ class DebugTool(ctk.CTkFrame):
                         self.all_assets[attr] = value
 
             # Update asset_dict for hover preview
-            if not HAS_CTKLISTBOX:
-                self.asset_listbox.asset_dict = self.all_assets
+            self.asset_listbox.asset_dict = self.all_assets
 
             self.asset_listbox.delete(0, "end")
             for asset_name in sorted(self.all_assets.keys()):
@@ -599,14 +562,16 @@ class DebugTool(ctk.CTkFrame):
 
         # Update listbox
         self.asset_listbox.delete(0, "end")
-        self.asset_listbox.selected_indices.clear()  # Clear selection indices
-
+        
         for asset_name in self.filtered_assets:
             self.asset_listbox.insert("end", asset_name)
 
         # Re-select the assets that are at the top (the selected ones)
         for i in range(len(selected_assets_list)):
             self.asset_listbox.selected_indices.add(i)
+        
+        # Update colors for restored selection
+        self.asset_listbox._update_colors(self.asset_colors)
 
         # Process the selection to update colors
         self._process_selection()
@@ -638,9 +603,8 @@ class DebugTool(ctk.CTkFrame):
 
         self.selected_assets = new_selected_assets
 
-        # Update listbox colors to show assigned colors (only when needed)
-        if not HAS_CTKLISTBOX and self.asset_colors:
-            self.asset_listbox._update_colors(self.asset_colors)
+        # Update listbox colors to show assigned colors
+        self.asset_listbox._update_colors(self.asset_colors)
 
         # Update status label
         if self.selected_assets:
@@ -660,20 +624,11 @@ class DebugTool(ctk.CTkFrame):
 
     def select_all_assets(self):
         """Select all visible assets"""
-        if HAS_CTKLISTBOX:
-            # CTkListbox doesn't have select_all, manually select
-            for i in range(len(self.filtered_assets)):
-                self.asset_listbox.select(i)
-        else:
-            self.asset_listbox.select_all()
-        self.on_asset_selected()
+        self.asset_listbox.select_all()
 
     def deselect_all_assets(self):
         """Deselect all assets"""
-        if HAS_CTKLISTBOX:
-            self.asset_listbox.deselect("all")
-        else:
-            self.asset_listbox.deselect_all()
+        self.asset_listbox.deselect_all()
         self.selected_assets = []
         self.asset_colors = {}  # Clear color assignments
         self.color_index = 0  # Reset color index
@@ -717,28 +672,9 @@ class DebugTool(ctk.CTkFrame):
 
                     h, w = template.shape[:2]
                     
-                    # --- Apply Region Logic (Same as AutoMonster._get_cords) ---
-                    region = ASSET_REGIONS.get(asset_name, Region.ALL)
-                    sh, sw = frame.shape[:2]
-                    
-                    # Calculate crop boundaries
-                    y_start, y_end = 0, sh
-                    x_start, x_end = 0, sw
-                    
-                    if region & Region.TOP:
-                        y_end = sh // 2
-                    elif region & Region.BOTTOM:
-                        y_start = sh // 2
-                        
-                    if region & Region.LEFT:
-                        x_end = sw // 2
-                    elif region & Region.RIGHT:
-                        x_start = sw // 2
-                        
-                    # Crop the frame for matching
-                    img_to_match = frame[y_start:y_end, x_start:x_end]
-                    crop_x, crop_y = x_start, y_start
-                    # -----------------------------------------------------------
+                    # Use full frame for debug scanning to find assets anywhere
+                    img_to_match = frame
+                    crop_x, crop_y = 0, 0
 
                     # Apply grayscale if selected
                     if self.grayscale_var.get():

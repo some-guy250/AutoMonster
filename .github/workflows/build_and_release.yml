@@ -44,7 +44,7 @@ jobs:
 
           # Step 3: Install remaining dependencies
           Write-Host "Installing remaining dependencies..."
-          python -m pip install --prefer-binary pillow opencv-python requests numpy customtkinter wakepy loguru
+          python -m pip install --prefer-binary pillow opencv-python requests numpy customtkinter wakepy loguru ctklistbox
           python -m pip install "adbutils<2.0.0,>=1.0.8"
 
           # Verify scrcpy-client installation
