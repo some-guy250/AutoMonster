@@ -148,10 +148,10 @@ class BattleManager:
                     if not self.controller.follow_sequence(ASSETS.PlayCutscene, ASSETS.Skip,
                                                 (ASSETS.StartBattle, ASSETS.PlayCutscene, ASSETS.EraSagaDone,
                                                  ASSETS.EnterEraSaga, ASSETS.StartBattleRankUp)):
-                        self.controller.wait_for(ASSETS.StartBattleRankUp, ASSETS.StartBattle, timeout=10)
-                        if self.controller.in_screen(ASSETS.EraSagaDone, ASSETS.EnterEraSaga):
+                        self.controller.wait_for(ASSETS.StartBattleRankUp, ASSETS.StartBattle, timeout=15)
+                        if self.controller.in_screen(ASSETS.EraSagaDone, ASSETS.EnterEraSaga, reties=3):
                             return True
-                        if not self.controller.in_screen(ASSETS.StartBattle, ASSETS.StartBattleRankUp, ASSETS.PlayCutscene):
+                        if not self.controller.in_screen(ASSETS.StartBattle, ASSETS.StartBattleRankUp, ASSETS.PlayCutscene, reties=3):
                             raise AutoMonsterErrors.BattleError("Failed to skip cutscene")
                     self.controller.pause(3)
                     if self.controller.in_screen(ASSETS.StartBattle, ASSETS.StartBattleRankUp):
