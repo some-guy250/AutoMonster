@@ -44,6 +44,9 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 Source: "final_dist\LauncherAutoMonster.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "replace.bat"; DestDir: "{app}"; Flags: ignoreversion
+Source: "utils\*"; DestDir: "{app}\utils"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "features\*"; DestDir: "{app}\features"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "device_manager.py"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

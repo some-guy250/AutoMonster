@@ -114,6 +114,8 @@ class ASSETS:
     ErrorPlayingVideo = "errorplayingvideo.png"
     FlashRaid = "flashraid.png"
     Cavern = "cavern.png"
+    CavernMisery = "cavernmisery.png"
+    CavernConspiracy = "cavernconspiracy.png"
     CavernFeral = "cavernferal.png"
     CavernHistoria = "cavernhistoria.png"
     CavernMultiverse = "cavernmultiverse.png"
@@ -143,6 +145,47 @@ class ASSETS:
     ActivityHub = "acthub.png"
     ClaimDaily = "claimdaily.png"
 
+
+class Region:
+    ALL = 0
+    TOP = 1
+    BOTTOM = 2
+    LEFT = 4
+    RIGHT = 8
+
+    # Combinations
+    TOP_LEFT = TOP | LEFT
+    TOP_RIGHT = TOP | RIGHT
+    BOTTOM_LEFT = BOTTOM | LEFT
+    BOTTOM_RIGHT = BOTTOM | RIGHT
+
+
+# Region definitions
+ASSET_REGIONS = {
+    ASSETS.CavernMisery: Region.TOP_LEFT,
+    ASSETS.CavernConspiracy: Region.TOP_LEFT,
+    ASSETS.CavernFeral: Region.TOP_LEFT,
+    ASSETS.CavernHistoria: Region.TOP_LEFT,
+    ASSETS.CavernMultiverse: Region.TOP_LEFT,
+    ASSETS.CavernEvaris: Region.TOP_LEFT,
+    ASSETS.CavernGeneza: Region.TOP_LEFT,
+    ASSETS.CavernJestin: Region.TOP_LEFT,
+    ASSETS.CavernBaBa: Region.TOP_LEFT,
+    ASSETS.CavernKhalorc: Region.TOP_LEFT,
+    ASSETS.CavernTyr: Region.TOP_LEFT,
+    ASSETS.CavernRobur: Region.TOP_LEFT,
+    ASSETS.CavernTheton: Region.TOP_LEFT,
+    ASSETS.CavernGriffania: Region.TOP_LEFT,
+    ASSETS.CavernAlpine: Region.TOP_LEFT,
+    ASSETS.CavernAbyssal: Region.TOP_LEFT,
+    ASSETS.CavernGalactic: Region.TOP_LEFT,
+    ASSETS.CavernBlossom: Region.TOP_LEFT,
+    ASSETS.CavernDoomed: Region.TOP_LEFT,
+    ASSETS.CavernMetro: Region.TOP_LEFT,
+    ASSETS.CavernCorrupted: Region.TOP_LEFT,
+    ASSETS.CavernCosmic: Region.TOP_LEFT,
+    ASSETS.CavernOriginal: Region.TOP_LEFT,
+}
 
 IN_GAME_ASSETS = (
     ASSETS.Cancel, ASSETS.Exit, ASSETS.Battles, ASSETS.Wheel, ASSETS.Shop, ASSETS.StartBattle, ASSETS.StartBattlePVP,

@@ -8,102 +8,51 @@ from adbutils import adb
 
 import AutoMonsterErrors
 import Constants
-from Constants import ASSETS, Ancestral_Cavers, AdLocationsHorizontal, AdLocationsVertical, IN_GAME_ASSETS, CommonAds
+from Constants import ASSETS, Ancestral_Cavers, AdLocationsHorizontal, AdLocationsVertical, IN_GAME_ASSETS, CommonAds, ASSET_REGIONS, Region
 from HelperFunctions import *
+from utils.logger import setup_logger
+from device_manager import DeviceManager
+from features.ads import AdManager
+from features.game import GameManager
+from features.battle import BattleManager
 
-
-class CustomFormatter(logging.Formatter):
-    blue = "\x1b[38;5;4m"
-    grey = "\x1b[38;5;7m"
-    yellow = "\x1b[33;20m"
-    red = "\x1b[31;20m"
-    bold_red = "\x1b[31;1m"
-    reset = "\x1b[0m"
-    format = "%(levelname)s: %(message)s"
-
-    FORMATS = {
-        logging.DEBUG: blue + format + reset,
-        logging.INFO: grey + format + reset,
-        logging.WARNING: yellow + format + reset,
-        logging.ERROR: red + format + reset,
-        logging.CRITICAL: bold_red + format + reset
-    }
-
-    def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno)
-        formatter = logging.Formatter(log_fmt)
-        return formatter.format(record)
-
-
-logger = logging.getLogger("AutoMonster")
-logger.setLevel(logging.DEBUG)
-# create console handler with a higher log level
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-ch.setFormatter(CustomFormatter())
-logger.addHandler(ch)
-os.system('color')
+logger = setup_logger()
 
 
 class Controller:
     def __init__(self, save_screen: bool = False, skip_game_launch: bool = False):
         self.gui_logger = None
-        self.cancel_flag = False
-        self.pause = time.sleep
-        self._paused = False
-        self.__last_screenshot: Optional[np.ndarray] = None
-        # connect to the device
+        self.device_manager = DeviceManager()
+        self.client = self.device_manager.client
         self.template_dict = {}
-        self.client = scrcpy.Client(max_fps=10, stay_awake=True, block_frame=True,
-                                    device=adb.device_list()[0])
-        self.client.start(True, True)
+
+        self.ad_manager = AdManager(self)
+        self.game_manager = GameManager(self)
+        self.battle_manager = BattleManager(self)
 
         # Only launch game if not skipping (for faster GUI startup)
         if not skip_game_launch:
             self.launch_game()
             time.sleep(2)
 
-        logger.info(f'Device connected')
-
-        size = self.client.resolution
-        self.ratio = None
-        self.new_width = size[0]
-        self.resized = False
-        if size[0] != 1280 or size[1] != 720:
-            self.resized = True
-            # Wait for a frame to be available before accessing it
-            image = self.client.last_frame
-            max_attempts = 10
-            attempts = 0
-            while image is None and attempts < max_attempts:
-                time.sleep(0.1)
-                image = self.client.last_frame
-                attempts += 1
-
-            if image is None:
-                logger.error("Could not get frame from device after 1 second. Device may not be responding.")
-                raise Exception("Failed to get frame from device - device connection failed")
-
-            self.new_width = int(720 * image.shape[1] / image.shape[0])
-            resized_image = cv2.resize(image, (self.new_width, 720))
-            width_original, height_original = image.shape[1], image.shape[0]
-            width_resized, height_resized = resized_image.shape[1], resized_image.shape[0]
-            self.ratio = (width_original / width_resized, height_original / height_resized)
-            logger.info(f"Screen resolution is {size[0]}x{size[1]}, recommended resolution is 1280x720, resizing to "
-                        f"{self.new_width}x720 might cause some issues")
-        self.scale_x = lambda x: int(x * self.ratio[0]) if self.resized else x
-        self.scale_y = lambda y: int(y * self.ratio[1]) if self.resized else y
-
         # insert the ad locations at the beginning of the list
-        if self.resized:
-            AdLocationsHorizontal.insert(0, (int((size[0] - 130) / self.ratio[0]), 85))
+        if self.device_manager.resized:
+            size = self.device_manager.client.resolution
+            AdLocationsHorizontal.insert(0, (int((size[0] - 130) / self.device_manager.ratio[0]), 85))
 
         pathlib.Path('assets').mkdir(parents=True, exist_ok=True)
+        
         self.available_assets: List[str] = []
         for asset in dir(ASSETS):
             if asset.startswith('__'):
                 continue
             png_file = getattr(ASSETS, asset)
+
+            if png_file not in ASSET_REGIONS:
+                logger.warning(f"Asset '{png_file}' (ASSETS.{asset}) has no region defined. Defaulting to Region.ALL")
+            elif ASSET_REGIONS[png_file] == Region.ALL:
+                logger.warning(f"Asset '{png_file}' (ASSETS.{asset}) is using Region.ALL. Consider optimizing.")
+
             if pathlib.Path(f'assets/{png_file}').exists():
                 img = cv2.imread(f'assets/{png_file}')
                 self.template_dict[png_file] = (img, img.shape[0], img.shape[1])
@@ -132,66 +81,44 @@ class Controller:
                 logger.warning(f'Asset {png_file} is missing')
 
     def get_battery_level(self):
-        return self.client.device.shell("dumpsys battery | grep level").strip().replace("level: ", "")
+        return self.device_manager.get_battery_level()
 
     def freeze(self):
-        self._paused = True
+        self.device_manager.freeze()
 
     def unfreeze(self):
-        self._paused = False
+        self.device_manager.unfreeze()
 
     def lock_device(self):
-        self.client.device.shell("input keyevent 26")
+        self.device_manager.lock_device()
 
     def get_orientation(self):
-        if self.client.device.shell(r"dumpsys input | grep SurfaceOrientation").strip() in ["SurfaceOrientation: 1",
-                                                                                            "SurfaceOrientation: 3"]:
-            return "portrait"
-        return "landscape"
+        return self.device_manager.get_orientation()
 
     def lower_brightness(self):
-        self.client.device.shell("settings put system screen_brightness_mode 0")
-        self.client.device.shell("settings put system screen_brightness 0")
+        self.device_manager.lower_brightness()
 
     def set_auto_brightness(self):
-        self.client.device.shell("settings put system screen_brightness_mode 1")
+        self.device_manager.set_auto_brightness()
 
     def get_brightness_info(self):
-        return self.client.device.shell("settings get system screen_brightness_mode"), self.client.device.shell(
-            "settings get system screen_brightness")
+        return self.device_manager.get_brightness_info()
 
     def enable_show_taps(self):
-        self.client.device.shell("settings put system show_touches 1")
+        self.device_manager.enable_show_taps()
 
     def disable_show_taps(self):
-        self.client.device.shell("settings put system show_touches 0")
+        self.device_manager.disable_show_taps()
 
     def log_gui(self, msg, level="info"):
         if self.gui_logger is not None:
             self.gui_logger(msg, level)
 
     def take_screenshot(self) -> np.ndarray:
-        if self.cancel_flag:
-            self.cancel_flag = False
-            logger.info("Cancelled current operation")
-            raise AutoMonsterErrors.ExecutionFlag
+        return self.device_manager.take_screenshot()
 
-        while self._paused:
-            self.pause(5)
-            if self.cancel_flag:
-                self.cancel_flag = False
-                logger.info("Cancelled current operation")
-                raise AutoMonsterErrors.ExecutionFlag
-
-        self.__last_screenshot = self.client.last_frame
-        if self.resized:
-            image = self.__last_screenshot
-            new_size = (self.new_width, 720)
-            if image.shape[0] > image.shape[1]:
-                new_size = (720, self.new_width)
-            resized_image = cv2.resize(image, new_size)
-            self.__last_screenshot = resized_image
-        return self.__last_screenshot
+    def get_last_screenshot(self) -> Optional[np.ndarray]:
+        return self.device_manager.get_last_screenshot()
 
     def save_screen(self, name: str = "sc", take_new=False):
         if take_new:
@@ -199,7 +126,7 @@ class Controller:
         i = 0
         while pathlib.Path(f"sc/{name}{i}.png").exists():
             i += 1
-        cv2.imwrite(f"sc/{name}{i}.png", self.__last_screenshot)
+        cv2.imwrite(f"sc/{name}{i}.png", self.device_manager.get_last_screenshot())
         self.log_gui(f"Screenshot saved as {name}{i}.png", "success")
 
     def _get_cords(self, asset_code: str, screenshot=None, threshold=.9, gray_img=False) -> List[List[int]]:
@@ -207,11 +134,33 @@ class Controller:
             screenshot = self.take_screenshot()
         template, h, w = self.template_dict[asset_code]
 
+        # Determine region and crop
+        region = ASSET_REGIONS.get(asset_code, Region.ALL)
+        sh, sw = screenshot.shape[:2]
+        
+        # Calculate crop boundaries
+        y_start, y_end = 0, sh
+        x_start, x_end = 0, sw
+        
+        if region & Region.TOP:
+            y_end = sh // 2
+        elif region & Region.BOTTOM:
+            y_start = sh // 2
+            
+        if region & Region.LEFT:
+            x_end = sw // 2
+        elif region & Region.RIGHT:
+            x_start = sw // 2
+            
+        # Apply crop
+        img_to_match = screenshot[y_start:y_end, x_start:x_end]
+        crop_x, crop_y = x_start, y_start
+
         if gray_img:
-            screenshot = cv2.cvtColor(screenshot, cv2.COLOR_BGR2GRAY)
+            img_to_match = cv2.cvtColor(img_to_match, cv2.COLOR_BGR2GRAY)
             template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
 
-        res = cv2.matchTemplate(screenshot, template, cv2.TM_CCOEFF_NORMED)
+        res = cv2.matchTemplate(img_to_match, template, cv2.TM_CCOEFF_NORMED)
 
         location = np.where(res >= threshold)
 
@@ -240,8 +189,38 @@ class Controller:
         for group in location_groups:
             x = sum(loc[1] for loc in group) // len(group)
             y = sum(loc[0] for loc in group) // len(group)
+            
+            # Adjust coordinates back to full screen
+            x += crop_x
+            y += crop_y
+
+            # Suggest region optimization if currently using ALL
+            if region == Region.ALL:
+                r = 0
+                # Vertical check
+                if y + h <= sh // 2:
+                    r |= Region.TOP
+                elif y >= sh // 2:
+                    r |= Region.BOTTOM
+                
+                # Horizontal check
+                if x + w <= sw // 2:
+                    r |= Region.LEFT
+                elif x >= sw // 2:
+                    r |= Region.RIGHT
+                
+                if r != 0:
+                    region_names = []
+                    if r & Region.TOP: region_names.append("TOP")
+                    if r & Region.BOTTOM: region_names.append("BOTTOM")
+                    if r & Region.LEFT: region_names.append("LEFT")
+                    if r & Region.RIGHT: region_names.append("RIGHT")
+                    
+                    suggested = " | ".join(["Region." + name for name in region_names])
+                    logger.info(f"Optimization Suggestion: Asset '{asset_code}' found in {suggested}")
+
             # add half the width and height of the template to the location and cast to int
-            location.append([self.scale_x(int(x + w / 1.9)), self.scale_y(int(y + h / 1.9))])
+            location.append([self.device_manager.scale_x(int(x + w / 1.9)), self.device_manager.scale_y(int(y + h / 1.9))])
         return location
 
     def count(self, *assets, gray_img=False, threshold=.9, screenshot=None):
@@ -259,8 +238,8 @@ class Controller:
         result = []
         for asset in assets:
             cords = self._get_cords(asset, screenshot, gray_img=gray_img, threshold=threshold)
-            if self.resized:
-                cords = [[int(x / self.ratio[0]), int(y / self.ratio[1])] for x, y in cords]
+            if self.device_manager.resized:
+                cords = [[int(x / self.device_manager.ratio[0]), int(y / self.device_manager.ratio[1])] for x, y in cords]
             colors = [(0, 255, 0)]
             if len(cords) > 1:
                 # create a gradient of colors form blue to green in BGR format for each cord
@@ -381,7 +360,7 @@ class Controller:
     def in_game(self, screenshot: Optional[np.ndarray] = None) -> bool:
         return self.in_screen(*IN_GAME_ASSETS, screenshot=screenshot, skip_ad_check=True)
 
-    def wait_for(self, *assets: [str, tuple[str, ...]], timeout: float = 10, skip_ad_check=False,
+    def wait_for(self, *assets: str | tuple[str, ...], timeout: float = 10, skip_ad_check=False,
                  raise_error=False, pause_for: float = 0) -> bool:
         start_time = time.perf_counter()
         while time.perf_counter() - start_time < timeout:
@@ -403,7 +382,7 @@ class Controller:
                 action = (action,)
             if type(next_action) is str:
                 next_action = (next_action,)
-            if not self.click(*action, screenshot=self.__last_screenshot):
+            if not self.click(*action, screenshot=self.get_last_screenshot()):
                 return False
             if next_action is not None:
                 return self.wait_for(*next_action, timeout=timeout)  # , pause_for=.5)
@@ -436,112 +415,22 @@ class Controller:
         return False
 
     def force_close(self):
-        self.client.device.shell(r"am force-stop es.socialpoint.MonsterLegends")
+        self.game_manager.force_close()
 
     def close_game(self):
-        if self.in_game():
-            self._goto_islands()
-            self.click_back()
-            self.click(ASSETS.Yes)
-            self.pause(2)
-            if self.in_game():
-                raise AutoMonsterErrors.CloseGameError("Failed to close game")
-        logger.info("Game closed")
+        self.game_manager.close_game()
 
     def launch_game(self):
-        self.client.device.shell(r"monkey -p es.socialpoint.MonsterLegends -c android.intent.category.LAUNCHER 1")
+        self.game_manager.launch_game()
 
     def open_game(self, force_close: bool = True):
-        if force_close:
-            self.force_close()
-            self.pause(2)
-        if not self.in_game():
-            self.launch_game()
-        now = time.perf_counter()
-        while True:
-            if self.in_game():
-                break
-            if time.perf_counter() - now > 70:
-                raise AutoMonsterErrors.OpenGameError("Failed to open game")
-            self.pause(1)
-        if force_close:
-            self.pause(13)
-        self.click(ASSETS.Exit)
-        logger.info("Ready to play")
+        self.game_manager.open_game(force_close)
 
     def _check_for_common_ads(self):
-        if self.click(*CommonAds, skip_ad_check=True, threshold=.8):
-            if self.click(ASSETS.ResumeAd, skip_ad_check=True):
-                return None
-            return self.in_game()
-        return False
+        return self.ad_manager._check_for_common_ads()
 
     def _skip_ad(self) -> bool:
-        def check_no_ads():
-            if self.in_screen(ASSETS.NoAds, skip_ad_check=True):
-                self.click_back(skip_ad_check=True)
-
-        def check_back():
-            for _ in range(2):
-                if self.in_game():
-                    return True
-                else:
-                    self.click_back(skip_ad_check=True)
-            return self.in_game()
-
-        if self.in_game():
-            return False
-
-        counter = 0
-        index = 0
-        orientation = self.get_orientation()
-        max_it = max(len(AdLocationsVertical), len(AdLocationsHorizontal)) * 4
-
-        while not self.in_game():
-            if counter > max_it:
-                raise AutoMonsterErrors.SkipAdError("Failed to skip ad")
-
-            if self.in_screen(ASSETS.Wheel, skip_ad_check=True, retries=5):
-                counter = 0
-                break
-
-            if check_back():
-                break
-
-            if self._check_for_common_ads():
-                check_no_ads()
-                logger.info("Skipped common ad")
-                return True
-
-            ad_locations = AdLocationsHorizontal
-            if orientation == "landscape":
-                ad_locations = AdLocationsVertical
-                logger.debug(logging.DEBUG, "Switched to vertical ad locations")
-
-            if orientation != self.get_orientation():
-                orientation = self.get_orientation()
-                index = 0
-            elif index > len(ad_locations) - 1:
-                index = 0
-
-            x, y = ad_locations[index]
-            x = self.scale_x(x)
-            # y = self.scale_y(y)
-
-            self.client.control.touch(x, y, scrcpy.ACTION_DOWN)
-            self.pause(.1)
-            self.client.control.touch(x, y, scrcpy.ACTION_UP)
-
-            index += 1
-            counter += 1
-            self.pause(.5)
-
-        if counter:
-            logger.info(f"Skipped ad in {counter} iterations")
-            self.click(ASSETS.Exit, skip_ad_check=True)
-            check_no_ads()
-            return True
-        return False
+        return self.ad_manager.skip_ad()
 
     def _check_for_change(self, t: float = 0):
         sc = self.take_screenshot()
@@ -549,300 +438,37 @@ class Controller:
         return compare_imgs(sc, self.take_screenshot(), transform_to_black=True)
 
     def _ad_wait_out(self, max_time=18):
-        ban = False
-        for tick in range(max_time // 2):
-            if not ban:
-                result = self._check_for_common_ads()
-                if result is None:
-                    ban = True
-                    logger.info("Resumed ad")
-                    continue
-                if result:
-                    logger.info("Skipped common ad in wait")
-                    return
-                if self._check_for_change(.5):
-                    logger.debug("Ad is not moving")
-                    return
+        self.ad_manager._ad_wait_out(max_time)
 
     def reduce_time(self, max_times: int = 0) -> bool:
-        times = 0
-        while self.click(ASSETS.ReduceTime, ASSETS.ReduceTimeGold):
-            self.pause(2)
-            if self.in_game():
-                if self.in_screen(ASSETS.ErrorPlayingVideo, screenshot=self.__last_screenshot):
-                    logger.warning("Error playing video")
-                    self.click_back()
-                break
-            times += 1
-
-            self._ad_wait_out(18)
-            self._skip_ad()
-            self.wait_for(ASSETS.ReduceTime, ASSETS.ReduceTimeGold, ASSETS.Exit, timeout=5)
-            if self.in_screen(ASSETS.Exit, screenshot=self.__last_screenshot):
-                self.click(ASSETS.Exit, screenshot=self.__last_screenshot)
-                break
-            if 0 < max_times <= times:
-                break
-        return times > 0
+        return self.ad_manager.reduce_time(max_times)
 
     def auto_battle(self):
-        if not self.follow_sequence((ASSETS.StartBattle, ASSETS.StartBattleRankUp, ASSETS.StartBattlePVP),
-                                    ASSETS.AutoBattle, None):
-            raise AutoMonsterErrors.BattleError("Failed to start battle")
-        self.pause(5)
-        counter = 5
-        while True:
-            sc = self.take_screenshot()
-            if not self.in_screen(ASSETS.AutoBattle, screenshot=sc) or self.in_screen(ASSETS.Cancel, screenshot=sc):
-                # check again because of ancestral monsters >:( they mess up the auto battle
-                if self.in_game(screenshot=sc):
-                    break
-                else:
-                    logger.info("Ancestral monster awakened")
-            if self.in_screen(ASSETS.NextPVP, screenshot=sc):
-                break
-            counter += 1
-            if counter > 300:
-                raise AutoMonsterErrors.BattleError("Battle is not finished, after 5 minutes")
-            self.pause(1)
+        self.battle_manager.auto_battle()
 
     def spin_wheel(self, screenshot=None):
-        if self.in_screen(ASSETS.SpinWheel, gray_img=True, threshold=.9, screenshot=screenshot, retries=2):
-            self.follow_sequence(ASSETS.SpinWheel, ASSETS.ClaimSpin, ASSETS.Cancel, timeout=15, raise_error=True)
-            return True
-        return False
+        return self.battle_manager.spin_wheel(screenshot)
 
     def do_node(self, *, has_wheel: bool, has_cutscene: bool, change_team: bool = False) -> Optional[bool]:
-        result = True
-        skip_part = False
-        timeout = 12
-
-        if has_cutscene:
-            if self.in_screen(ASSETS.PlayCutscene):
-                while True:
-                    if not self.follow_sequence(ASSETS.PlayCutscene, ASSETS.Skip,
-                                                (ASSETS.StartBattle, ASSETS.PlayCutscene, ASSETS.EraSagaDone,
-                                                 ASSETS.EnterEraSaga, ASSETS.StartBattleRankUp)):
-                        self.wait_for(ASSETS.StartBattleRankUp, ASSETS.StartBattle, timeout=10)
-                        if self.in_screen(ASSETS.EraSagaDone, ASSETS.EnterEraSaga):
-                            return True
-                        if not self.in_screen(ASSETS.StartBattle, ASSETS.StartBattleRankUp, ASSETS.PlayCutscene):
-                            raise AutoMonsterErrors.BattleError("Failed to skip cutscene")
-                    self.pause(3)
-                    if self.in_screen(ASSETS.StartBattle, ASSETS.StartBattleRankUp):
-                        skip_part = True
-                        break
-                    elif self.in_screen(ASSETS.SagaComplete, ASSETS.EnterEraSaga):
-                        return True
-
-        if not skip_part:
-            if not self.follow_sequence((ASSETS.EnterBattleRankUp, ASSETS.EnterBattleStamina),
-                                        (ASSETS.StartBattle, ASSETS.StartBattleRankUp, ASSETS.StartBattleGray,
-                                         ASSETS.RefillStamina, ASSETS.NoMonsterLeft, ASSETS.NotFullTeam,
-                                         ASSETS.NoUndefeated, ASSETS.SelectTeam, ASSETS.ChangeTeam), timeout=timeout):
-                return None
-
-        if self.in_screen(ASSETS.SelectTeam, screenshot=self.__last_screenshot) and not change_team:
-            logger.warning("All monsters are dead and change team is disabled")
-            return None
-
-        if self.in_screen(ASSETS.RefillStamina, ASSETS.NoMonsterLeft, ASSETS.NotFullTeam, ASSETS.NoUndefeated,
-                          screenshot=self.__last_screenshot):
-            return None
-        ct = True
-        if change_team:
-            ct = self.change_team()
-        if not ct:
-            return None
-        if self.in_screen(ASSETS.StartBattleGray):
-            return None
-        self.auto_battle()
-        if has_wheel:
-            result = self.spin_wheel(screenshot=self.__last_screenshot)
-        self.pause(5)
-        return result
+        return self.battle_manager.do_node(has_wheel=has_wheel, has_cutscene=has_cutscene, change_team=change_team)
 
     def do_dungeon(self, has_wheel: bool, has_cutscene: bool, has_stamina: bool, *, max_nodes: int = None,
                    max_losses: int = 3, wait_for_stamina_to_refill: bool = True, change_team: bool = False) -> bool:
-        nodes = 0
-        losses = 0
-
-        while True:
-            if not self.wait_for(ASSETS.EnterBattleRankUp, ASSETS.EnterBattleStamina, ASSETS.PlayCutscene):
-                break
-            if max_nodes is not None and nodes >= max_nodes:
-                logger.info("Reached max nodes")
-                break
-            result = self.do_node(has_wheel=has_wheel, has_cutscene=has_cutscene, change_team=change_team)
-            change_team = False
-            if result is None:
-                waited_for_stamina = False
-                if has_stamina:
-                    if self.in_screen(ASSETS.RefillStamina, screenshot=self.__last_screenshot):
-                        # wait for 10 minutes for stamina to refill
-                        logger.warning("Stamina is empty")
-                        if wait_for_stamina_to_refill:
-                            logger.info("Waiting for stamina to refill")
-                            for _ in range(10):
-                                self.pause(60)
-                                self.take_screenshot()
-                            self.click_back()
-                            waited_for_stamina = True
-                        else:
-                            logger.info("Not waiting for stamina to refill")
-                            self.click_back()
-                            break
-                if not waited_for_stamina:
-                    break
-            elif result:
-                nodes += 1
-                if losses != 0 and max_losses != 0:
-                    logger.info("--------------------")
-                losses = 0
-            else:
-                losses += 1
-                if max_losses != 0:
-                    logger.warning("Lost a battle")
-            if 0 < max_losses <= losses:
-                logger.warning("Lost too many battles")
-                return False
-        return True
+        return self.battle_manager.do_dungeon(has_wheel, has_cutscene, has_stamina, max_nodes=max_nodes,
+                                              max_losses=max_losses, wait_for_stamina_to_refill=wait_for_stamina_to_refill,
+                                              change_team=change_team)
 
     def change_team(self, second_team=False) -> bool:
-        def has_selected():
-            for index in range(len(selected_team)):
-                if self.in_screen(selected_team[index], gray_img=True, threshold=.8):
-                    selected_team.pop(index)
-                    non_selected_team.pop(index)
-                    non_selected_team_synergy.pop(index)
-                    return True
-            return False
-
-        def check_and_select_team():
-            if has_selected():
-                return True
-            if not self.click(*non_selected_team, gray_img=True, threshold=.8):
-                self.click(*non_selected_team_synergy, gray_img=True, threshold=.8)
-            return has_selected()
-
-        def full_team_already_selected():
-            screenshot = self.take_screenshot()
-            one = min(self.count(ASSETS.Selected1, gray_img=True, screenshot=screenshot, threshold=.8), 1)
-            two = min(self.count(ASSETS.Selected2, gray_img=True, screenshot=screenshot, threshold=.8), 1)
-            three = min(self.count(ASSETS.Selected3, gray_img=True, screenshot=screenshot, threshold=.8), 1)
-
-            return one + two + three == 3
-
-        def crop_img(img):
-            return img[0: height, 0: width // 3]
-
-        if not self.follow_sequence((ASSETS.SelectTeam, ASSETS.ChangeTeam), ASSETS.Change):
-            return False
-
-        height = self.__last_screenshot.shape[0]
-        width = self.__last_screenshot.shape[1]
-
-        non_selected_team = [
-            ASSETS.RankUp1,
-            ASSETS.RankUp2,
-            ASSETS.RankUp3,
-        ]
-        non_selected_team_synergy = [
-            ASSETS.RankUp1Synergy,
-            ASSETS.RankUp2Synergy,
-            ASSETS.RankUp3Synergy
-        ]
-        selected_team = [
-            ASSETS.RankUpSelected1,
-            ASSETS.RankUpSelected2,
-            ASSETS.RankUpSelected3
-        ]
-
-        if second_team:
-            non_selected_team = [
-                ASSETS.RankUp4,
-                ASSETS.RankUp5,
-                ASSETS.RankUp6,
-            ]
-            non_selected_team_synergy = [
-                ASSETS.RankUp4Synergy,
-                ASSETS.RankUp5Synergy,
-                ASSETS.RankUp6Synergy
-            ]
-            selected_team = [
-                ASSETS.RankUpSelected4,
-                ASSETS.RankUpSelected5,
-                ASSETS.RankUpSelected6
-            ]
-
-        for i in range(3):
-            if full_team_already_selected():
-                self.click_back()
-                return True
-
-            if not self.click(ASSETS.Change, index=i):
-                return False
-
-            if not check_and_select_team():
-                for _ in range(6):
-                    self.client.control.swipe(self.scale_x(300), self.scale_y(200), self.scale_x(300),
-                                              self.scale_y(800), 20)
-                    self.pause(.1)
-                self.pause(1)
-
-                for _ in range(50):
-                    sc = self.take_screenshot()
-                    if check_and_select_team():
-                        break
-                    self.client.control.swipe(self.scale_x(300), self.scale_y(550), self.scale_x(300),
-                                              self.scale_y(300))
-                    self.pause(.5)
-                    if compare_imgs(crop_img(sc), crop_img(self.take_screenshot()), True):
-                        logger.warning("Could not find team")
-                        self.log_gui("Could not find team", "warning")
-                        return False
-            self.click_back()
-
-        self.click_back()
-        return True
+        return self.battle_manager.change_team(second_team)
 
     def _goto_islands(self):
-        if not self.in_game():
-            self.open_game(force_close=False)
-        logger.info("Going to islands")
-        count = 0
-        while not self.in_screen(ASSETS.QuitGame):
-            if self.in_screen(ASSETS.HavingFun):
-                self.click(ASSETS.No)
-                self.click_back()
-            if self.in_screen(ASSETS.ClaimDaily):
-                self.click(ASSETS.ClaimDaily)
-                self.click_back()
-            self.click(ASSETS.Cancel, ASSETS.CancelSmall, ASSETS.Exit, screenshot=self.__last_screenshot)
-            self.click_back()
-            count += 1
-            if count > 10:
-                raise AutoMonsterErrors.GoToError("Failed to go to islands")
-        self.pause(1)
-        if self.in_screen(ASSETS.QuitGame):
-            self.click_back()
-        logger.info("In islands")
+        self.game_manager._goto_islands()
 
     def _goto_activity_hub(self):
-        if not self.follow_sequence(ASSETS.Battles, ASSETS.ActivityHub, reset_func=self._goto_islands, max_tries=3,
-                                    timeout=15,
-                                    raise_error=True):
-            self.pause(1)
-            raise AutoMonsterErrors.GoToError("Failed to enter Activity Hub")
+        self.game_manager._goto_activity_hub()
 
     def scroll_hub(self, asset: str):
-        count = 0
-        while not self.in_screen(asset):
-            self.client.control.swipe(self.scale_x(600), self.scale_y(400), self.scale_x(100), self.scale_y(400), 20)
-            self.pause(.1)
-            count += 1
-            if count > 5:
-                raise AutoMonsterErrors.GoToError(f"Failed to scroll to {asset}")
+        self.game_manager.scroll_hub(asset)
 
     def _goto_pvp(self):
         self._goto_activity_hub()
@@ -862,9 +488,9 @@ class Controller:
     def _reduce_box_time(self) -> Optional[bool]:
         if self.in_screen(ASSETS.BoxSpeedup, threshold=.85, gray_img=True):
             logger.info("Reducing time for box")  # Changed from egg to box
-            if not self.in_screen(ASSETS.ReduceTime, screenshot=self.__last_screenshot):
+            if not self.in_screen(ASSETS.ReduceTime, screenshot=self.get_last_screenshot()):
                 return False
-            self.click(ASSETS.BoxSpeedup, screenshot=self.__last_screenshot)
+            self.click(ASSETS.BoxSpeedup, screenshot=self.get_last_screenshot())
             if self.in_screen(ASSETS.ComeBackLater):
                 logger.warning("No ads available")
                 res = False
@@ -917,7 +543,7 @@ class Controller:
             if not self.wait_for(ASSETS.EnterBattlePVP, ASSETS.PVPNoPoints, timeout=5):
                 try:
                     self._goto_pvp()
-                except AutoMonsterErrors:
+                except AutoMonsterErrors.PVPError:
                     raise AutoMonsterErrors.PVPError("Failed to enter PVP")
 
             if handle_boxes:
@@ -946,7 +572,7 @@ class Controller:
                 break
 
             self.follow_sequence(ASSETS.EnterBattlePVP, (ASSETS.StartBattlePVP, ASSETS.Yes), timeout=15)
-            if self.in_screen(ASSETS.Yes, screenshot=self.__last_screenshot):
+            if self.in_screen(ASSETS.Yes, screenshot=self.get_last_screenshot()):
                 self.follow_sequence(ASSETS.Yes, ASSETS.StartBattlePVP, timeout=15)
             self.auto_battle()
             self.click(ASSETS.NextPVP)
@@ -989,11 +615,11 @@ class Controller:
     def do_cavern(self, *dungeons_to_do: str, change_team: bool = False, max_rooms: int = 0, progress_callback=None):
         def handle_error_ending(ancestral: bool) -> bool:
             if self.in_screen(ASSETS.NotFullTeam, ASSETS.NoMonsterLeft, ASSETS.NoUndefeated, ASSETS.StartBattleGray,
-                              screenshot=self.__last_screenshot):
-                if self.in_screen(ASSETS.StartBattleGray, screenshot=self.__last_screenshot):
+                              screenshot=self.get_last_screenshot()):
+                if self.in_screen(ASSETS.StartBattleGray, screenshot=self.get_last_screenshot()):
                     logger.warning("Cannot start, invalid monsters")
                     self.click_back()
-                elif self.in_screen(ASSETS.NotFullTeam, screenshot=self.__last_screenshot):
+                elif self.in_screen(ASSETS.NotFullTeam, screenshot=self.get_last_screenshot()):
                     logger.warning("Does not have full team")
                     self.click_back()
                 else:
@@ -1102,11 +728,11 @@ class Controller:
         now = time.time()
 
         while self.wait_for(ASSETS.PlayVideo, timeout=5):
-            self.click(ASSETS.PlayVideo, screenshot=self.__last_screenshot)
+            self.click(ASSETS.PlayVideo, screenshot=self.get_last_screenshot())
 
             self.pause(2)
             if self.in_game():
-                if self.in_screen(ASSETS.ErrorPlayingVideo, screenshot=self.__last_screenshot):
+                if self.in_screen(ASSETS.ErrorPlayingVideo, screenshot=self.get_last_screenshot()):
                     logger.warning("Error playing video")
                     errors += 1
                     self.click_back()
@@ -1151,6 +777,35 @@ class Controller:
             if not self.click(ASSETS.RightArrow, pause=2):
                 break
         logger.info("Finished all resource dungeons")
+
+    def scale_x(self, x):
+        return self.device_manager.scale_x(x)
+
+    def scale_y(self, y):
+        return self.device_manager.scale_y(y)
+
+    @property
+    def new_width(self):
+        return self.device_manager.new_width
+
+    @property
+    def cancel_flag(self):
+        return self.device_manager.cancel_flag
+
+    @cancel_flag.setter
+    def cancel_flag(self, value):
+        self.device_manager.cancel_flag = value
+
+    def pause(self, seconds: float):
+        self.device_manager.pause(seconds)
+
+    @property
+    def resized(self):
+        return self.device_manager.resized
+
+    @property
+    def ratio(self):
+        return self.device_manager.ratio
 
 
 def main():

@@ -9,6 +9,7 @@ import os
 import subprocess
 from pathlib import Path
 import scrcpy
+from Constants import ASSET_REGIONS, Region, ASSETS
 
 # Try to import CTkListbox, fallback to a simple implementation if not available
 try:
@@ -433,6 +434,39 @@ class DebugTool(ctk.CTkFrame):
         )
         self.status_label.grid(row=8, column=0, sticky="w", padx=5, pady=(10, 0))
 
+        # Threshold Slider
+        threshold_frame = ctk.CTkFrame(left_panel, fg_color="transparent")
+        threshold_frame.grid(row=8, column=0, sticky="ew", padx=5, pady=(10, 0))
+        threshold_frame.grid_columnconfigure(0, weight=1)
+        threshold_frame.grid_columnconfigure(1, weight=0)
+
+        self.threshold_label = ctk.CTkLabel(
+            threshold_frame,
+            text="Threshold: 90%",
+            font=("Arial", 12)
+        )
+        self.threshold_label.grid(row=0, column=0, sticky="w")
+
+        self.threshold_slider = ctk.CTkSlider(
+            threshold_frame,
+            from_=1,
+            to=100,
+            number_of_steps=99,
+            command=self.update_threshold_label
+        )
+        self.threshold_slider.set(90)  # Default threshold is 0.9 (90%)
+        self.threshold_slider.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(5, 0))
+
+        # Grayscale option
+        self.grayscale_var = ctk.BooleanVar(value=False)
+        self.grayscale_checkbox = ctk.CTkCheckBox(
+            threshold_frame,
+            text="Grayscale Match",
+            variable=self.grayscale_var,
+            font=("Arial", 12)
+        )
+        self.grayscale_checkbox.grid(row=2, column=0, columnspan=2, sticky="w", pady=(5, 0))
+
         # Initialize data
         self.all_assets = {}
         self.filtered_assets = []
@@ -526,6 +560,10 @@ class DebugTool(ctk.CTkFrame):
 
                 # Reload the controller's template dict
                 self.controller.load_templates()
+
+                # Clear search and selection before reloading
+                self.after(0, lambda: self.search_var.set(""))
+                self.after(0, self.deselect_all_assets)
 
                 # Load assets fresh using after to update UI on main thread
                 self.after(0, self.load_assets)
@@ -678,16 +716,123 @@ class DebugTool(ctk.CTkFrame):
                         continue
 
                     h, w = template.shape[:2]
-                    result = cv2.matchTemplate(frame, template, cv2.TM_CCOEFF_NORMED)
-                    threshold = 0.9
+                    
+                    # --- Apply Region Logic (Same as AutoMonster._get_cords) ---
+                    region = ASSET_REGIONS.get(asset_name, Region.ALL)
+                    sh, sw = frame.shape[:2]
+                    
+                    # Calculate crop boundaries
+                    y_start, y_end = 0, sh
+                    x_start, x_end = 0, sw
+                    
+                    if region & Region.TOP:
+                        y_end = sh // 2
+                    elif region & Region.BOTTOM:
+                        y_start = sh // 2
+                        
+                    if region & Region.LEFT:
+                        x_end = sw // 2
+                    elif region & Region.RIGHT:
+                        x_start = sw // 2
+                        
+                    # Crop the frame for matching
+                    img_to_match = frame[y_start:y_end, x_start:x_end]
+                    crop_x, crop_y = x_start, y_start
+                    # -----------------------------------------------------------
+
+                    # Apply grayscale if selected
+                    if self.grayscale_var.get():
+                        img_to_match = cv2.cvtColor(img_to_match, cv2.COLOR_BGR2GRAY)
+                        template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+
+                    result = cv2.matchTemplate(img_to_match, template, cv2.TM_CCOEFF_NORMED)
+                    threshold = self.threshold_slider.get() / 100.0
                     locations = np.where(result >= threshold)
 
                     if len(locations[0]) > 0:
-                        points = list(zip(locations[1], locations[0]))
+                        # --- NMS / Grouping Logic ---
+                        # Zip into (y, x) tuples for sorting/grouping
+                        locs = list(zip(locations[0], locations[1]))
+                        
+                        # Sort by score (descending)
+                        locs.sort(key=lambda pt: result[pt[0]][pt[1]], reverse=True)
+                        
+                        # Group nearby points (within 5px)
+                        location_groups = []
+                        for loc in locs:
+                            if not location_groups:
+                                location_groups.append([loc])
+                            else:
+                                for group in location_groups:
+                                    if abs(group[-1][0] - loc[0]) < 5 and abs(group[-1][1] - loc[1]) < 5:
+                                        group.append(loc)
+                                        break
+                                else:
+                                    location_groups.append([loc])
+                        
+                        # Calculate average top-left for each group and adjust to full frame
+                        points = []
+                        for group in location_groups:
+                            avg_y = sum(l[0] for l in group) // len(group)
+                            avg_x = sum(l[1] for l in group) // len(group)
+                            points.append((avg_x + crop_x, avg_y + crop_y))
+                        # ---------------------------
+                        
+                        # Calculate regions
+                        frame_h, frame_w = frame.shape[:2]
+                        match_regions = []
+                        
+                        # Prepare for scaling if needed
+                        dm = self.controller.device_manager
+                        scaled_points = []
+                        scaled_w, scaled_h = w, h
+                        
+                        if dm.resized:
+                            scaled_w = dm.scale_x(w)
+                            scaled_h = dm.scale_y(h)
+
+                        for x, y in points:
+                            # Region logic uses unscaled coordinates (relative to the scanned frame)
+                            # Check if the ENTIRE asset fits within the quadrant boundaries
+                            # If it crosses the center line, it belongs to the broader region (e.g. Top instead of Top-Left)
+                            
+                            r = 0
+                            # Vertical check
+                            if y + h <= frame_h // 2:
+                                r |= Region.TOP
+                            elif y >= frame_h // 2:
+                                r |= Region.BOTTOM
+                            
+                            # Horizontal check
+                            if x + w <= frame_w // 2:
+                                r |= Region.LEFT
+                            elif x >= frame_w // 2:
+                                r |= Region.RIGHT
+                            
+                            region_name = []
+                            if r == 0:
+                                region_name.append("All")
+                            else:
+                                if r & Region.TOP: region_name.append("Top")
+                                if r & Region.BOTTOM: region_name.append("Bottom")
+                                if r & Region.LEFT: region_name.append("Left")
+                                if r & Region.RIGHT: region_name.append("Right")
+                            
+                            match_regions.append("-".join(region_name))
+                            
+                            # Scale points for drawing on the original frame
+                            if dm.resized:
+                                sx = dm.scale_x(x)
+                                sy = dm.scale_y(y)
+                                scaled_points.append((sx, sy))
+                            else:
+                                scaled_points.append((x, y))
+
                         self.current_matches[asset_name] = {
-                            'points': points,
-                            'template_size': (w, h),
-                            'count': len(points)
+                            'points': scaled_points,
+                            'template_size': (scaled_w, scaled_h),
+                            'count': len(points),
+                            'regions': match_regions
                         }
                         matches_found += len(points)
                 except Exception as e:
@@ -703,12 +848,36 @@ class DebugTool(ctk.CTkFrame):
     def _update_scan_results(self, matches_found):
         """Update UI with scan results"""
         if self.current_matches:
-            result_text = f"Found {matches_found} matches:\n"
+            # Simplified UI message
+            result_text = f"Found {matches_found} matches.\nCheck logs for details."
+            
+            # Detailed log message
+            log_msg = f"Scan Results - Found {matches_found} matches:\n"
+            
             for asset, data in self.current_matches.items():
-                result_text += f"  • {asset}: {data['count']}\n"
+                count = data['count']
+                regions_list = data.get('regions', [])
+                # Format regions string if available
+                regions_str = f" [{', '.join(sorted(list(set(regions_list))))}]" if regions_list else ""
+                
+                log_msg += f"• {asset}: {count}{regions_str}\n"
+                
             self.status_label.configure(text=result_text, text_color="#2ecc71")
+            
+            # Log to main GUI
+            try:
+                # self.master is main_frame, self.master.master is ControllerGUI
+                if hasattr(self.master.master, 'append_log'):
+                    self.master.master.append_log(log_msg.strip(), "info")
+            except Exception as e:
+                print(f"Failed to log to GUI: {e}")
         else:
             self.status_label.configure(text="No matches found", text_color="orange")
+            try:
+                if hasattr(self.master.master, 'append_log'):
+                    self.master.master.append_log("Scan complete: No matches found", "warning")
+            except Exception:
+                pass
 
     def draw_detections_on_frame(self, frame):
         """Draw detection boxes on the given frame (called by main GUI)"""
@@ -719,18 +888,33 @@ class DebugTool(ctk.CTkFrame):
         for asset_name, data in self.current_matches.items():
             # Get a color based on asset name hash
             color = self._get_color_for_asset(asset_name)
-            for x, y in data['points']:
+            regions = data.get('regions', [])
+            
+            for i, (x, y) in enumerate(data['points']):
                 w, h = data['template_size']
                 cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
-                # Draw label
+                
+                # Draw label with background for better visibility
+                label = asset_name
+                if i < len(regions):
+                    label += f" ({regions[i]})"
+
+                font_scale = 0.7
+                thickness = 2
+                (text_w, text_h), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
+                
+                # Draw background rectangle
+                cv2.rectangle(frame, (x, y - text_h - 10), (x + text_w, y), (255, 255, 255), -1)
+                
+                # Draw text in black
                 cv2.putText(
                     frame,
-                    asset_name,
+                    label,
                     (x, y - 5),
                     cv2.FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    color,
-                    1
+                    font_scale,
+                    (0, 0, 0),  # Black text
+                    thickness
                 )
 
         return frame
@@ -739,3 +923,7 @@ class DebugTool(ctk.CTkFrame):
         """Get the assigned color for an asset"""
         # Return the color that was assigned when the asset was selected
         return self.asset_colors.get(asset_name, (0, 255, 0))  # Default to green if not found
+
+    def update_threshold_label(self, value):
+        """Update the threshold label text"""
+        self.threshold_label.configure(text=f"Threshold: {int(value)}%")

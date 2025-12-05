@@ -18,9 +18,7 @@ from command_frame import CommandFrame
 from device_selection_frame import DeviceSelectionFrame
 from macro_dialog import MacroDialog
 from debug_tool import DebugTool
-
-DEFAULTS_FILE = "defaults.json"
-MACROS_FILE = "macros.json"
+from utils.config_manager import ConfigManager
 
 if os.path.isfile("version.txt"):
     with open("version.txt", "r") as file:
@@ -41,7 +39,9 @@ class ControllerGUI(ctk.CTk):
         self.resizable(False, False)
 
         # Initialize macros before creating frames
-        self.macros = self.load_macros()
+        self.config_manager = ConfigManager()
+        self.macros = self.config_manager.get_macros()
+        self.macro_options = self.config_manager.get_macro_options()
 
         # Add macro execution state
         self.macro_running = False
@@ -120,6 +120,7 @@ class ControllerGUI(ctk.CTk):
         }
         self.battery = self.controller.get_battery_level()
         self.last_check_battery = datetime.now()
+        self.debug_tool = None
 
         # Define panel width
         self.panel_width = 300
@@ -137,7 +138,7 @@ class ControllerGUI(ctk.CTk):
         self.main_frame.grid_columnconfigure(2, weight=1)  # Preview
         self.main_frame.grid_columnconfigure(3, weight=0, minsize=self.panel_width)  # Info frame
         self.main_frame.grid_columnconfigure(4, weight=0, minsize=30)  # Right toggle button
-        self.main_frame.grid_columnconfigure(5, weight=0, minsize=self.panel_width)  # Debug panel (hidden by default)
+        self.main_frame.grid_columnconfigure(5, weight=0, minsize=0)  # Debug panel (hidden by default)
         self.main_frame.grid_rowconfigure(0, weight=3)  # Row for main content
         self.main_frame.grid_rowconfigure(1, weight=1)  # Row for logs
 
@@ -392,11 +393,17 @@ class ControllerGUI(ctk.CTk):
         # Hide progress frame initially
         self.progress_frame.pack_forget()
 
-        ratio = .55
-        self.img_size = int(self.controller.new_width * ratio), int(720 * ratio)
+        self.preview_ratio = .55
+        self.img_size = int(self.controller.new_width * self.preview_ratio), int(720 * self.preview_ratio)
+        self.is_portrait_frame = False
 
         # Setup preview update
         self.controller.client.add_listener(scrcpy.EVENT_FRAME, lambda frame: self.update_image_safe(frame))
+        
+        # Bind mouse events for interaction
+        self.preview_label.bind("<ButtonPress-1>", self.on_mouse_down)
+        self.preview_label.bind("<B1-Motion>", self.on_mouse_move)
+        self.preview_label.bind("<ButtonRelease-1>", self.on_mouse_up)
 
         # Create logs frame (removed tabview for cleaner look)
         self.log_frame = ctk.CTkFrame(self.main_frame)
@@ -457,11 +464,8 @@ class ControllerGUI(ctk.CTk):
             self.toggle_debug_mode()
 
     def override_parameter_defaults(self):
-        loaded_defaults = {}
-        if os.path.isfile(DEFAULTS_FILE):
-            with open(DEFAULTS_FILE, "r") as f:
-                print("Loaded defaults")
-                loaded_defaults = json.load(f)
+        loaded_defaults = self.config_manager.defaults
+        print("Loaded defaults")
         for cmd_name, params in self.commands.items():
             saved = loaded_defaults.get(cmd_name, {})
             for param_name, config in params.items():
@@ -560,7 +564,9 @@ class ControllerGUI(ctk.CTk):
 
     def stop_command(self):
         """Stop the current command execution"""
-        self.controller.cancel_flag = True
+        if self.controller:
+            self.controller.cancel_flag = True
+            logging.info(f"Set cancel_flag to True. Controller: {self.controller}")
         self.append_log("Stopping command...", "warning")
 
     def toggle_panel(self):
@@ -677,11 +683,12 @@ class ControllerGUI(ctk.CTk):
             # Ignore errors if video stream disconnects
             pass
 
+        self.is_portrait_frame = frame.shape[0] > frame.shape[1]
         img_size = self.img_size
-        if frame.shape[0] > frame.shape[1]:
+        if self.is_portrait_frame:
             img_size = img_size[::-1]
         resized_frame = cv2.resize(frame, img_size)
-        if frame.shape[0] > frame.shape[1]:
+        if self.is_portrait_frame:
             resized_frame = cv2.rotate(resized_frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
         # check for the battery level every 60 seconds
@@ -723,6 +730,9 @@ class ControllerGUI(ctk.CTk):
             # Show Asset Debugger as side panel (spans both rows - main content and logs)
             if self.debug_tool is None:
                 self.debug_tool = DebugTool(self.main_frame, self.controller)
+            
+            # Expand column for debug tool
+            self.main_frame.grid_columnconfigure(5, weight=0, minsize=self.panel_width)
             self.debug_tool.grid(row=0, column=5, rowspan=2, padx=(0, 10), pady=10, sticky="nsew")
             self.append_log("Debug mode enabled", "debug")
         else:
@@ -730,6 +740,9 @@ class ControllerGUI(ctk.CTk):
             # Hide Asset Debugger panel
             if self.debug_tool is not None:
                 self.debug_tool.grid_forget()
+            
+            # Collapse column
+            self.main_frame.grid_columnconfigure(5, weight=0, minsize=0)
             self.append_log("Debug mode disabled", "success")
 
     def update_info_panel(self, command_name):
@@ -756,14 +769,10 @@ class ControllerGUI(ctk.CTk):
         self.info_description.configure(state="disabled")
 
     def load_macros(self):
-        """Load macros from JSON file."""
-        if os.path.isfile(MACROS_FILE):
-            with open(MACROS_FILE, "r") as f:
-                data = json.load(f)
-                self.macro_options = data.get("options", {})
-                return data["macros"]
-        self.macro_options = {}
-        return {}
+        """Load macros from ConfigManager."""
+        self.config_manager.load_configs()
+        self.macro_options = self.config_manager.get_macro_options()
+        return self.config_manager.get_macros()
 
     def run_macro(self, name):
         """Legacy method - use start_macro instead"""
@@ -904,3 +913,54 @@ class ControllerGUI(ctk.CTk):
         if hasattr(self, "controller"):
             self.controller.client.remove_listener(scrcpy.EVENT_FRAME)
             self.controller.client.stop()
+
+    def _get_device_coords(self, event):
+        """Convert GUI coordinates to device coordinates"""
+        # Calculate coordinates in the resized (720p) space
+        x_disp = event.x
+        y_disp = event.y
+        
+        # Scale up from preview size to 720p size
+        x_720 = int(x_disp / self.preview_ratio)
+        y_720 = int(y_disp / self.preview_ratio)
+        
+        if self.is_portrait_frame:
+            w_orig_720 = int(self.img_size[1] / self.preview_ratio)
+            final_x_720 = w_orig_720 - y_720
+            final_y_720 = x_720
+        else:
+            final_x_720 = x_720
+            final_y_720 = y_720
+            
+        # Clamp coordinates to valid range in 720p space
+        final_x_720 = max(0, min(final_x_720, self.controller.new_width))
+        final_y_720 = max(0, min(final_y_720, 720))
+
+        # Scale to device resolution
+        device_x = self.controller.scale_x(final_x_720)
+        device_y = self.controller.scale_y(final_y_720)
+        
+        return device_x, device_y
+
+    def on_mouse_down(self, event):
+        if not self.debug_mode:
+            return
+            
+        # Clear debug tool detections if active
+        if self.debug_tool is not None:
+            self.debug_tool.clean_detections()
+            
+        x, y = self._get_device_coords(event)
+        self.controller.client.control.touch(x, y, scrcpy.ACTION_DOWN)
+
+    def on_mouse_move(self, event):
+        if not self.debug_mode:
+            return
+        x, y = self._get_device_coords(event)
+        self.controller.client.control.touch(x, y, scrcpy.ACTION_MOVE)
+
+    def on_mouse_up(self, event):
+        if not self.debug_mode:
+            return
+        x, y = self._get_device_coords(event)
+        self.controller.client.control.touch(x, y, scrcpy.ACTION_UP)
