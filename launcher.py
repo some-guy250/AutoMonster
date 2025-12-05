@@ -327,28 +327,55 @@ def download_file(url, target_path, progress_window=None, progress_start=0, prog
                     progress_window.root.update_idletasks()
                     last_update = current_percent
 
+def get_launcher_version():
+    if os.path.isfile("launcher_version.txt"):
+        with open("launcher_version.txt", "r") as file:
+            return file.read().strip()
+    return "0.0.0"
+
 def self_update(latest_release, progress_window):
     assets = latest_release.get('assets', [])
-    # Look for LauncherAutoMonster.exe or Launcher.bin (if renamed)
+    
+    # Check for version file in assets
+    version_asset = next((a for a in assets if a['name'] == 'launcher_version.txt'), None)
     launcher_asset = next((a for a in assets if a['name'] in ['LauncherAutoMonster.exe', 'Launcher.bin']), None)
     
     if not launcher_asset:
         return False
 
-    # Check if we need update (simple size check for now, ideally hash)
+    should_update = False
+    new_version = None
+
+    if version_asset:
+        try:
+            response = requests.get(version_asset['browser_download_url'])
+            if response.status_code == 200:
+                new_version = response.text.strip()
+                local_version = get_launcher_version()
+                if compare_versions(new_version, local_version) == 1:
+                    should_update = True
+        except Exception as e:
+            print(f"Error checking launcher version: {e}")
+    
+    # Fallback to size check if version check failed or file missing
     current_exe = sys.executable
-    if getattr(sys, 'frozen', False):
+    if not should_update and getattr(sys, 'frozen', False) and not new_version:
         local_size = os.path.getsize(current_exe)
         remote_size = launcher_asset['size']
-        
-        if local_size == remote_size:
-            return False
-            
+        if local_size != remote_size:
+            should_update = True
+
+    if should_update and getattr(sys, 'frozen', False):
         progress_window.update_progress(0, "Updating Launcher...", "Downloading new version...")
         
         new_launcher_path = current_exe + ".new"
         download_file(launcher_asset['browser_download_url'], new_launcher_path, progress_window, 0, 100, "Downloading Launcher update...")
         
+        # Update the version file locally
+        if new_version:
+            with open("launcher_version.txt", "w") as f:
+                f.write(new_version)
+
         # Rename dance
         old_launcher_path = current_exe + ".old"
         if os.path.exists(old_launcher_path):
