@@ -3,17 +3,8 @@
 #define MyAppURL "https://github.com/some-guy250/AutoMonster"
 #define MyAppExeName "LauncherAutoMonster.exe"
 
-; Read launcher version from launcher_version.txt
-#define FileHandle
-#define FileLine
-#if FileExists("launcher_version.txt")
-    #define FileHandle = FileOpen("launcher_version.txt")
-    #define FileLine = FileRead(FileHandle)
-    #define MyAppVersion = FileLine
-    #expr FileClose(FileHandle)
-#else
-    #define MyAppVersion "1.0.0"
-#endif
+; Static version for the bootstrap installer
+#define MyAppVersion "1.0.0"
 
 [Setup]
 AppId={{9C832C97-2F5E-4807-AA45-38B25DD77D6D}
@@ -57,9 +48,4 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
-Type: filesandordirs; Name: "{app}\assets"
-Type: filesandordirs; Name: "{app}\AutoMonster.exe"
-Type: filesandordirs; Name: "{app}\version.txt"
-Type: filesandordirs; Name: "{app}\defaults.json"
-Type: filesandordirs; Name: "{app}\macros.json"
 Type: filesandordirs; Name: "{app}"
