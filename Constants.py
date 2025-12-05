@@ -208,6 +208,8 @@ Ancestral_Cavers = (
 )
 
 All_Cavers = (
+    ASSETS.CavernMisery,
+    ASSETS.CavernConspiracy,
     ASSETS.CavernFeral,
     ASSETS.CavernHistoria,
     ASSETS.CavernMultiverse,
@@ -238,6 +240,8 @@ NumberOfCommonAds = 24
 CommonAds = tuple(f"commonad{i}.png" for i in range(1, NumberOfCommonAds + 1))
 
 CAVERN_TO_ASSETS = {
+    'misery': ASSETS.CavernMisery,
+    'conspiracy': ASSETS.CavernConspiracy,
     'feral': ASSETS.CavernFeral,
     'historia': ASSETS.CavernHistoria,
     'multiverse': ASSETS.CavernMultiverse,
@@ -288,6 +292,8 @@ GUI_COMMANDS = {
         "era": {
             "type": "multiple_choice",
             "choices": [
+                "misery",
+                "conspiracy",
                 "feral",
                 "historia",
                 "multiverse",
