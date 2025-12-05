@@ -150,6 +150,11 @@ jobs:
         run: |
           & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' installer.iss
 
+      - name: Rename artifacts for release
+        run: |
+          Move-Item -Path "final_dist/AutoMonster.exe" -Destination "final_dist/AutoMonster.bin" -Force
+          Move-Item -Path "final_dist/LauncherAutoMonster.exe" -Destination "final_dist/Launcher.bin" -Force
+
       - name: Get version
         id: get_version
         run: |
@@ -172,5 +177,5 @@ jobs:
             > **Note:** Only download the Setup file. Other assets are used by the auto-updater.
           files: |
             ./installer/AutoMonster_Setup.exe
-            ./final_dist/AutoMonster.exe
-            ./final_dist/LauncherAutoMonster.exe
+            ./final_dist/AutoMonster.bin
+            ./final_dist/Launcher.bin

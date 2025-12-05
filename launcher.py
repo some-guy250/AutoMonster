@@ -2,6 +2,8 @@ import os
 import threading
 import time
 import tkinter as tk
+import sys
+import subprocess
 from tempfile import gettempdir
 from tkinter import ttk
 
@@ -250,20 +252,11 @@ def download_assets(progress_window=None):
         files_to_download = [item for item in contents if item["type"] == "file"]
         total_files = len(files_to_download)
 
-        # Calculate total size with progress updates
+        # Calculate total size
         if progress_window:
             progress_window.update_progress(0, "Preparing download...", "Calculating total size...")
 
-        total_size = 0
-        for idx, item in enumerate(files_to_download):
-            if progress_window:
-                progress_window.update_progress(
-                    0,
-                    "Preparing download...",
-                    f"Checking file {idx + 1}/{total_files}: {item['name']}"
-                )
-            response = requests.head(item["download_url"])
-            total_size += int(response.headers.get('content-length', 0))
+        total_size = sum(item["size"] for item in files_to_download)
 
         start_time = time.time()
         total_downloaded = 0
@@ -274,7 +267,7 @@ def download_assets(progress_window=None):
             response = requests.get(item["download_url"], stream=True)
 
             with open(file_path, "wb") as f:
-                for chunk in response.iter_content(chunk_size=1024):
+                for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
                     total_downloaded += len(chunk)
                     if progress_window and total_size:
@@ -302,6 +295,74 @@ def download_assets(progress_window=None):
                         progress_window.root.update_idletasks()
 
 
+def download_file(url, target_path, progress_window=None, progress_start=0, progress_end=100, label="Downloading..."):
+    response = requests.get(url, stream=True)
+    total_size = int(response.headers.get('content-length', 0))
+    
+    start_time = time.time()
+    downloaded = 0
+    last_update = 0
+    
+    with open(target_path, "wb") as file:
+        for chunk in response.iter_content(chunk_size=8192):
+            file.write(chunk)
+            downloaded += len(chunk)
+            
+            if progress_window and total_size:
+                current_percent = (downloaded / total_size)
+                if current_percent - last_update >= 0.01:
+                    progress = progress_start + (current_percent * (progress_end - progress_start))
+                    eta = calculate_eta(start_time, downloaded, total_size)
+                    speed = downloaded / (time.time() - start_time) if (time.time() - start_time) > 0 else 0
+                    
+                    status = (
+                        f"{label}\n"
+                        f"{format_size(downloaded)} / {format_size(total_size)} ({int(current_percent * 100)}%)"
+                    )
+                    
+                    global_status = f"Speed: {format_size(speed)}/s | ETA: {eta}"
+                    
+                    progress_window.update_progress(progress, label, status)
+                    progress_window.update_eta(global_status)
+                    progress_window.root.update_idletasks()
+                    last_update = current_percent
+
+def self_update(latest_release, progress_window):
+    assets = latest_release.get('assets', [])
+    # Look for LauncherAutoMonster.exe or Launcher.bin (if renamed)
+    launcher_asset = next((a for a in assets if a['name'] in ['LauncherAutoMonster.exe', 'Launcher.bin']), None)
+    
+    if not launcher_asset:
+        return False
+
+    # Check if we need update (simple size check for now, ideally hash)
+    current_exe = sys.executable
+    if getattr(sys, 'frozen', False):
+        local_size = os.path.getsize(current_exe)
+        remote_size = launcher_asset['size']
+        
+        if local_size == remote_size:
+            return False
+            
+        progress_window.update_progress(0, "Updating Launcher...", "Downloading new version...")
+        
+        new_launcher_path = current_exe + ".new"
+        download_file(launcher_asset['browser_download_url'], new_launcher_path, progress_window, 0, 100, "Downloading Launcher update...")
+        
+        # Rename dance
+        old_launcher_path = current_exe + ".old"
+        if os.path.exists(old_launcher_path):
+            os.remove(old_launcher_path)
+            
+        os.rename(current_exe, old_launcher_path)
+        os.rename(new_launcher_path, current_exe)
+        
+        # Restart
+        subprocess.Popen([current_exe])
+        sys.exit(0)
+        return True
+    return False
+
 def download_main_exe(progress_window=None):
     if progress_window:
         progress_window.update_progress(50, "Downloading main executable...")
@@ -310,48 +371,15 @@ def download_main_exe(progress_window=None):
     response = requests.get(f"{repo_url_api}/releases/latest")
     latest_release = response.json()
     assets = latest_release['assets']
-    main_exe = next((asset for asset in assets if asset['name'] == 'AutoMonster.exe'), None)
+    # Look for AutoMonster.exe or AutoMonster.bin
+    main_exe = next((asset for asset in assets if asset['name'] in ['AutoMonster.exe', 'AutoMonster.bin']), None)
     if not main_exe:
         raise Exception("AutoMonster.exe not found in release")
 
     temp_dir = gettempdir()
-    temp_file = os.path.join(temp_dir, "AutoMonster_new.exe")  # Changed temp filename
-    exe_data = requests.get(main_exe['browser_download_url'], stream=True)
-    total_size = int(exe_data.headers.get('content-length', 0))
-
-    start_time = time.time()
-    with open(temp_file, "wb") as file:
-        downloaded = 0
-        last_update = 0
-        for chunk in exe_data.iter_content(chunk_size=1024):  # Smaller chunks
-            file.write(chunk)
-            downloaded += len(chunk)
-            if progress_window and total_size:
-                current_percent = (downloaded / total_size) * 100
-                if current_percent - last_update >= 0.1:  # More frequent updates
-                    progress = 50 + (downloaded / total_size) * 50
-                    eta = calculate_eta(start_time, downloaded, total_size)
-                    speed = downloaded / (time.time() - start_time)
-
-                    # Update main status without ETA
-                    status = (
-                        f"Downloaded: {format_size(downloaded)} / {format_size(total_size)}\n"
-                        f"{int(current_percent)}% Complete"
-                    )
-
-                    # Update global ETA separately
-                    global_status = (
-                        f"Speed: {format_size(speed)}/s | ETA: {eta}"
-                    )
-
-                    progress_window.update_progress(
-                        progress,
-                        "Downloading main executable...",
-                        status
-                    )
-                    progress_window.update_eta(global_status)
-                    progress_window.root.update_idletasks()  # Force UI update
-                    last_update = current_percent
+    temp_file = os.path.join(temp_dir, "AutoMonster_new.exe")
+    
+    download_file(main_exe['browser_download_url'], temp_file, progress_window, 50, 100, "Downloading main executable...")
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
     try:
@@ -386,6 +414,13 @@ def save_version(version):
 
 def update_process(progress_window, latest_version):
     try:
+        # Check for self-update first
+        response = requests.get(f"{repo_url_api}/releases/latest")
+        latest_release = response.json()
+        
+        if self_update(latest_release, progress_window):
+            return # self_update will restart the process
+
         progress_window.update_progress(0, "Initializing update...", "Starting download process...")
         download_assets(progress_window)
         download_main_exe(progress_window)

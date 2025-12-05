@@ -11,6 +11,7 @@ import Constants
 from Constants import ASSETS, Ancestral_Cavers, AdLocationsHorizontal, AdLocationsVertical, IN_GAME_ASSETS, CommonAds, ASSET_REGIONS, Region
 from HelperFunctions import *
 from utils.logger import setup_logger
+from utils.vision_manager import VisionManager
 from device_manager import DeviceManager
 from features.ads import AdManager
 from features.game import GameManager
@@ -24,7 +25,8 @@ class Controller:
         self.gui_logger = None
         self.device_manager = DeviceManager()
         self.client = self.device_manager.client
-        self.template_dict = {}
+        
+        self.vision_manager = VisionManager(self.device_manager)
 
         self.ad_manager = AdManager(self)
         self.game_manager = GameManager(self)
@@ -40,25 +42,6 @@ class Controller:
             size = self.device_manager.client.resolution
             AdLocationsHorizontal.insert(0, (int((size[0] - 130) / self.device_manager.ratio[0]), 85))
 
-        pathlib.Path('assets').mkdir(parents=True, exist_ok=True)
-        
-        self.available_assets: List[str] = []
-        for asset in dir(ASSETS):
-            if asset.startswith('__'):
-                continue
-            png_file = getattr(ASSETS, asset)
-
-            if png_file not in ASSET_REGIONS:
-                logger.warning(f"Asset '{png_file}' (ASSETS.{asset}) has no region defined. Defaulting to Region.ALL")
-            elif ASSET_REGIONS[png_file] == Region.ALL:
-                logger.warning(f"Asset '{png_file}' (ASSETS.{asset}) is using Region.ALL. Consider optimizing.")
-
-            if pathlib.Path(f'assets/{png_file}').exists():
-                img = cv2.imread(f'assets/{png_file}')
-                self.template_dict[png_file] = (img, img.shape[0], img.shape[1])
-            else:
-                logger.warning(f'Asset {png_file} is missing')
-
         if save_screen:
             self.save_screen(take_new=True)
 
@@ -68,17 +51,7 @@ class Controller:
 
     def load_templates(self):
         """Reload all templates from disk and Constants.py"""
-        self.template_dict = {}
-        pathlib.Path('assets').mkdir(parents=True, exist_ok=True)
-        for asset in dir(ASSETS):
-            if asset.startswith('__'):
-                continue
-            png_file = getattr(ASSETS, asset)
-            if pathlib.Path(f'assets/{png_file}').exists():
-                img = cv2.imread(f'assets/{png_file}')
-                self.template_dict[png_file] = (img, img.shape[0], img.shape[1])
-            else:
-                logger.warning(f'Asset {png_file} is missing')
+        self.vision_manager.load_templates()
 
     def get_battery_level(self):
         return self.device_manager.get_battery_level()
@@ -132,104 +105,12 @@ class Controller:
     def _get_cords(self, asset_code: str, screenshot=None, threshold=.9, gray_img=False) -> List[List[int]]:
         if screenshot is None:
             screenshot = self.take_screenshot()
-        template, h, w = self.template_dict[asset_code]
-
-        # Determine region and crop
-        region = ASSET_REGIONS.get(asset_code, Region.ALL)
-        sh, sw = screenshot.shape[:2]
-        
-        # Calculate crop boundaries
-        y_start, y_end = 0, sh
-        x_start, x_end = 0, sw
-        
-        if region & Region.TOP:
-            y_end = sh // 2
-        elif region & Region.BOTTOM:
-            y_start = sh // 2
-            
-        if region & Region.LEFT:
-            x_end = sw // 2
-        elif region & Region.RIGHT:
-            x_start = sw // 2
-            
-        # Apply crop
-        img_to_match = screenshot[y_start:y_end, x_start:x_end]
-        crop_x, crop_y = x_start, y_start
-
-        if gray_img:
-            img_to_match = cv2.cvtColor(img_to_match, cv2.COLOR_BGR2GRAY)
-            template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-
-        res = cv2.matchTemplate(img_to_match, template, cv2.TM_CCOEFF_NORMED)
-
-        location = np.where(res >= threshold)
-
-        # rearrange based on the highest value of the match
-        location = [(location[0][i], location[1][i]) for i in range(len(location[0]))]
-        location.sort(key=lambda pt: res[pt[0]][pt[1]], reverse=True)
-
-        # group the locations that are close to each other by 5px in each direction
-        # if the distance between the current location and the last location is less than 5px in each direction
-        # then add it to the last location group else create a new group
-
-        location_groups = []
-        for loc in location:
-            if len(location_groups) == 0:
-                location_groups.append([loc])
-            else:
-                for group in location_groups:
-                    if abs(group[-1][0] - loc[0]) < 5 and abs(group[-1][1] - loc[1]) < 5:
-                        group.append(loc)
-                        break
-                else:
-                    location_groups.append([loc])
-
-        # update location to be the center of the group
-        location = []
-        for group in location_groups:
-            x = sum(loc[1] for loc in group) // len(group)
-            y = sum(loc[0] for loc in group) // len(group)
-            
-            # Adjust coordinates back to full screen
-            x += crop_x
-            y += crop_y
-
-            # Suggest region optimization if currently using ALL
-            if region == Region.ALL:
-                r = 0
-                # Vertical check
-                if y + h <= sh // 2:
-                    r |= Region.TOP
-                elif y >= sh // 2:
-                    r |= Region.BOTTOM
-                
-                # Horizontal check
-                if x + w <= sw // 2:
-                    r |= Region.LEFT
-                elif x >= sw // 2:
-                    r |= Region.RIGHT
-                
-                if r != 0:
-                    region_names = []
-                    if r & Region.TOP: region_names.append("TOP")
-                    if r & Region.BOTTOM: region_names.append("BOTTOM")
-                    if r & Region.LEFT: region_names.append("LEFT")
-                    if r & Region.RIGHT: region_names.append("RIGHT")
-                    
-                    suggested = " | ".join(["Region." + name for name in region_names])
-                    logger.info(f"Optimization Suggestion: Asset '{asset_code}' found in {suggested}")
-
-            # add half the width and height of the template to the location and cast to int
-            location.append([self.device_manager.scale_x(int(x + w / 1.9)), self.device_manager.scale_y(int(y + h / 1.9))])
-        return location
+        return self.vision_manager.get_cords(asset_code, screenshot, threshold, gray_img)
 
     def count(self, *assets, gray_img=False, threshold=.9, screenshot=None):
         if screenshot is None:
             screenshot = self.take_screenshot()
-        total = 0
-        for a in assets:
-            total += len(self._get_cords(a, screenshot, gray_img=gray_img, threshold=threshold))
-        return total
+        return self.vision_manager.count(*assets, screenshot=screenshot, gray_img=gray_img, threshold=threshold)
 
     def debug_get_cords_in_image(self, *assets: Optional[str | tuple[str, ...]], show_asset=False, gray_img=False,
                                  threshold=.9) -> \
@@ -283,7 +164,9 @@ class Controller:
 
         if show_asset:
             for asset in assets:
-                cv2.imshow(asset, self.template_dict[asset][0])
+                img = self.vision_manager.get_template_image(asset)
+                if img is not None:
+                    cv2.imshow(asset, img)
 
         cv2.waitKey(0)
         return result
@@ -339,7 +222,7 @@ class Controller:
         return False
 
     def in_screen(self, *assets: str, screenshot=None, skip_ad_check=False, retries: int = 1, gray_img=False,
-                  threshold=.9) -> bool:
+                  threshold=.9, pause_for=0.5) -> bool:
         for _ in range(retries):
             if screenshot is None:
                 screenshot = self.take_screenshot()
@@ -355,6 +238,7 @@ class Controller:
                 if len(self._get_cords(asset, screenshot, threshold=threshold, gray_img=gray_img)) > 0:
                     return True
             screenshot = None
+            self.pause(pause_for)
         return False
 
     def in_game(self, screenshot: Optional[np.ndarray] = None) -> bool:
