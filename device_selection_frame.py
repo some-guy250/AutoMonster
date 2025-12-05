@@ -132,7 +132,8 @@ class DeviceSelectionFrame(ctk.CTkFrame):
 
         try:
             result = adb.connect(address)
-            self.on_device_selected(result)
+            # Pass the address (serial) to the callback
+            self.on_device_selected(address)
         except Exception as e:
             self.status.configure(text=f"Connection failed: {str(e)}", text_color="red")
             print(e)
@@ -145,8 +146,9 @@ class DeviceSelectionFrame(ctk.CTkFrame):
 
         if selection in self.device_serials:
             serial = self.device_serials[selection]
-            result = adb.connect(serial)
-            self.on_device_selected(result)
+            # For USB devices, we don't strictly need adb.connect, but it doesn't hurt.
+            # We pass the serial to the callback.
+            self.on_device_selected(serial)
 
     def refresh_devices(self):
         try:

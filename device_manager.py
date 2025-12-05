@@ -12,7 +12,7 @@ from utils.logger import setup_logger
 logger = setup_logger()
 
 class DeviceManager:
-    def __init__(self):
+    def __init__(self, serial: Optional[str] = None):
         self.client: Optional[scrcpy.Client] = None
         self.ratio: Optional[Tuple[float, float]] = None
         self.new_width: int = 0
@@ -21,7 +21,7 @@ class DeviceManager:
         self._paused: bool = False
         self.cancel_flag: bool = False
 
-        self.connect()
+        self.connect(serial)
 
     def pause(self, seconds: float):
         start = time.time()
@@ -32,16 +32,26 @@ class DeviceManager:
                 raise AutoMonsterErrors.ExecutionFlag
             time.sleep(min(0.1, seconds - (time.time() - start)))
 
-    def connect(self):
+    def connect(self, serial: Optional[str] = None):
         try:
             devices = adb.device_list()
             if not devices:
                 raise Exception("No ADB devices found")
             
+            target_device = None
+            if serial:
+                # Find the device with the matching serial
+                target_device = next((d for d in devices if d.serial == serial), None)
+                if not target_device:
+                    logger.warning(f"Device with serial {serial} not found, falling back to first device")
+            
+            if not target_device:
+                target_device = devices[0]
+
             self.client = scrcpy.Client(max_fps=10, stay_awake=True, block_frame=True,
-                                        device=devices[0])
+                                        device=target_device)
             self.client.start(True, True)
-            logger.info(f'Device connected')
+            logger.info(f'Device connected: {target_device.serial}')
             
             self._check_resolution()
         except Exception as e:

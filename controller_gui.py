@@ -77,7 +77,7 @@ class ControllerGUI(ctk.CTk):
         y = (self.winfo_screenheight() // 2) - (height // 2)
         self.geometry(f'{width}x{height}+{x}+{y}')
 
-    def on_device_selected(self, device):
+    def on_device_selected(self, device_serial):
         # Show loading progress
         self.device_frame.disable_connect_btns()
         self.device_frame.show_loading("Connecting to device...")
@@ -86,7 +86,7 @@ class ControllerGUI(ctk.CTk):
             self.controller = None
             try:
                 # Controller() handles everything: launch_game, wait, check resolution, open_game
-                self.controller = Controller()
+                self.controller = Controller(serial=device_serial)
             except IndexError:
                 pass
 

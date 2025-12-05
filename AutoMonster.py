@@ -21,9 +21,9 @@ logger = setup_logger()
 
 
 class Controller:
-    def __init__(self, save_screen: bool = False, skip_game_launch: bool = False):
+    def __init__(self, save_screen: bool = False, skip_game_launch: bool = False, serial: Optional[str] = None):
         self.gui_logger = None
-        self.device_manager = DeviceManager()
+        self.device_manager = DeviceManager(serial=serial)
         self.client = self.device_manager.client
         
         self.vision_manager = VisionManager(self.device_manager)
