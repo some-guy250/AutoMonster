@@ -496,7 +496,8 @@ def download_main_exe(progress_window=None):
 
 
 def launch_main(updated=False):
-    os.system(f"start AutoMonster.exe {'updated' if updated else ''}")
+    # Use Popen to launch without blocking
+    subprocess.Popen(["AutoMonster.exe"] + (["updated"] if updated else []))
 
 
 def save_version(version):
