@@ -12,10 +12,13 @@ class AdManager:
         self.controller = controller
 
     def _check_for_common_ads(self):
-        if self.controller.click(*CommonAds, skip_ad_check=True, threshold=.8):
-            if self.controller.click(ASSETS.ResumeAd, skip_ad_check=True):
-                return None
-            return self.controller.in_game()
+        screenshot = self.controller.take_screenshot()
+        for ad in CommonAds:
+            if self.controller.click(ad, skip_ad_check=True, threshold=.8, screenshot=screenshot, gray_img=True):
+                self.controller.log_gui(f"Ad detected: {ad}", "debug")
+                if self.controller.click(ASSETS.ResumeAd, skip_ad_check=True):
+                    return None
+                return self.controller.in_game()
         return False
 
     def skip_ad(self) -> bool:

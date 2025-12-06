@@ -204,9 +204,9 @@ class BattleManager:
                 break
             result = self.do_node(has_wheel=has_wheel, has_cutscene=has_cutscene, change_team=change_team)
             change_team = False
-            if result is None:
+            if not result:
                 waited_for_stamina = False
-                if has_stamina:
+                if has_stamina and result is None:
                     if self.controller.in_screen(ASSETS.RefillStamina, screenshot=self.controller.get_last_screenshot()):
                         # wait for 10 minutes for stamina to refill
                         logger.warning("Stamina is empty")
@@ -223,7 +223,7 @@ class BattleManager:
                     losses += 1
                     if max_losses != -1 and losses >= max_losses:
                         logger.info("Reached max losses")
-                        break
+                        return False
             else:
                 nodes += 1
                 losses = 0
