@@ -239,7 +239,7 @@ class Controller:
 
     def in_screen(self, *assets: str, screenshot=None, skip_ad_check=False, retries: int = 1, gray_img=False,
                   threshold=.9, pause_for=0.5) -> bool:
-        for _ in range(retries):
+        for i in range(retries):
             if screenshot is None:
                 screenshot = self.take_screenshot()
 
@@ -254,7 +254,8 @@ class Controller:
                 if len(self._get_cords(asset, screenshot, threshold=threshold, gray_img=gray_img)) > 0:
                     return True
             screenshot = None
-            self.pause(pause_for)
+            if i < retries - 1:
+                self.pause(pause_for)
         return False
 
     def in_game(self, screenshot: Optional[np.ndarray] = None) -> bool:

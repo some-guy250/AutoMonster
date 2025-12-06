@@ -177,7 +177,6 @@ ASSET_REGIONS = {
     ASSETS.Slider: Region.BOTTOM,
     ASSETS.PlayCutscene: Region.BOTTOM,
     ASSETS.EnterEraSaga: Region.BOTTOM_LEFT,
-
     ASSETS.CavernMisery: Region.TOP_LEFT,
     ASSETS.CavernConspiracy: Region.TOP_LEFT,
     ASSETS.CavernFeral: Region.TOP_LEFT,
@@ -201,19 +200,8 @@ ASSET_REGIONS = {
     ASSETS.CavernCorrupted: Region.TOP_LEFT,
     ASSETS.CavernCosmic: Region.TOP_LEFT,
     ASSETS.CavernOriginal: Region.TOP_LEFT,
-
-    # In-Game Assets Optimization
-    # ASSETS.Exit: Region.TOP_RIGHT,
-    # ASSETS.Shop: Region.BOTTOM_LEFT,
-    # ASSETS.StartBattlePVP: Region.BOTTOM_RIGHT,
-    # ASSETS.ChangeTeam: Region.BOTTOM_LEFT,
-    # ASSETS.SelectTeam: Region.BOTTOM_LEFT,
-    # ASSETS.Back: Region.TOP_LEFT,
-    # ASSETS.BackPVP: Region.TOP_LEFT,
-    # ASSETS.CancelSmall: Region.TOP_RIGHT,
-    # ASSETS.Skip: Region.TOP_RIGHT,
-    # ASSETS.CollectPVP: Region.BOTTOM,
-    # ASSETS.DiscardPVP: Region.BOTTOM,
+    ASSETS.PlayVideo: Region.BOTTOM,
+    ASSETS.CollectAd: Region.BOTTOM_LEFT,
 }
 
 IN_GAME_ASSETS = (
