@@ -204,6 +204,20 @@ ASSET_REGIONS = {
     ASSETS.Back: Region.TOP_LEFT,
     ASSETS.NotFullTeam: Region.BOTTOM,
     ASSETS.FlashRaid: Region.TOP,
+
+    ASSETS.BoxSpeedup: Region.BOTTOM,
+    ASSETS.CollectPVP: Region.BOTTOM,
+    ASSETS.StartBattlePVP: Region.BOTTOM,
+    ASSETS.EnterBattlePVP: Region.BOTTOM_RIGHT,
+    ASSETS.BoxDone: Region.BOTTOM,
+    ASSETS.EnterMultiplayer: Region.BOTTOM,
+    ASSETS.ReduceTime: Region.BOTTOM,
+    ASSETS.NextPVP: Region.BOTTOM_RIGHT,
+
+    ASSETS.HavingFun: Region.TOP,
+    ASSETS.No: Region.BOTTOM_LEFT,
+    ASSETS.DiscardPVP: Region.BOTTOM_RIGHT,
+    ASSETS.PVPNoPoints: Region.BOTTOM_RIGHT
 }
 
 IN_GAME_ASSETS = (
