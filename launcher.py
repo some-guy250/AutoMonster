@@ -542,15 +542,25 @@ def update_process(progress_window, latest_version):
             progress_window.close()
 
 
-def main():
-    # Clean up old launcher if it exists
+def cleanup_old_launcher():
+    """Background thread to clean up old launcher file"""
     if getattr(sys, 'frozen', False):
         old_exe = sys.executable + ".old"
         if os.path.exists(old_exe):
-            try:
-                os.remove(old_exe)
-            except:
-                pass
+            # Try a couple times with a small delay
+            for attempt in range(2):
+                try:
+                    os.remove(old_exe)
+                    break  # Successfully deleted
+                except:
+                    pass  
+                time.sleep(1)
+
+
+def main():
+    # Start background cleanup thread for old launcher
+    cleanup_thread = threading.Thread(target=cleanup_old_launcher, daemon=True)
+    cleanup_thread.start()
 
     update_needed, latest_version = check_for_updates()
     local_version = get_version()
