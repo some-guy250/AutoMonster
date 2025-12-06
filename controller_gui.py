@@ -352,9 +352,7 @@ class ControllerGUI(ctk.CTk):
             text="Open Folder",
             height=35,
             font=self.fonts["button"],
-            command=self.open_screenshots_folder,
-            fg_color="#3498db",
-            hover_color="#2980b9"
+            command=self.open_screenshots_folder
         )
         # Screenshot button will be managed by debug mode toggle
 
