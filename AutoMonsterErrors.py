@@ -64,3 +64,6 @@ class SkipAdError(AutoMonsterError):
 
 class ConnectError(AutoMonsterError):
     pass
+
+class SliderError(AutoMonsterError):
+    pass

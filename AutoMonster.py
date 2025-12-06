@@ -217,7 +217,7 @@ class Controller:
 
     def are_you_there_skip(self, screenshot) -> bool:
         # find slider asset and drag it a bit to the right
-        cords = self._get_cords(ASSETS.Slider, screenshot)
+        cords = self._get_cords(ASSETS.Slider, screenshot, threshold=0.8) or self._get_cords(ASSETS.Slider2, screenshot, threshold=0.8)
         times = 0
         while len(cords) > 0:
             x, y = cords[0]
@@ -234,7 +234,10 @@ class Controller:
                 self.pause(1)
                 logger.info("Skipped are you there")
                 return True
-            cords = self._get_cords(ASSETS.Slider)
+            if not self.wait_for(ASSETS.Slider, ASSETS.Slider2, timeout=2.5, skip_ad_check=True):
+                raise AutoMonsterErrors.SliderError("Cannot find slider after trying to move it")
+            sc = self.take_screenshot()
+            cords = self._get_cords(ASSETS.Slider, sc, threshold=0.8) or self._get_cords(ASSETS.Slider2, sc, threshold=0.8)
         return False
 
     def in_screen(self, *assets: str, screenshot=None, skip_ad_check=False, retries: int = 1, gray_img=False,
@@ -277,7 +280,7 @@ class Controller:
                  raise_error=False, pause_for: float = 0) -> bool:
         start_time = time.perf_counter()
         while time.perf_counter() - start_time < timeout:
-            if self.in_screen(*assets, skip_ad_check=skip_ad_check):
+            if self.in_screen(*assets, skip_ad_check=skip_ad_check, pause_for=0):
                 self.pause(pause_for)
                 return True
             self.pause(.1)
@@ -515,6 +518,8 @@ class Controller:
                     logger.warning("Not in era saga")
                     break
             if not self.do_dungeon(True, True, False):
+                logger.info("Era saga exiting - reached max losses")
+                self.log_gui("Era saga exiting - reached max losses", "warning")
                 break
 
     def _goto_cavern(self):
@@ -723,6 +728,7 @@ class Controller:
 
 def main():
     controller = Controller()
+    controller.change_team()
 
 
 if __name__ == '__main__':
