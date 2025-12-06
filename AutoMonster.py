@@ -1,5 +1,6 @@
 import logging
 import pathlib
+import sys
 from typing import List, Callable, Optional
 
 import numpy as np
@@ -96,11 +97,23 @@ class Controller:
     def save_screen(self, name: str = "sc", take_new=False):
         if take_new:
             self.take_screenshot()
+            
+        # Determine base path to ensure we save next to the executable/script
+        if getattr(sys, 'frozen', False):
+            base_path = pathlib.Path(sys.executable).parent
+        else:
+            base_path = pathlib.Path(__file__).parent
+            
+        sc_dir = base_path / "sc"
+        sc_dir.mkdir(exist_ok=True)
+        
         i = 0
-        while pathlib.Path(f"sc/{name}{i}.png").exists():
+        while (sc_dir / f"{name}{i}.png").exists():
             i += 1
-        cv2.imwrite(f"sc/{name}{i}.png", self.device_manager.get_last_screenshot())
-        self.log_gui(f"Screenshot saved as {name}{i}.png", "success")
+            
+        filepath = sc_dir / f"{name}{i}.png"
+        cv2.imwrite(str(filepath), self.device_manager.get_last_screenshot())
+        self.log_gui(f"Screenshot saved as {filepath.name}", "success")
 
     def _get_cords(self, asset_code: str, screenshot=None, threshold=.9, gray_img=False) -> List[List[int]]:
         if screenshot is None:

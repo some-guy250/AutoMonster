@@ -32,41 +32,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-
-          # Step 1: Install av with pre-built binary (av 16.0.1 has wheels for Python 3.10)
-          Write-Host "Installing av 16.0.1 with pre-built binary..."
-          python -m pip install av==16.0.1 --only-binary=:all:
-
-          # Step 2: Install scrcpy-client without dependencies to avoid av conflict
-          # (scrcpy-client requires av<10.0.0, but av 16.0.1 is API-compatible)
-          Write-Host "Installing scrcpy-client without dependencies..."
-          python -m pip install --no-deps scrcpy-client>=0.4.7
-
-          # Step 3: Install remaining dependencies
-          Write-Host "Installing remaining dependencies..."
-          python -m pip install --prefer-binary pillow opencv-python requests numpy customtkinter wakepy loguru ctklistbox
-          python -m pip install "adbutils<2.0.0,>=1.0.8"
-
-          # Verify scrcpy-client installation
-          Write-Host "Verifying scrcpy-client installation..."
-          $scrcpyInstalled = python -c "import importlib.util; print(importlib.util.find_spec('scrcpy') is not None)"
-          if ($scrcpyInstalled -eq "False") {
-            Write-Host "ERROR: scrcpy-client installed but module not found. This is a critical dependency."
-            exit 1
-          }
-
-          # Show installed packages for debugging
-          Write-Host "Installed packages (av):"
-          pip list | findstr "av"
-          Write-Host "Installed packages (scrcpy):"
-          pip list | findstr "scrcpy"
-          Write-Host "Installed packages (adbutils):"
-          pip list | findstr "adbutils"
-
-          # Install PyInstaller
-          Write-Host "Installing PyInstaller..."
-          python -m pip install --prefer-binary pyinstaller
+          .\install_dependencies.bat
+          python -m pip install pyinstaller
 
       - name: Build Executable
         run: |
@@ -139,7 +106,6 @@ jobs:
           New-Item -ItemType Directory -Force -Path final_dist
           Move-Item -Path "dist/AutoMonster/AutoMonster.exe" -Destination "final_dist/AutoMonster.exe" -Force
           Move-Item -Path "dist/LauncherAutoMonster/LauncherAutoMonster.exe" -Destination "final_dist/LauncherAutoMonster.exe" -Force
-          Copy-Item -Path "replace.bat" -Destination "final_dist/replace.bat" -Force
           Get-ChildItem final_dist
 
       - name: Install Inno Setup

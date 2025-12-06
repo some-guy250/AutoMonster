@@ -5,6 +5,8 @@ import sys
 import threading
 import time
 from datetime import datetime
+import pathlib
+import subprocess
 
 import customtkinter as ctk
 import cv2
@@ -343,6 +345,16 @@ class ControllerGUI(ctk.CTk):
             height=35,
             font=self.fonts["button"],
             command=lambda: self.controller.save_screen(take_new=True)
+        )
+        
+        self.open_sc_folder_btn = ctk.CTkButton(
+            screenshot_row,
+            text="Open Folder",
+            height=35,
+            font=self.fonts["button"],
+            command=self.open_screenshots_folder,
+            fg_color="#3498db",
+            hover_color="#2980b9"
         )
         # Screenshot button will be managed by debug mode toggle
 
@@ -726,7 +738,8 @@ class ControllerGUI(ctk.CTk):
 
         # Toggle debug buttons visibility
         if self.debug_mode:
-            self.screenshot_btn.pack(fill="x", expand=True, padx=2)
+            self.screenshot_btn.pack(side="left", fill="x", expand=True, padx=(2, 1))
+            self.open_sc_folder_btn.pack(side="left", fill="x", expand=True, padx=(1, 2))
             # Show Asset Debugger as side panel (spans both rows - main content and logs)
             if self.debug_tool is None:
                 self.debug_tool = DebugTool(self.main_frame, self.controller)
@@ -737,6 +750,7 @@ class ControllerGUI(ctk.CTk):
             self.append_log("Debug mode enabled", "debug")
         else:
             self.screenshot_btn.pack_forget()
+            self.open_sc_folder_btn.pack_forget()  # Hide open folder button
             # Hide Asset Debugger panel
             if self.debug_tool is not None:
                 self.debug_tool.grid_forget()
@@ -964,3 +978,28 @@ class ControllerGUI(ctk.CTk):
             return
         x, y = self._get_device_coords(event)
         self.controller.client.control.touch(x, y, scrcpy.ACTION_UP)
+
+    def open_screenshots_folder(self):
+        """Open the screenshots folder in file explorer"""
+        try:
+            # Determine base path to ensure we open the correct folder
+            if getattr(sys, 'frozen', False):
+                base_path = pathlib.Path(sys.executable).parent
+            else:
+                base_path = pathlib.Path(__file__).parent
+                
+            sc_dir = base_path / "sc"
+            
+            # Create if it doesn't exist
+            if not sc_dir.exists():
+                sc_dir.mkdir(exist_ok=True)
+                
+            # Open folder based on OS
+            if os.name == 'nt':  # Windows
+                os.startfile(str(sc_dir))
+            elif os.name == 'posix':  # macOS/Linux
+                subprocess.run(['open' if sys.platform == 'darwin' else 'xdg-open', str(sc_dir)])
+                
+            self.append_log("Opened screenshots folder", "info")
+        except Exception as e:
+            self.append_log(f"Error opening folder: {str(e)}", "error")

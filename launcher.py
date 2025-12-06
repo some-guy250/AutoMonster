@@ -7,6 +7,7 @@ import subprocess
 from tempfile import gettempdir
 from tkinter import ttk
 import concurrent.futures
+import shutil
 
 import requests
 
@@ -219,7 +220,25 @@ def check_for_updates():
         latest_release = response.json()
         latest_version = latest_release['tag_name'].replace("v-", "")
         current_version = get_version()
-        return (compare_versions(latest_version, current_version) == 1, latest_version)
+        
+        app_update = compare_versions(latest_version, current_version) == 1
+        
+        # Check launcher version as well
+        launcher_update = False
+        assets = latest_release.get('assets', [])
+        version_asset = next((a for a in assets if a['name'] == 'launcher_version.txt'), None)
+        if version_asset:
+            try:
+                ver_response = requests.get(version_asset['browser_download_url'])
+                if ver_response.status_code == 200:
+                    remote_launcher_ver = ver_response.text.strip()
+                    local_launcher_ver = get_launcher_version()
+                    if compare_versions(remote_launcher_ver, local_launcher_ver) == 1:
+                        launcher_update = True
+            except:
+                pass
+                
+        return (app_update or launcher_update, latest_version)
     except:
         return (False, None)
 
@@ -451,7 +470,7 @@ def self_update(latest_release, progress_window):
         
         # Restart
         subprocess.Popen([current_exe])
-        sys.exit(0)
+        os._exit(0)
         return True
     return False
 
@@ -475,19 +494,10 @@ def download_main_exe(progress_window=None):
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
     try:
-        # Ensure we use correct paths
-        batch_path = "replace.bat"  # Use relative path since it's in the same directory
-        target_path = "AutoMonster.exe"  # Use relative path
-        
-        # Use subprocess with simplified paths
-        import subprocess
-        process = subprocess.run([batch_path, temp_file, target_path], 
-                               shell=True,
-                               capture_output=True,
-                               text=True)
-        
-        if process.returncode != 0:
-            raise Exception(f"Failed to replace executable file: {process.stderr}")
+        # Replace file using python instead of batch script
+        if os.path.exists("AutoMonster.exe"):
+            os.remove("AutoMonster.exe")
+        shutil.move(temp_file, "AutoMonster.exe")
             
     except Exception as e:
         import tkinter.messagebox as msg
@@ -533,6 +543,15 @@ def update_process(progress_window, latest_version):
 
 
 def main():
+    # Clean up old launcher if it exists
+    if getattr(sys, 'frozen', False):
+        old_exe = sys.executable + ".old"
+        if os.path.exists(old_exe):
+            try:
+                os.remove(old_exe)
+            except:
+                pass
+
     update_needed, latest_version = check_for_updates()
     local_version = get_version()
 
