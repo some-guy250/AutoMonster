@@ -706,11 +706,6 @@ class ControllerGUI(ctk.CTk):
             self.battery = self.controller.get_battery_level()
             self.last_check_battery = datetime.now()
 
-        # Add battery level to the image if the debug mode is enabled
-        if self.debug_mode:
-            cv2.putText(resized_frame, f"Battery: {self.battery}%", (int(resized_frame.shape[1] * .85), 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
-
         image = Image.fromarray(cv2.cvtColor(resized_frame, cv2.COLOR_BGR2RGB))
 
         ctk_image = ctk.CTkImage(light_image=image, dark_image=image, size=self.img_size)
