@@ -8,6 +8,7 @@ from tempfile import gettempdir
 from tkinter import ttk
 import concurrent.futures
 import shutil
+import unicodedata
 
 import requests
 
@@ -557,7 +558,25 @@ def cleanup_old_launcher():
                 time.sleep(1)
 
 
+def fix_tkinter_env():
+    if getattr(sys, 'frozen', False):
+        try:
+            base_path = sys._MEIPASS
+            tcl_dir = os.path.join(base_path, 'tcl')
+            if os.path.exists(tcl_dir):
+                for item in os.listdir(tcl_dir):
+                    full_path = os.path.join(tcl_dir, item)
+                    if os.path.isdir(full_path):
+                        if item.startswith('tcl8'):
+                            os.environ['TCL_LIBRARY'] = full_path
+                        elif item.startswith('tk8'):
+                            os.environ['TK_LIBRARY'] = full_path
+        except Exception:
+            pass
+
+
 def main():
+    fix_tkinter_env()
     # Start background cleanup thread for old launcher
     cleanup_thread = threading.Thread(target=cleanup_old_launcher, daemon=True)
     cleanup_thread.start()
