@@ -221,11 +221,10 @@ ASSET_REGIONS = {
 }
 
 IN_GAME_ASSETS = (
-    ASSETS.Cancel, ASSETS.Battles, ASSETS.ActivityHub, ASSETS.Wheel, ASSETS.StartBattle, ASSETS.StartBattlePVP,
-    ASSETS.StartBattleRankUp, ASSETS.AutoBattle, ASSETS.ChangeTeam, ASSETS.SelectTeam, ASSETS.Back, ASSETS.BackPVP,
-    ASSETS.CancelSmall, ASSETS.SpinWheel, ASSETS.ClaimSpin, ASSETS.Slider,
-    ASSETS.PlayCutscene, ASSETS.Skip, ASSETS.Change, ASSETS.CollectPVP,
-    ASSETS.DiscardPVP, ASSETS.Exit
+    ASSETS.Cancel, ASSETS.AutoBattle, ASSETS.Battles, ASSETS.StartBattleRankUp, ASSETS.StartBattlePVP,
+    ASSETS.Wheel, ASSETS.ActivityHub, ASSETS.Exit, ASSETS.StartBattle, ASSETS.ChangeTeam, ASSETS.SelectTeam,
+    ASSETS.Back, ASSETS.BackPVP, ASSETS.CancelSmall, ASSETS.Slider,
+    ASSETS.PlayCutscene, ASSETS.Skip, ASSETS.Change, ASSETS.CollectPVP, ASSETS.DiscardPVP
 )
 
 Ancestral_Cavers = (

@@ -268,7 +268,6 @@ class Controller:
 
         for asset in IN_GAME_ASSETS:
             if len(self._get_cords(asset, screenshot)) > 0:
-                self.log_gui(f"In-Game check found: {asset}", "debug")
                 return True
         
         return False
