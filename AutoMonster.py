@@ -9,7 +9,7 @@ from adbutils import adb
 
 import AutoMonsterErrors
 import Constants
-from Constants import ASSETS, Ancestral_Cavers, AdLocationsHorizontal, AdLocationsVertical, IN_GAME_ASSETS, CommonAds, ASSET_REGIONS, Region
+from Constants import ASSETS, Ancestral_Cavers, AdLocationsHorizontal, AdLocationsVertical, IN_GAME_ASSETS, ASSET_REGIONS, Region
 from HelperFunctions import *
 from utils.logger import setup_logger
 from utils.vision_manager import VisionManager

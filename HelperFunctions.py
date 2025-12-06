@@ -42,9 +42,19 @@ def crush_png(image_path):
 
 
 def crush_assets():
+    import pathlib
+    
+    # Crush images in assets root
     for file in os.listdir("assets"):
         if file.endswith(".png"):
             crush_png(f"assets/{file}")
+    
+    # Crush images in ads subdirectory
+    ads_dir = pathlib.Path("assets/ads")
+    if ads_dir.exists():
+        for file in ads_dir.glob("*.png"):
+            crush_png(str(file))
+    
     print("Crushed all assets")
 
 # crush_assets()

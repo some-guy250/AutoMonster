@@ -72,26 +72,6 @@ class ASSETS:
     ClaimSpin = "claimspin.png"
     SpinWheel = "spinwheel.png"
     ClaimAndAnother = "claimanother.png"
-    CommonAd1 = "commonad1.png"
-    CommonAd2 = "commonad2.png"
-    CommonAd3 = "commonad3.png"
-    CommonAd4 = "commonad4.png"
-    CommonAd5 = "commonad5.png"
-    CommonAd6 = "commonad6.png"
-    CommonAd7 = "commonad7.png"
-    CommonAd8 = "commonad8.png"
-    CommonAd9 = "commonad9.png"
-    CommonAd10 = "commonad10.png"
-    CommonAd11 = "commonad11.png"
-    CommonAd12 = "commonad12.png"
-    CommonAd13 = "commonad13.png"
-    CommonAd14 = "commonad14.png"
-    CommonAd15 = "commonad15.png"
-    CommonAd16 = "commonad16.png"
-    CommonAd17 = "commonad17.png"
-    CommonAd18 = "commonad18.png"
-    CommonAd19 = "commonad19.png"
-    CommonAd20 = "commonad20.png"
     ResumeAd = "resumead.png"
     NoAds = "noads.png"
     NotFullTeam = "notfullteam.png"
@@ -148,6 +128,7 @@ class Region:
     BOTTOM = 2
     LEFT = 4
     RIGHT = 8
+    AD_AREA = 16
 
     # Combinations
     TOP_LEFT = TOP | LEFT
@@ -252,8 +233,8 @@ All_Cavers = (
 AdLocations = [[1240, 45], [1240, 35], [1250, 85], [630, 50], [666, 80], [680, 25]]
 AdLocationsHorizontal = [(1165, 75), (1240, 45), (1240, 35), (1250, 85)]
 AdLocationsVertical = [(630, 50), (666, 80), (680, 25)]
-NumberOfCommonAds = 20
-CommonAds = tuple(f"commonad{i}.png" for i in range(1, NumberOfCommonAds + 1))
+ADS_DIR = "ads"
+AD_REGION = Region.AD_AREA
 
 CAVERN_TO_ASSETS = {
     'misery': ASSETS.CavernMisery,

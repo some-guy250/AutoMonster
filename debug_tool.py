@@ -473,6 +473,14 @@ class DebugTool(ctk.CTkFrame):
                     asset_path = Path(f'assets/{value}')
                     if asset_path.exists():
                         self.all_assets[attr] = value
+            
+            # Load ads
+            ads_dir = getattr(Constants, 'ADS_DIR', 'ads')
+            ads_path = Path('assets') / ads_dir
+            if ads_path.exists():
+                for file in ads_path.glob('*.png'):
+                    key = f"{ads_dir}/{file.name}"
+                    self.all_assets[key] = key
 
             # Update asset_dict for hover preview
             self.asset_listbox.asset_dict = self.all_assets

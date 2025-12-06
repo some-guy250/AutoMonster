@@ -287,98 +287,108 @@ def download_assets(progress_window=None):
         progress_window.update_progress(0, "Preparing to download assets...", "Fetching file information...")
 
     if os.path.exists("assets"):
-        for fname in os.listdir("assets"):
-            os.remove(f"assets/{fname}")
-        os.rmdir("assets")
+        shutil.rmtree("assets", ignore_errors=True)
     os.makedirs("assets", exist_ok=True)
 
-    response = requests.get(f"{repo_url_api}/contents/assets")
-    if response.status_code == 200:
-        contents = response.json()
-        files_to_download = [item for item in contents if item["type"] == "file"]
-        total_files = len(files_to_download)
+    all_files = []
+    
+    def fetch_contents(path=""):
+        url = f"{repo_url_api}/contents/assets/{path}" if path else f"{repo_url_api}/contents/assets"
+        response = requests.get(url)
+        if response.status_code == 200:
+            contents = response.json()
+            if isinstance(contents, list):
+                for item in contents:
+                    if item["type"] == "file":
+                        item["relative_path"] = os.path.join(path, item["name"])
+                        all_files.append(item)
+                    elif item["type"] == "dir":
+                        fetch_contents(os.path.join(path, item["name"]))
 
-        # Calculate total size
-        if progress_window:
-            progress_window.update_progress(0, "Preparing download...", "Calculating total size...")
+    fetch_contents()
+    
+    files_to_download = all_files
+    total_files = len(files_to_download)
 
-        total_size = sum(item["size"] for item in files_to_download)
+    # Calculate total size
+    if progress_window:
+        progress_window.update_progress(0, "Preparing download...", "Calculating total size...")
 
-        start_time = time.time()
-        # Use a lock for thread-safe updates to total_downloaded
-        progress_lock = threading.Lock()
-        # We'll use a mutable container to share state across threads
-        shared_state = {'total_downloaded': 0, 'files_completed': 0}
+    total_size = sum(item["size"] for item in files_to_download)
+
+    start_time = time.time()
+    # Use a lock for thread-safe updates to total_downloaded
+    progress_lock = threading.Lock()
+    # We'll use a mutable container to share state across threads
+    shared_state = {'total_downloaded': 0, 'files_completed': 0}
+    
+    def download_single_asset(item):
+        file_path = os.path.join("assets", item["relative_path"])
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
         
-        def download_single_asset(item):
-            file_name = os.path.basename(item["download_url"])
-            file_path = os.path.join("assets", file_name)
-            
-            # Use a session for potentially better performance (though new session per thread here)
-            # Ideally we pass a session, but requests.get is simple.
-            # Let's just use requests.get with a larger chunk size.
-            response = requests.get(item["download_url"], stream=True)
-            
-            with open(file_path, "wb") as f:
-                for chunk in response.iter_content(chunk_size=1048576): # 1MB chunks
-                    f.write(chunk)
-                    with progress_lock:
-                        shared_state['total_downloaded'] += len(chunk)
-                        
-                        # Throttle updates to shared state to avoid lock contention and excessive updates
-                        # Actually, we can just update the variables. The GUI polls.
-                        # But we need to calculate ETA/Speed based on global progress.
-                        
-                        current_downloaded = shared_state['total_downloaded']
-                        
-                        if progress_window and total_size:
-                            # Only update if we have significant change or enough time passed?
-                            # Since we are in a lock, let's be quick.
-                            pass
-
-            with progress_lock:
-                shared_state['files_completed'] += 1
-
-        # Monitor thread to update progress
-        def monitor_progress():
-            last_update_time = 0
-            while shared_state['files_completed'] < total_files:
-                current_time = time.time()
-                if current_time - last_update_time > 0.1:
-                    with progress_lock:
-                        downloaded = shared_state['total_downloaded']
-                        completed = shared_state['files_completed']
+        # Use a session for potentially better performance (though new session per thread here)
+        # Ideally we pass a session, but requests.get is simple.
+        # Let's just use requests.get with a larger chunk size.
+        response = requests.get(item["download_url"], stream=True)
+        
+        with open(file_path, "wb") as f:
+            for chunk in response.iter_content(chunk_size=1048576): # 1MB chunks
+                f.write(chunk)
+                with progress_lock:
+                    shared_state['total_downloaded'] += len(chunk)
+                    
+                    # Throttle updates to shared state to avoid lock contention and excessive updates
+                    # Actually, we can just update the variables. The GUI polls.
+                    # But we need to calculate ETA/Speed based on global progress.
+                    
+                    current_downloaded = shared_state['total_downloaded']
                     
                     if progress_window and total_size:
-                        current_progress = (downloaded / total_size) * 50
-                        eta = calculate_eta(start_time, downloaded, total_size)
-                        speed = downloaded / (current_time - start_time) if (current_time - start_time) > 0 else 0
-                        
-                        status = (
-                            f"Downloading assets... ({completed}/{total_files})\n"
-                            f"Total Progress: {format_size(downloaded)} / {format_size(total_size)}"
-                        )
-                        
-                        global_status = f"Speed: {format_size(speed)}/s | ETA: {eta}"
-                        
-                        progress_window.update_progress(current_progress, "Downloading assets...", status)
-                        progress_window.update_eta(global_status)
+                        # Only update if we have significant change or enough time passed?
+                        # Since we are in a lock, let's be quick.
+                        pass
+
+        with progress_lock:
+            shared_state['files_completed'] += 1
+
+    # Monitor thread to update progress
+    def monitor_progress():
+        last_update_time = 0
+        while shared_state['files_completed'] < total_files:
+            current_time = time.time()
+            if current_time - last_update_time > 0.1:
+                with progress_lock:
+                    downloaded = shared_state['total_downloaded']
+                    completed = shared_state['files_completed']
+                
+                if progress_window and total_size:
+                    current_progress = (downloaded / total_size) * 50
+                    eta = calculate_eta(start_time, downloaded, total_size)
+                    speed = downloaded / (current_time - start_time) if (current_time - start_time) > 0 else 0
                     
-                    last_update_time = current_time
-                time.sleep(0.05)
+                    status = (
+                        f"Downloading assets... ({completed}/{total_files})\n"
+                        f"Total Progress: {format_size(downloaded)} / {format_size(total_size)}"
+                    )
+                    
+                    global_status = f"Speed: {format_size(speed)}/s | ETA: {eta}"
+                    
+                    progress_window.update_progress(current_progress, "Downloading assets...", status)
+                    progress_window.update_eta(global_status)
+                
+                last_update_time = current_time
+            time.sleep(0.05)
 
-        # Start monitor thread
-        monitor = threading.Thread(target=monitor_progress)
-        monitor.start()
+    # Start monitor thread
+    monitor = threading.Thread(target=monitor_progress)
+    monitor.start()
 
-        # Run downloads in parallel
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            executor.map(download_single_asset, files_to_download)
-            
-        # Ensure monitor finishes
-        monitor.join()
-
-
+    # Run downloads in parallel
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        executor.map(download_single_asset, files_to_download)
+        
+    # Ensure monitor finishes
+    monitor.join()
 def download_file(url, target_path, progress_window=None, progress_start=0, progress_end=100, label="Downloading..."):
     response = requests.get(url, stream=True)
     total_size = int(response.headers.get('content-length', 0))

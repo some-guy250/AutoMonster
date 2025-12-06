@@ -1,7 +1,8 @@
 import logging
 import time
+import pathlib
 import scrcpy
-from Constants import ASSETS, CommonAds, AdLocationsHorizontal, AdLocationsVertical
+from Constants import ASSETS, AdLocationsHorizontal, AdLocationsVertical, ADS_DIR
 import AutoMonsterErrors
 from utils.logger import setup_logger
 
@@ -13,9 +14,15 @@ class AdManager:
 
     def _check_for_common_ads(self):
         screenshot = self.controller.take_screenshot()
-        for ad in CommonAds:
-            if self.controller.click(ad, skip_ad_check=True, threshold=.8, screenshot=screenshot, gray_img=True):
-                self.controller.log_gui(f"Ad detected: {ad}", "debug")
+        
+        ad_keys = self.controller.vision_manager.ad_keys
+
+        if not ad_keys:
+            return False
+
+        for ad_key in ad_keys:
+            if self.controller.click(ad_key, skip_ad_check=True, threshold=.8, screenshot=screenshot, gray_img=True):
+                self.controller.log_gui(f"Ad detected: {ad_key}", "debug")
                 if self.controller.click(ASSETS.ResumeAd, skip_ad_check=True):
                     return None
                 return self.controller.in_game()
