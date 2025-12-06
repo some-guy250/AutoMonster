@@ -53,12 +53,12 @@ class DeviceManager:
             self.client.start(True, True)
             logger.info(f'Device connected: {target_device.serial}')
             
-            self._check_resolution()
+            self.check_resolution()
         except Exception as e:
             logger.error(f"Failed to connect to device: {e}")
             raise e
 
-    def _check_resolution(self):
+    def check_resolution(self):
         size = self.client.resolution
         self.new_width = size[0]
         self.resized = False
@@ -73,6 +73,13 @@ class DeviceManager:
                 time.sleep(0.1)
                 image = self.client.last_frame
                 attempts += 1
+
+            if image is None:
+                # Try to get resolution from client if frame is not available
+                pass
+            else:
+                # Update size from image if available, as client.resolution might be stale
+                size = (image.shape[1], image.shape[0])
 
             if image is None:
                 logger.error("Could not get frame from device after 1 second. Device may not be responding.")

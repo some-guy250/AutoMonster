@@ -135,9 +135,9 @@ class VisionManager:
                     
                     asset_name = self.asset_reverse_map.get(asset_code)
                     if asset_name:
-                        logger.debug(f"Optimization Suggestion: ASSETS.{asset_name}: {suggested_str},")
+                        logger.info(f"Optimization Suggestion: ASSETS.{asset_name}: {suggested_str},")
                     else:
-                        logger.debug(f"Optimization Suggestion: Asset '{asset_code}' found in {suggested_str}")
+                        logger.info(f"Optimization Suggestion: Asset '{asset_code}' found in {suggested_str}")
 
             # add half the width and height of the template to the location and cast to int
             # Use device_manager for scaling

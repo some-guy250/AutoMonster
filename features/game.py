@@ -38,6 +38,8 @@ class GameManager:
             self.controller.pause(2)
         if not self.controller.in_game():
             self.launch_game()
+            self.controller.pause(5)
+            self.controller.refresh_resolution()
         now = time.perf_counter()
         while True:
             if self.controller.in_game():

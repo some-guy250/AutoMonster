@@ -54,6 +54,9 @@ class Controller:
         """Reload all templates from disk and Constants.py"""
         self.vision_manager.load_templates()
 
+    def refresh_resolution(self):
+        self.device_manager.check_resolution()
+
     def get_battery_level(self):
         return self.device_manager.get_battery_level()
 
@@ -257,6 +260,11 @@ class Controller:
     def in_game(self, screenshot: Optional[np.ndarray] = None) -> bool:
         if screenshot is None:
             screenshot = self.take_screenshot()
+
+        # If width is small, we are likely in portrait mode or bad resize state
+        # The game runs in landscape 1280x720.
+        if screenshot.shape[1] < 1000:
+            return False
 
         for asset in IN_GAME_ASSETS:
             if len(self._get_cords(asset, screenshot)) > 0:
