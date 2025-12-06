@@ -231,13 +231,18 @@ class Controller:
                 self.client.control.touch(x, y, scrcpy.ACTION_DOWN)
                 self.pause(.1)
                 self.client.control.touch(x, y, scrcpy.ACTION_UP)
-                self.pause(2)
+                self.pause(1)
                 logger.info("Skipped are you there")
                 return True
-            if not self.wait_for(ASSETS.Slider, ASSETS.Slider2, timeout=2.5, skip_ad_check=True):
-                raise AutoMonsterErrors.SliderError("Cannot find slider after trying to move it")
-            sc = self.take_screenshot()
-            cords = self._get_cords(ASSETS.Slider, sc, threshold=0.8) or self._get_cords(ASSETS.Slider2, sc, threshold=0.8)
+            count = 0
+            while True:
+                sc = self.take_screenshot()
+                cords = self._get_cords(ASSETS.Slider, sc, threshold=0.8) or self._get_cords(ASSETS.Slider2, sc, threshold=0.8)
+                if len(cords) != 0:
+                    break
+                count += 1
+                if count > 5:
+                    raise AutoMonsterErrors.SliderError("Cannot find slider after trying to move it")
         return False
 
     def in_screen(self, *assets: str, screenshot=None, skip_ad_check=False, retries: int = 1, gray_img=False,
