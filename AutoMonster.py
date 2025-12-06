@@ -209,11 +209,11 @@ class Controller:
             raise AutoMonsterErrors.ClickError(f"Could not find any of the assets: {assets}")
         return False
 
-    def click_back(self, skip_ad_check=False):
+    def click_back(self, skip_ad_check=False, pause: float = 2):
         if not skip_ad_check and not self.in_game():
             self._skip_ad()
         self.client.device.keyevent("KEYCODE_BACK")
-        self.pause(2)
+        self.pause(pause)
 
     def are_you_there_skip(self, screenshot) -> bool:
         # find slider asset and drag it a bit to the right
