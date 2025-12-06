@@ -257,6 +257,7 @@ class ControllerGUI(ctk.CTk):
             macro_controls,
             text="▶ Run Macro",
             height=32,
+            width=140,  # Fixed width to prevent size changes between Run/Stop
             command=self.toggle_macro,
             font=self.fonts["normal"]
         )

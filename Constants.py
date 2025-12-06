@@ -7,11 +7,8 @@ class ASSETS:
     StartBattleGray = "fightgray.png"
     AutoBattle = "auto.png"
     Cancel = "cancel.png"
-    Settings = "settings.png"
     Battles = "battles.png"
-    EnterDungeons = "enterdungeons.png"
     ResourceDungeon = "resourcedungeon.png"
-    EnterDungeons2 = "enterdungeons2.png"
     DungeonNotAvailable = "dungeonnotavailable.png"
     EnterEraSaga = "entersaga.png"
     EraSagaDone = "erasagadone.png"
@@ -20,18 +17,14 @@ class ASSETS:
     GemDungeon = "gemdungeon.png"
     RuneDungeon = "runedungeon.png"
     MazeCoinDungeon = "mazecoindungeon.png"
-    CoinDungeon = "coindungeon.png"
     RefillStamina = "refillstamina.png"
     PlayVideo = "playvideo.png"
     CollectAd = "collectad.png"
     QuitGame = "quitgame.png"
-    EnterBattleAdventure = "enterbattleadventure.png"
-    DoneAdventure = "share.png"
     EnterBattleRankUp = "enterbattlerankup.png"
     StartBattleRankUp = "startbattlerankup.png"
     PlayCutscene = "playcut.png"
     Skip = "skip.png"
-    DailyBonus = "dailybonus.png"
     EnterMultiplayer = "entermultiplayer.png"
     EnterPVP = "enterpvp.png"
     EnterBattlePVP = "enterbattlepvp.png"
@@ -71,18 +64,16 @@ class ASSETS:
     SelectTeam = "selectteam.png"
     ClaimSpin = "claimspin.png"
     SpinWheel = "spinwheel.png"
-    ClaimAndAnother = "claimanother.png"
     ResumeAd = "resumead.png"
     NoAds = "noads.png"
     NotFullTeam = "notfullteam.png"
     NoMonsterLeft = "nomonsterleft.png"
     NoUndefeated = "noundefeated.png"
-    Shop = "shop.png"
     Back = "back.png"
     Exit = "exit.png"
     CancelSmall = "cancelsmall.png"
-    AreYouThere = "areyouthere.png"
     Slider = "slider.png"
+    Slider2 = "slider2.png"
     Continue = "continue.png"
     EnterCavern = "entercavern.png"
     HavingFun = "havingfun.png"
@@ -113,7 +104,6 @@ class ASSETS:
     CavernCorrupted = "caverncorrupted.png"
     CavernCosmic = "caverncosmic.png"
     CavernOriginal = "cavernoriginal.png"
-    Unlock = "unlock.png"
     ComeBackLater = "comebacklater.png"
     Selected1 = "selected1.png"
     Selected2 = "selected2.png"
@@ -140,7 +130,7 @@ class Region:
 # Region definitions
 ASSET_REGIONS = {
     ASSETS.Cancel: Region.TOP_RIGHT,
-
+    ASSETS.Continue: Region.BOTTOM,
     ASSETS.ActivityHub: Region.TOP,
     ASSETS.Battles: Region.BOTTOM_LEFT,
     ASSETS.RightArrow: Region.RIGHT,
@@ -153,11 +143,12 @@ ASSET_REGIONS = {
     ASSETS.Wheel: Region.TOP_RIGHT,
     ASSETS.SpinWheel: Region.BOTTOM_RIGHT,
     ASSETS.EnterCavern: Region.BOTTOM,
-    ASSETS.ResourceDungeon: Region.BOTTOM_RIGHT,
+    ASSETS.ResourceDungeon: Region.BOTTOM,
     ASSETS.EnterBattleStamina: Region.BOTTOM,
     ASSETS.Slider: Region.BOTTOM,
+    ASSETS.Slider2: Region.BOTTOM,
     ASSETS.PlayCutscene: Region.BOTTOM,
-    ASSETS.EnterEraSaga: Region.BOTTOM_LEFT,
+    ASSETS.EnterEraSaga: Region.BOTTOM,
     ASSETS.CavernMisery: Region.TOP_LEFT,
     ASSETS.CavernConspiracy: Region.TOP_LEFT,
     ASSETS.CavernFeral: Region.TOP_LEFT,
@@ -184,12 +175,41 @@ ASSET_REGIONS = {
     ASSETS.PlayVideo: Region.BOTTOM,
     ASSETS.CollectAd: Region.BOTTOM_LEFT,
     ASSETS.Exit: Region.BOTTOM_RIGHT,
+    ASSETS.SelectTeam: Region.BOTTOM_LEFT,
+    ASSETS.StartBattleGray: Region.BOTTOM_RIGHT,
+    ASSETS.RankUp1: Region.LEFT, 
+    ASSETS.RankUp2: Region.LEFT, 
+    ASSETS.RankUp3: Region.LEFT, 
+    ASSETS.RankUp4: Region.LEFT, 
+    ASSETS.RankUp5: Region.LEFT, 
+    ASSETS.RankUp6: Region.LEFT, 
+    ASSETS.RankUp1Synergy: Region.LEFT, 
+    ASSETS.RankUp2Synergy: Region.LEFT, 
+    ASSETS.RankUp3Synergy: Region.LEFT, 
+    ASSETS.RankUp4Synergy: Region.LEFT, 
+    ASSETS.RankUp5Synergy: Region.LEFT, 
+    ASSETS.RankUp6Synergy: Region.LEFT,
+    ASSETS.RankUpSelected1: Region.LEFT, 
+    ASSETS.RankUpSelected2: Region.LEFT, 
+    ASSETS.RankUpSelected3: Region.LEFT, 
+    ASSETS.RankUpSelected4: Region.LEFT,
+    ASSETS.RankUpSelected5: Region.LEFT, 
+    ASSETS.RankUpSelected6: Region.LEFT, 
+    ASSETS.Selected1: Region.TOP,
+    ASSETS.Selected2: Region.TOP,
+    ASSETS.Selected3: Region.TOP,
+    ASSETS.Cavern: Region.RIGHT,
+    ASSETS.ChangeTeam: Region.BOTTOM_LEFT,
+    ASSETS.BackPVP: Region.TOP_LEFT,
+    ASSETS.Back: Region.TOP_LEFT,
+    ASSETS.NotFullTeam: Region.BOTTOM,
+    ASSETS.FlashRaid: Region.TOP,
 }
 
 IN_GAME_ASSETS = (
     ASSETS.Cancel, ASSETS.AutoBattle, ASSETS.Battles, ASSETS.StartBattleRankUp, ASSETS.StartBattlePVP,
     ASSETS.Wheel, ASSETS.ActivityHub, ASSETS.Exit, ASSETS.StartBattle, ASSETS.ChangeTeam, ASSETS.SelectTeam,
-    ASSETS.Back, ASSETS.BackPVP, ASSETS.CancelSmall, ASSETS.Slider,
+    ASSETS.Back, ASSETS.BackPVP, ASSETS.CancelSmall, ASSETS.Slider, ASSETS.Slider2,
     ASSETS.PlayCutscene, ASSETS.Skip, ASSETS.Change, ASSETS.CollectPVP, ASSETS.DiscardPVP
 )
 

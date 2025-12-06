@@ -110,6 +110,7 @@ class CommandFrame(ctk.CTkFrame):
                 action_buttons,
                 text="▶ Run",
                 height=35,
+                width=100,  # Fixed width to prevent size changes
                 font=("Arial", 13, "bold"),
                 command=self.toggle_execution
             )
@@ -120,6 +121,7 @@ class CommandFrame(ctk.CTkFrame):
                 action_buttons,
                 text="Pause",
                 height=35,
+                width=100,  # Fixed width to prevent size changes between Pause/Resume
                 font=("Arial", 13, "bold"),
                 command=self.on_pause,
                 state="disabled"

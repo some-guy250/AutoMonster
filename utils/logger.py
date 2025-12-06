@@ -27,16 +27,19 @@ class CustomFormatter(logging.Formatter):
 def setup_logger(name="AutoMonster", level=logging.DEBUG):
     logger = logging.getLogger(name)
     logger.setLevel(level)
-    
+
     # Check if handlers already exist to avoid duplicates
     if not logger.handlers:
         ch = logging.StreamHandler()
         ch.setLevel(level)
         ch.setFormatter(CustomFormatter())
         logger.addHandler(ch)
-    
+
+    # Prevent propagation to root logger to avoid duplicate messages
+    logger.propagate = False
+
     # Enable colors in Windows terminal
     if sys.platform == 'win32':
         os.system('color')
-        
+
     return logger

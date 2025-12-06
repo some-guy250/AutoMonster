@@ -14,10 +14,11 @@ from Constants import ASSET_REGIONS, Region, ASSETS
 
 class SimpleMultiSelectListbox(ctk.CTkFrame):
     """Simple multi-select listbox implementation using CTkScrollableFrame"""
-    def __init__(self, master, command=None, asset_dict=None, **kwargs):
+    def __init__(self, master, command=None, asset_dict=None, template_cache=None, **kwargs):
         super().__init__(master, **kwargs)
         self.command = command
         self.asset_dict = asset_dict or {}  # Maps asset name -> filename
+        self.template_cache = template_cache  # Reference to controller's loaded templates
         self.selected_indices = set()
         self.items = []
         self.item_widgets = []
@@ -55,22 +56,27 @@ class SimpleMultiSelectListbox(ctk.CTkFrame):
 
     def _create_item_widget(self, index, item):
         """Create a clickable label for an item"""
-        frame = ctk.CTkFrame(self.scrollable_frame, fg_color="transparent")
+        frame = ctk.CTkFrame(self.scrollable_frame, fg_color="transparent", border_width=0)
         frame.grid(row=index, column=0, sticky="ew", padx=0, pady=1)
         frame.grid_columnconfigure(0, weight=1)
 
+        # Use a fixed border frame to prevent width changes
+        border_frame = ctk.CTkFrame(frame, fg_color="transparent", border_width=0)
+        border_frame.grid(row=0, column=0, sticky="ew", padx=2, pady=0)
+        border_frame.grid_columnconfigure(0, weight=1)
+        border_frame.grid_rowconfigure(0, weight=0)  # Don't expand vertically
+
         label = ctk.CTkLabel(
-            frame,
+            border_frame,
             text=item,
             anchor="w",
             fg_color="#1f1f1f",
             text_color="white",
             corner_radius=4,
             height=24,
-            padx=10,
-            width=50  # Allow shrinking/expanding without forcing width
+            padx=10
         )
-        label.grid(row=0, column=0, sticky="ew", padx=2, pady=0)
+        label.grid(row=0, column=0, sticky="ew", padx=0, pady=0)
 
         # Bind click events - default multi-select (no Ctrl needed)
         def on_click(event, idx=index):
@@ -92,6 +98,7 @@ class SimpleMultiSelectListbox(ctk.CTkFrame):
             self._hide_preview()
 
         label.bind("<Button-1>", on_click)
+        border_frame.bind("<Button-1>", on_click)
         frame.bind("<Button-1>", on_click)
         label.bind("<Enter>", on_enter)
         label.bind("<Leave>", on_leave)
@@ -104,7 +111,9 @@ class SimpleMultiSelectListbox(ctk.CTkFrame):
         if changed_index is not None:
             if changed_index < len(self.item_widgets):
                 widget = self.item_widgets[changed_index]
-                label = widget.winfo_children()[0]
+                # Get border_frame (first child of frame), then label (first child of border_frame)
+                border_frame = widget.winfo_children()[0]
+                label = border_frame.winfo_children()[0]
                 if changed_index in self.selected_indices:
                     # Check if we have a specific color for this item
                     item_name = self.items[changed_index]
@@ -120,7 +129,9 @@ class SimpleMultiSelectListbox(ctk.CTkFrame):
 
         # Otherwise update all
         for i, widget in enumerate(self.item_widgets):
-            label = widget.winfo_children()[0]
+            # Get border_frame (first child of frame), then label (first child of border_frame)
+            border_frame = widget.winfo_children()[0]
+            label = border_frame.winfo_children()[0]
             if i in self.selected_indices:
                 # Use assigned color if available
                 if asset_colors and i < len(self.items):
@@ -151,63 +162,69 @@ class SimpleMultiSelectListbox(ctk.CTkFrame):
         self._update_colors()
 
     def _show_preview(self, asset_name):
-        """Show hover preview of asset image"""
+        """Show hover preview of asset image using cached templates"""
         if asset_name not in self.asset_dict:
             return
 
-        filename = self.asset_dict[asset_name]
-        asset_path = Path(f'assets/{filename}')
-
-        if not asset_path.exists():
-            return
-
-        # Store the current asset being previewed to detect if user moved away
+        # Store the current asset being previewed
         self._current_preview_asset = asset_name
 
-        def load_and_show():
-            try:
-                # Load image with OpenCV
+        try:
+            # Try to get from template cache first (already loaded in memory)
+            img = None
+            if self.template_cache is not None:
+                filename = self.asset_dict[asset_name]
+                template_key = f'assets/{filename}'
+                cached_data = self.template_cache.get(template_key)
+                if cached_data is not None:
+                    # VisionManager stores templates as (img, height, width) tuples
+                    img = cached_data[0]
+
+            # Fallback to loading from disk if not in cache
+            if img is None:
+                filename = self.asset_dict[asset_name]
+                asset_path = Path(f'assets/{filename}')
+                if not asset_path.exists():
+                    return
                 img = cv2.imread(str(asset_path))
-                if img is None:
-                    return
 
-                # Convert BGR to RGB
-                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            if img is None:
+                return
 
-                # Resize to a reasonable preview size (max 300x300, maintain aspect ratio)
-                max_size = 300
-                h, w = img.shape[:2]
-                if h > max_size or w > max_size:
-                    scale = min(max_size / h, max_size / w)
-                    new_w = int(w * scale)
-                    new_h = int(h * scale)
-                    img = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
+            # Check if user moved away
+            if self._current_preview_asset != asset_name:
+                return
 
-                # Convert to PIL Image then CTkImage for proper customtkinter support
-                pil_image = Image.fromarray(img)
-                photo = ctk.CTkImage(light_image=pil_image, dark_image=pil_image, size=pil_image.size)
+            # Convert BGR to RGB
+            img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-                # Only show if still hovering over the same asset
-                if self._current_preview_asset != asset_name:
-                    return
+            # Resize to a reasonable preview size (max 300x300, maintain aspect ratio)
+            max_size = 300
+            h, w = img_rgb.shape[:2]
+            if h > max_size or w > max_size:
+                scale = min(max_size / h, max_size / w)
+                new_w = int(w * scale)
+                new_h = int(h * scale)
+                img_rgb = cv2.resize(img_rgb, (new_w, new_h), interpolation=cv2.INTER_AREA)
 
-                # Use after to ensure this runs on main thread (create window on main thread)
-                self.after(0, lambda: self._create_and_display_preview(photo))
+            # Convert to PIL Image then CTkImage
+            pil_image = Image.fromarray(img_rgb)
+            photo = ctk.CTkImage(light_image=pil_image, dark_image=pil_image, size=pil_image.size)
 
-            except Exception as e:
-                print(f"Error loading preview for {asset_name}: {e}")
+            # Final check before displaying
+            if self._current_preview_asset == asset_name:
+                self._create_and_display_preview(photo)
 
-        # Load image in background thread to avoid blocking hover
-        preview_thread = threading.Thread(target=load_and_show, daemon=True)
-        preview_thread.start()
+        except Exception as e:
+            print(f"Error loading preview for {asset_name}: {e}")
 
     def _create_and_display_preview(self, photo):
-        """Create and display the preview window (must run on main thread)"""
+        """Create and display the preview window"""
         # Double-check user is still hovering
         if self._current_preview_asset is None:
             return
 
-        # Create preview window if it doesn't exist (MUST be on main thread)
+        # Create preview window if it doesn't exist
         if self.preview_window is None:
             try:
                 self.preview_window = ctk.CTkToplevel(self)
@@ -219,14 +236,19 @@ class SimpleMultiSelectListbox(ctk.CTkFrame):
                 self.preview_label = ctk.CTkLabel(self.preview_window, text="")
                 self.preview_label.pack(padx=5, pady=5)
 
-                # Bind events to hide preview when it loses focus or cursor leaves
+                # Bind events to hide preview when cursor leaves the preview window
                 self.preview_label.bind("<Leave>", lambda e: self._hide_preview())
+                self.preview_window.bind("<Leave>", lambda e: self._hide_preview())
             except Exception as e:
                 print(f"Error creating preview window: {e}")
                 self.preview_window = None
                 return
 
         try:
+            # Only show if still supposed to be previewing
+            if self._current_preview_asset is None:
+                return
+
             # Update image
             self.preview_label.configure(image=photo)
             self.preview_label.image = photo  # Keep a reference
@@ -235,15 +257,22 @@ class SimpleMultiSelectListbox(ctk.CTkFrame):
             x = self.winfo_pointerx() + 15
             y = self.winfo_pointery() + 15
             self.preview_window.geometry(f"+{x}+{y}")
+
+            # Show window
             self.preview_window.deiconify()
+            self.preview_window.lift()  # Bring to front
         except Exception as e:
             print(f"Error displaying preview: {e}")
+            self._hide_preview()
 
     def _hide_preview(self):
         """Hide hover preview"""
         self._current_preview_asset = None  # Clear the preview tracking
         if self.preview_window is not None:
-            self.preview_window.withdraw()
+            try:
+                self.preview_window.withdraw()
+            except Exception as e:
+                pass  # Ignore errors during hide
 
     def select_all(self):
         """Select all items"""
@@ -309,22 +338,49 @@ class DebugTool(ctk.CTkFrame):
         )
         open_folder_btn.grid(row=2, column=0, sticky="ew", padx=5, pady=(0, 10))
 
-        # Search bar
+        # Search bar with clear button
+        search_frame = ctk.CTkFrame(left_panel, fg_color="transparent")
+        search_frame.grid(row=3, column=0, sticky="ew", padx=5, pady=(10, 5))
+        search_frame.grid_columnconfigure(0, weight=1)
+
         search_label = ctk.CTkLabel(
-            left_panel,
+            search_frame,
             text="Search Assets:",
             font=("Arial", 10)
         )
-        search_label.grid(row=3, column=0, sticky="w", padx=5, pady=(10, 5))
+        search_label.grid(row=0, column=0, sticky="w", pady=(0, 5))
+
+        self.search_result_label = ctk.CTkLabel(
+            search_frame,
+            text="",
+            font=("Arial", 9),
+            text_color="gray"
+        )
+        self.search_result_label.grid(row=0, column=1, sticky="e", pady=(0, 5))
+
+        search_entry_frame = ctk.CTkFrame(left_panel, fg_color="transparent")
+        search_entry_frame.grid(row=4, column=0, sticky="ew", padx=5, pady=(0, 10))
+        search_entry_frame.grid_columnconfigure(0, weight=1)
 
         self.search_var = ctk.StringVar()
-        self.search_var.trace("w", lambda *args: self.filter_assets())
-        search_entry = ctk.CTkEntry(
-            left_panel,
+        self.search_var.trace("w", lambda *args: self._debounced_filter())
+        self.search_entry = ctk.CTkEntry(
+            search_entry_frame,
             textvariable=self.search_var,
             placeholder_text="Type to search..."
         )
-        search_entry.grid(row=4, column=0, sticky="ew", padx=5, pady=(0, 10))
+        self.search_entry.grid(row=0, column=0, sticky="ew", padx=(0, 5))
+
+        # Clear search button
+        self.clear_search_btn = ctk.CTkButton(
+            search_entry_frame,
+            text="✕",
+            width=30,
+            command=self.clear_search,
+            fg_color="#e74c3c",
+            hover_color="#c0392b"
+        )
+        self.clear_search_btn.grid(row=0, column=1)
 
         # Asset list with multi-select
         list_label = ctk.CTkLabel(
@@ -338,7 +394,8 @@ class DebugTool(ctk.CTkFrame):
         self.asset_listbox = SimpleMultiSelectListbox(
             left_panel,
             command=self.on_asset_selected,
-            asset_dict={}  # Will be populated in load_assets
+            asset_dict={},  # Will be populated in load_assets
+            template_cache=controller.vision_manager.template_dict  # Use controller's loaded templates
         )
         self.asset_listbox.grid(row=6, column=0, sticky="nsew", padx=5, pady=(0, 10))
 
@@ -454,6 +511,9 @@ class DebugTool(ctk.CTkFrame):
         ]
         self.color_index = 0
 
+        # Debouncing for search
+        self._filter_after_id = None
+
         # Load assets
         self.load_assets()
 
@@ -552,34 +612,118 @@ class DebugTool(ctk.CTkFrame):
         refresh_thread = threading.Thread(target=do_refresh, daemon=True)
         refresh_thread.start()
 
-    def filter_assets(self):
-        """Filter assets based on search query"""
-        search_term = self.search_var.get().lower()
+    def clear_search(self):
+        """Clear the search box"""
+        self.search_var.set("")
+        self.search_entry.focus()
 
-        # Separate selected and non-selected assets
-        search_filtered = [
-            asset for asset in sorted(self.all_assets.keys())
-            if search_term in asset.lower()
-        ]
+    def _debounced_filter(self):
+        """Debounce the filter to avoid flickering during typing"""
+        # Cancel any pending filter call
+        if self._filter_after_id is not None:
+            self.after_cancel(self._filter_after_id)
+
+        # Show loading indicator
+        current_text = self.search_result_label.cget("text")
+        if not current_text.endswith("..."):
+            self.search_result_label.configure(text="Searching...", text_color="#3498db")
+
+        # Schedule new filter call after 50ms (reduced from 150ms for better responsiveness)
+        self._filter_after_id = self.after(50, self.filter_assets)
+
+    def _smart_match(self, search_term, asset_name):
+        """
+        Smart matching algorithm that scores matches.
+        Returns (matched: bool, score: int)
+        Higher score = better match
+        """
+        search_lower = search_term.lower()
+        asset_lower = asset_name.lower()
+
+        # Exact match - highest priority
+        if search_lower == asset_lower:
+            return True, 1000
+
+        # Starts with search term - very high priority
+        if asset_lower.startswith(search_lower):
+            return True, 900
+
+        # Contains search term as whole word - high priority
+        if search_lower in asset_lower:
+            # Bonus for word boundary match
+            if f"_{search_lower}" in asset_lower or f"{search_lower}_" in asset_lower:
+                return True, 800
+            return True, 700
+
+        # Fuzzy matching - check if all characters appear in order
+        search_idx = 0
+        for char in asset_lower:
+            if search_idx < len(search_lower) and char == search_lower[search_idx]:
+                search_idx += 1
+
+        if search_idx == len(search_lower):
+            # All characters found in order - medium priority
+            return True, 500
+
+        # No match
+        return False, 0
+
+    def filter_assets(self):
+        """Filter assets based on search query with smart matching"""
+        search_term = self.search_var.get().strip()
+
+        if not search_term:
+            # No search term - show all assets
+            search_filtered = sorted(self.all_assets.keys())
+            self.search_result_label.configure(text="", text_color="gray")
+        else:
+            # Apply smart matching
+            matches = []
+            for asset in self.all_assets.keys():
+                matched, score = self._smart_match(search_term, asset)
+                if matched:
+                    matches.append((asset, score))
+
+            # Sort by score (descending), then alphabetically
+            matches.sort(key=lambda x: (-x[1], x[0]))
+            search_filtered = [asset for asset, _ in matches]
+
+            # Update result count with color feedback
+            count = len(search_filtered)
+            total = len(self.all_assets)
+            if count == 0:
+                self.search_result_label.configure(text=f"{count}/{total}", text_color="#e74c3c")  # Red for no results
+            else:
+                self.search_result_label.configure(text=f"{count}/{total}", text_color="gray")
 
         # Put selected assets first, then filtered results
-        selected_assets_list = [a for a in self.selected_assets if a in self.all_assets]
+        selected_assets_list = [a for a in self.selected_assets if a in self.all_assets and a in search_filtered]
         other_filtered_assets = [a for a in search_filtered if a not in selected_assets_list]
 
         self.filtered_assets = selected_assets_list + other_filtered_assets
 
         # Update listbox
         self.asset_listbox.delete(0, "end")
-        
+
         for asset_name in self.filtered_assets:
             self.asset_listbox.insert("end", asset_name)
 
         # Re-select the assets that are at the top (the selected ones)
         for i in range(len(selected_assets_list)):
             self.asset_listbox.selected_indices.add(i)
-        
+
         # Update colors for restored selection
         self.asset_listbox._update_colors(self.asset_colors)
+
+        # Force scrollable frame to update its scrollbar and content size
+        self.asset_listbox.scrollable_frame.update_idletasks()
+
+        # Update scroll region to match actual content
+        canvas = self.asset_listbox.scrollable_frame._parent_canvas
+        canvas.configure(scrollregion=canvas.bbox("all"))
+
+        # Force canvas to recalculate if scrollbar is needed
+        canvas.update_idletasks()
 
         # Process the selection to update colors
         self._process_selection()
