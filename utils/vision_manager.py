@@ -78,9 +78,7 @@ class VisionManager:
 
         location = np.where(res >= threshold)
 
-        # rearrange based on the highest value of the match
         location = [(location[0][i], location[1][i]) for i in range(len(location[0]))]
-        location.sort(key=lambda pt: res[pt[0]][pt[1]], reverse=True)
 
         # group the locations that are close to each other by 5px in each direction
         location_groups = []
@@ -144,6 +142,9 @@ class VisionManager:
             # add half the width and height of the template to the location and cast to int
             # Use device_manager for scaling
             final_locations.append([self.device_manager.scale_x(int(x + w / 1.9)), self.device_manager.scale_y(int(y + h / 1.9))])
+        
+        # Sort by x-coordinate (left to right)
+        final_locations.sort(key=lambda loc: loc[0])
         
         return final_locations
 
