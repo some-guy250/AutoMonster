@@ -183,6 +183,7 @@ ASSET_REGIONS = {
     ASSETS.CavernOriginal: Region.TOP_LEFT,
     ASSETS.PlayVideo: Region.BOTTOM,
     ASSETS.CollectAd: Region.BOTTOM_LEFT,
+    ASSETS.Exit: Region.BOTTOM_RIGHT,
 }
 
 IN_GAME_ASSETS = (
