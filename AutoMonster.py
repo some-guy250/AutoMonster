@@ -643,7 +643,7 @@ class Controller:
         while self.wait_for(ASSETS.PlayVideo, timeout=5):
             self.click(ASSETS.PlayVideo, screenshot=self.get_last_screenshot())
 
-            self.pause(2)
+            self.pause(3)
             if self.in_game():
                 if self.in_screen(ASSETS.ErrorPlayingVideo, screenshot=self.get_last_screenshot()):
                     logger.warning("Error playing video")
