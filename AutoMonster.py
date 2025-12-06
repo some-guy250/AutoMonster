@@ -219,9 +219,9 @@ class Controller:
         while len(cords) > 0:
             x, y = cords[0]
             self.client.control.swipe(x, y, x + 25, y)
-            self.pause(.5)
+            self.pause(.25)
             times += 1
-            if times > 30:
+            if times > 50:
                 input("Please move the slider to the right and press enter")
             if len(con_coord := self._get_cords(ASSETS.Continue)) > 0:
                 x, y = con_coord[0]
@@ -255,7 +255,15 @@ class Controller:
         return False
 
     def in_game(self, screenshot: Optional[np.ndarray] = None) -> bool:
-        return self.in_screen(*IN_GAME_ASSETS, screenshot=screenshot, skip_ad_check=True)
+        if screenshot is None:
+            screenshot = self.take_screenshot()
+
+        for asset in IN_GAME_ASSETS:
+            if len(self._get_cords(asset, screenshot)) > 0:
+                self.log_gui(f"In-Game check found: {asset}", "debug")
+                return True
+        
+        return False
 
     def wait_for(self, *assets: str | tuple[str, ...], timeout: float = 10, skip_ad_check=False,
                  raise_error=False, pause_for: float = 0) -> bool:
@@ -669,7 +677,7 @@ class Controller:
                 elif self.in_screen(ASSETS.MazeCoinDungeon):
                     logger.info("Entering maze coin dungeon")
                 self.click(ASSETS.EnterCavern)
-                print(self.do_dungeon(True, False, True, max_losses=0,
+                print(self.do_dungeon(True, False, True, max_losses=-1,
                                       wait_for_stamina_to_refill=wait_for_stamina_to_refill))
             if not self.click(ASSETS.RightArrow, pause=2):
                 break

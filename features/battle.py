@@ -221,7 +221,7 @@ class BattleManager:
                             return False
                 if not waited_for_stamina:
                     losses += 1
-                    if losses >= max_losses:
+                    if max_losses != -1 and losses >= max_losses:
                         logger.info("Reached max losses")
                         break
             else:
