@@ -14,6 +14,7 @@ logger = setup_logger()
 class DeviceManager:
     def __init__(self, serial: Optional[str] = None):
         self.client: Optional[scrcpy.Client] = None
+        self.device = None
         self.ratio: Optional[Tuple[float, float]] = None
         self.new_width: int = 0
         self.resized: bool = False
@@ -47,6 +48,9 @@ class DeviceManager:
             
             if not target_device:
                 target_device = devices[0]
+
+            self.device = target_device
+            self.ensure_screen_on_and_unlocked()
 
             self.client = scrcpy.Client(max_fps=10, stay_awake=True, block_frame=True,
                                         device=target_device)
@@ -160,3 +164,76 @@ class DeviceManager:
 
     def unfreeze(self):
         self._paused = False
+
+    def ensure_screen_on_and_unlocked(self):
+        if not self.device:
+            return
+
+        try:
+            # 1. Wake up the device
+            # Check if screen is on first to avoid unnecessary wakeups
+            dump_power = self.device.shell("dumpsys power")
+            is_screen_on = "mWakefulness=Awake" in dump_power
+            
+            if not is_screen_on:
+                logger.info("Screen is off, turning it on...")
+                # KEYCODE_WAKEUP (224) is more reliable than POWER (26) as it doesn't toggle off if already on
+                self.device.shell("input keyevent KEYCODE_WAKEUP")
+                time.sleep(1.0) # Critical delay to allow screen to fully wake up
+            
+            # 2. Check if locked
+            # We check 'mIsShowing=true' or 'mKeyguardShowing=true' in 'dumpsys window policy'
+            dump_policy = self.device.shell("dumpsys window policy")
+            is_locked = ("mIsShowing=true" in dump_policy or 
+                        "mKeyguardShowing=true" in dump_policy or
+                        "showing=true" in dump_policy.lower())
+            
+            if is_locked:
+                logger.info("Device is locked. Executing robust unlock sequence...")
+                
+                # Method A: Menu Key (82)
+                # This key event often triggers the "unlock" action on swipe screens
+                self.device.shell("input keyevent 82")
+                time.sleep(0.5)
+                
+                # Method B: Direct Dismiss Command
+                # Works on some Android versions/ROMs
+                self.device.shell("wm dismiss-keyguard")
+                time.sleep(0.5)
+                
+                # Method C: Swipe Up (The most common manual action)
+                # Get resolution to calculate swipe coordinates
+                wm_size = self.device.shell("wm size")
+                width, height = 1080, 1920 # Safe defaults
+                if "Physical size:" in wm_size:
+                    try:
+                        for line in wm_size.splitlines():
+                            if "Physical size:" in line:
+                                res_str = line.split("Physical size: ")[1].strip()
+                                w, h = map(int, res_str.split("x"))
+                                width, height = w, h
+                                break
+                    except Exception:
+                        logger.warning("Failed to parse resolution, using defaults")
+
+                # Calculate swipe points
+                center_x = width // 2
+                start_y = int(height * 0.85) # Start lower down (85%)
+                end_y = int(height * 0.15)   # End higher up (15%)
+                
+                # Try a "Fling" swipe (faster duration = 300ms)
+                # This is often more effective for unlocking than a slow drag
+                self.device.shell(f"input swipe {center_x} {start_y} {center_x} {end_y} 300")
+                time.sleep(1)
+                
+                # Verify if still locked and retry if necessary
+                dump_policy_retry = self.device.shell("dumpsys window policy")
+                is_still_locked = ("mIsShowing=true" in dump_policy_retry or 
+                                  "mKeyguardShowing=true" in dump_policy_retry)
+                if is_still_locked:
+                     logger.info("Still locked, trying alternative longer swipe...")
+                     # Try a slower, longer swipe (1000ms)
+                     self.device.shell(f"input swipe {center_x} {int(height * 0.9)} {center_x} {int(height * 0.1)} 1000")
+
+        except Exception as e:
+            logger.error(f"Failed to ensure screen on/unlocked: {e}")

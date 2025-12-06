@@ -92,10 +92,6 @@ class ASSETS:
     CommonAd18 = "commonad18.png"
     CommonAd19 = "commonad19.png"
     CommonAd20 = "commonad20.png"
-    CommonAd21 = "commonad21.png"
-    CommonAd22 = "commonad22.png"
-    CommonAd23 = "commonad23.png"
-    CommonAd24 = "commonad24.png"
     ResumeAd = "resumead.png"
     NoAds = "noads.png"
     NotFullTeam = "notfullteam.png"
@@ -268,7 +264,7 @@ All_Cavers = (
 AdLocations = [[1240, 45], [1240, 35], [1250, 85], [630, 50], [666, 80], [680, 25]]
 AdLocationsHorizontal = [(1165, 75), (1240, 45), (1240, 35), (1250, 85)]
 AdLocationsVertical = [(630, 50), (666, 80), (680, 25)]
-NumberOfCommonAds = 24
+NumberOfCommonAds = 20
 CommonAds = tuple(f"commonad{i}.png" for i in range(1, NumberOfCommonAds + 1))
 
 CAVERN_TO_ASSETS = {
