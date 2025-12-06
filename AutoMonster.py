@@ -231,7 +231,7 @@ class Controller:
                 self.client.control.touch(x, y, scrcpy.ACTION_DOWN)
                 self.pause(.1)
                 self.client.control.touch(x, y, scrcpy.ACTION_UP)
-                self.pause(1)
+                self.pause(2)
                 logger.info("Skipped are you there")
                 return True
             if not self.wait_for(ASSETS.Slider, ASSETS.Slider2, timeout=2.5, skip_ad_check=True):
