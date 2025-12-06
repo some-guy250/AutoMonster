@@ -177,7 +177,7 @@ ASSET_REGIONS = {
     ASSETS.SpinWheel: Region.BOTTOM_RIGHT,
     ASSETS.EnterCavern: Region.BOTTOM,
     ASSETS.ResourceDungeon: Region.BOTTOM_RIGHT,
-    ASSETS.EnterBattleStamina: Region.BOTTOM_RIGHT,
+    ASSETS.EnterBattleStamina: Region.BOTTOM,
     ASSETS.Slider: Region.BOTTOM,
     ASSETS.PlayCutscene: Region.BOTTOM,
     ASSETS.EnterEraSaga: Region.BOTTOM_LEFT,
@@ -205,14 +205,27 @@ ASSET_REGIONS = {
     ASSETS.CavernCorrupted: Region.TOP_LEFT,
     ASSETS.CavernCosmic: Region.TOP_LEFT,
     ASSETS.CavernOriginal: Region.TOP_LEFT,
+
+    # In-Game Assets Optimization
+    # ASSETS.Exit: Region.TOP_RIGHT,
+    # ASSETS.Shop: Region.BOTTOM_LEFT,
+    # ASSETS.StartBattlePVP: Region.BOTTOM_RIGHT,
+    # ASSETS.ChangeTeam: Region.BOTTOM_LEFT,
+    # ASSETS.SelectTeam: Region.BOTTOM_LEFT,
+    # ASSETS.Back: Region.TOP_LEFT,
+    # ASSETS.BackPVP: Region.TOP_LEFT,
+    # ASSETS.CancelSmall: Region.TOP_RIGHT,
+    # ASSETS.Skip: Region.TOP_RIGHT,
+    # ASSETS.CollectPVP: Region.BOTTOM,
+    # ASSETS.DiscardPVP: Region.BOTTOM,
 }
 
 IN_GAME_ASSETS = (
-    ASSETS.Cancel, ASSETS.Exit, ASSETS.Battles, ASSETS.Wheel, ASSETS.Shop, ASSETS.StartBattle, ASSETS.StartBattlePVP,
+    ASSETS.Cancel, ASSETS.Battles, ASSETS.ActivityHub, ASSETS.Wheel, ASSETS.StartBattle, ASSETS.StartBattlePVP,
     ASSETS.StartBattleRankUp, ASSETS.AutoBattle, ASSETS.ChangeTeam, ASSETS.SelectTeam, ASSETS.Back, ASSETS.BackPVP,
-    ASSETS.CancelSmall, ASSETS.SpinWheel, ASSETS.ClaimSpin, ASSETS.AreYouThere,
-    ASSETS.PlayCutscene, ASSETS.Skip, ASSETS.Change, ASSETS.CollectPVP, ASSETS.ActivityHub,
-    ASSETS.DiscardPVP
+    ASSETS.CancelSmall, ASSETS.SpinWheel, ASSETS.ClaimSpin, ASSETS.Slider,
+    ASSETS.PlayCutscene, ASSETS.Skip, ASSETS.Change, ASSETS.CollectPVP,
+    ASSETS.DiscardPVP, ASSETS.Exit
 )
 
 Ancestral_Cavers = (
