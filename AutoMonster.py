@@ -231,7 +231,14 @@ class Controller:
                 self.client.control.touch(x, y, scrcpy.ACTION_DOWN)
                 self.pause(.1)
                 self.client.control.touch(x, y, scrcpy.ACTION_UP)
-                self.pause(1)
+                count = 0
+                while True:
+                    sc = self.take_screenshot()
+                    if len(self._get_cords(ASSETS.Slider, sc, threshold=0.8) + self._get_cords(ASSETS.Slider2, sc, threshold=0.8)) == 0:
+                        break
+                    self.pause(.5)
+                    if count > 5:
+                        raise AutoMonsterErrors.SliderError("Slider still present after clicking continue")
                 logger.info("Skipped are you there")
                 return True
             count = 0
