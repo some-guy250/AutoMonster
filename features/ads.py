@@ -34,11 +34,11 @@ class AdManager:
                 self.controller.click_back(skip_ad_check=True)
 
         def check_back():
-            for _ in range(4):
+            for _ in range(5):
                 if self.controller.in_game():
                     return True
                 else:
-                    self.controller.click_back(skip_ad_check=True, pause=0.5)
+                    self.controller.click_back(skip_ad_check=True, pause=1.0)
             return self.controller.in_game()
 
         if self.controller.in_game():
