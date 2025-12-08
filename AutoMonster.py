@@ -345,8 +345,35 @@ class Controller:
     def force_close(self):
         self.game_manager.force_close()
 
-    def close_game(self):
+    def close_game(self, action: str = "Close Game Only"):
+        """Close the game and optionally exit program or shutdown computer
+        
+        Args:
+            action: One of:
+                - "Close Game Only": Just close the game
+                - "Close Game & Exit Program": Close game and exit AutoMonster
+                - "Close Game & Shutdown Computer": Close game, exit, and shutdown PC
+        """
+        import os
+        
+        self.log_gui("Closing game...", "info")
         self.game_manager.close_game()
+        time.sleep(2)  # Give time for the game to close
+        
+        if action == "Close Game Only":
+            self.log_gui("Game closed", "success")
+            return None
+        elif action == "Close Game & Exit Program":
+            self.log_gui("Exiting program...", "info")
+            return "EXIT"
+        elif action == "Close Game & Shutdown Computer":
+            self.log_gui("Shutting down computer in 10 seconds...", "warning")
+            # Windows shutdown command
+            os.system("shutdown /s /t 10")
+            self.log_gui("Exiting program...", "info")
+            return "EXIT"
+        
+        return None
 
     def launch_game(self):
         self.game_manager.launch_game()

@@ -524,7 +524,14 @@ class ControllerGUI(ctk.CTk):
                 self.param_frame.progress.set(0)
             callback = self.get_command_callback(command_name)
             self.append_log(f"Starting {command_name}...", "info")
-            callback(**params)
+            result = callback(**params)
+            
+            # Check if exit program was called
+            if result == "EXIT":
+                self.append_log("Closing application...", "warning")
+                self.after(1000, self.destroy)  # Close the GUI after 1 second
+                return
+            
             self.append_log(f"Completed {command_name}", "success")
         except AutoMonsterErrors.AutoMonsterError as e:
             error_msg = f"Error running {command_name}: {e}"
@@ -651,7 +658,9 @@ class ControllerGUI(ctk.CTk):
                 progress_callback=self.update_command_progress
             )
         elif command_name == "Close Game":
-            return self.controller.close_game
+            return lambda **kwargs: self.controller.close_game(
+                action=kwargs.pop("action", "Close Game Only")
+            )
         else:
             raise ValueError(f"Unknown command: {command_name}")
 

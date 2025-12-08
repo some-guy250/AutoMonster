@@ -350,7 +350,13 @@ GUI_COMMANDS = {
         "reduce_box_time": {"type": "bool", "default": True}
     },
     "Era Saga": {},
-    "Close Game": {}
+    "Close Game": {
+        "action": {
+            "type": "choice",
+            "choices": ["Close Game Only", "Close Game & Exit Program", "Close Game & Shutdown Computer"],
+            "default": "Close Game Only"
+        }
+    }
 }
 
 GUI_COMMAND_DESCRIPTIONS = {
@@ -412,7 +418,13 @@ GUI_COMMAND_DESCRIPTIONS = {
     },
     "Close Game": {
         "title": "Close Game",
-        "description": "Closes the game gracefully.",
-        "parameters": {}
+        "description": "Closes the game gracefully.\n\n"
+                       "Features:\n"
+                       "• Close Game Only - Just closes the game\n"
+                       "• Close Game & Exit Program - Closes game and exits AutoMonster\n"
+                       "• Close Game & Shutdown Computer - Closes game, exits, and shuts down PC",
+        "parameters": {
+            "action": "Select what to do after closing the game"
+        }
     }
 }
