@@ -74,9 +74,11 @@ class Controller:
 
     def lower_brightness(self):
         self.device_manager.lower_brightness()
+        self._brightness_was_lowered = True
 
     def set_auto_brightness(self):
         self.device_manager.set_auto_brightness()
+        self._brightness_was_lowered = False
 
     def get_brightness_info(self):
         return self.device_manager.get_brightness_info()
@@ -360,8 +362,18 @@ class Controller:
         self.game_manager.close_game()
         time.sleep(2)  # Give time for the game to close
         
+        # Reset brightness before locking device (if it was lowered)
+        if hasattr(self, '_brightness_was_lowered') and self._brightness_was_lowered:
+            self.set_auto_brightness()
+            self.log_gui("Reset device brightness to auto mode", "info")
+            self._brightness_was_lowered = False
+        
+        # Lock device after closing game
+        self.log_gui("Locking device...", "info")
+        self.lock_device()
+        
         if action == "Close Game Only":
-            self.log_gui("Game closed", "success")
+            self.log_gui("Game closed and device locked", "success")
             return None
         elif action == "Close Game & Exit Program":
             self.log_gui("Exiting program...", "info")

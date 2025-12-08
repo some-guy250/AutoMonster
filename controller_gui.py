@@ -876,7 +876,13 @@ class ControllerGUI(ctk.CTk):
                         if command in ["PVP", "Cavern"]:
                             self.update_command_progress(0)
                             
-                        callback(**params)
+                        result = callback(**params)
+                        
+                        # Check if exit program was called
+                        if result == "EXIT":
+                            self.append_log("Closing application...", "warning")
+                            self.after(1000, self.destroy)  # Close the GUI after 1 second
+                            return
                         
                         # Hide command progress after completion
                         if command in ["PVP", "Cavern"]:
