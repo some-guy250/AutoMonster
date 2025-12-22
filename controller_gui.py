@@ -328,9 +328,18 @@ class ControllerGUI(ctk.CTk):
         preview_container = ctk.CTkFrame(self.preview_frame)
         preview_container.pack(expand=True, fill="both", padx=10, pady=10)
 
+        # Info label for screen interaction
+        interaction_info = ctk.CTkLabel(
+            preview_container,
+            text="Click on screen to interact with game",
+            font=("Arial", 11),
+            text_color="gray"
+        )
+        interaction_info.pack(pady=(5, 0))
+
         # Preview label
         self.preview_label = ctk.CTkLabel(preview_container, text="")
-        self.preview_label.pack(expand=True, fill="both", pady=(0, 10))
+        self.preview_label.pack(expand=True, fill="both", pady=(5, 10))
 
         # Create a separate frame for all buttons
         all_buttons_frame = ctk.CTkFrame(preview_container)
@@ -407,9 +416,15 @@ class ControllerGUI(ctk.CTk):
         self.preview_ratio = .55
         self.img_size = int(self.controller.new_width * self.preview_ratio), int(720 * self.preview_ratio)
         self.is_portrait_frame = False
+        self.actual_display_size = self.img_size  # Track actual displayed size for click mapping
+        self._last_preview_size = (0, 0)  # Cache for size calculations
+        self._size_recalc_needed = False  # Flag to trigger size recalculation
 
         # Setup preview update
         self.controller.client.add_listener(scrcpy.EVENT_FRAME, lambda frame: self.update_image_safe(frame))
+
+        # Bind window resize to update preview scaling
+        self.bind("<Configure>", self.on_window_resize)
         
         # Bind mouse events for interaction
         self.preview_label.bind("<ButtonPress-1>", self.on_mouse_down)
@@ -463,8 +478,9 @@ class ControllerGUI(ctk.CTk):
 
         self.controller.gui_logger = self.append_log
 
-        # Debug tool will be created when debug mode is enabled
-        self.debug_tool = None
+        # Pre-create debug tool (hidden) to avoid lag when toggling F3
+        self.debug_tool = DebugTool(self.main_frame, self.controller)
+        # Keep it hidden initially - column 5 stays at minsize 0
 
         if len(sys.argv) > 1:
             self.append_log(f"Updated to the latest version: v-{__version__}")
@@ -704,7 +720,37 @@ class ControllerGUI(ctk.CTk):
             pass
 
         self.is_portrait_frame = frame.shape[0] > frame.shape[1]
-        img_size = self.img_size
+
+        # Calculate available space in preview frame
+        available_width = self.preview_label.winfo_width()
+        available_height = self.preview_label.winfo_height()
+
+        # Only recalculate size if dimensions changed or flag is set
+        current_size = (available_width, available_height)
+        if self._size_recalc_needed or current_size != self._last_preview_size:
+            # Use minimum size if widget hasn't been sized yet
+            if available_width <= 1 or available_height <= 1:
+                available_width = 800
+                available_height = 600
+
+            # Calculate aspect ratio preserving size
+            game_width = self.controller.new_width
+            game_height = 720
+
+            scale_w = available_width / game_width
+            scale_h = available_height / game_height
+            scale = min(scale_w, scale_h)  # Use smaller scale to fit within bounds
+
+            # Calculate final display size (what user sees)
+            display_width = int(game_width * scale)
+            display_height = int(game_height * scale)
+            self.actual_display_size = (display_width, display_height)
+
+            self._last_preview_size = current_size
+            self._size_recalc_needed = False
+
+        # Prepare frame for display
+        img_size = (self.controller.new_width, 720)
         if self.is_portrait_frame:
             img_size = img_size[::-1]
         resized_frame = cv2.resize(frame, img_size)
@@ -718,7 +764,8 @@ class ControllerGUI(ctk.CTk):
 
         image = Image.fromarray(cv2.cvtColor(resized_frame, cv2.COLOR_BGR2RGB))
 
-        ctk_image = ctk.CTkImage(light_image=image, dark_image=image, size=self.img_size)
+        # CTkImage will handle the scaling to display_size
+        ctk_image = ctk.CTkImage(light_image=image, dark_image=image, size=self.actual_display_size)
         self.preview_label.configure(image=ctk_image)
         self.preview_label.image = ctk_image
 
@@ -743,21 +790,18 @@ class ControllerGUI(ctk.CTk):
         if self.debug_mode:
             self.screenshot_btn.pack(side="left", fill="x", expand=True, padx=(2, 1))
             self.open_sc_folder_btn.pack(side="left", fill="x", expand=True, padx=(1, 2))
-            # Show Asset Debugger as side panel (spans both rows - main content and logs)
-            if self.debug_tool is None:
-                self.debug_tool = DebugTool(self.main_frame, self.controller)
-            
-            # Expand column for debug tool
+
+            # Show debug tool (already created, just needs to be shown)
             self.main_frame.grid_columnconfigure(5, weight=0, minsize=self.panel_width)
             self.debug_tool.grid(row=0, column=5, rowspan=2, padx=(0, 10), pady=10, sticky="nsew")
             self.append_log("Debug mode enabled", "debug")
         else:
             self.screenshot_btn.pack_forget()
-            self.open_sc_folder_btn.pack_forget()  # Hide open folder button
-            # Hide Asset Debugger panel
-            if self.debug_tool is not None:
-                self.debug_tool.grid_forget()
-            
+            self.open_sc_folder_btn.pack_forget()
+
+            # Hide debug tool
+            self.debug_tool.grid_forget()
+
             # Collapse column
             self.main_frame.grid_columnconfigure(5, weight=0, minsize=0)
             self.append_log("Debug mode disabled", "success")
@@ -939,54 +983,57 @@ class ControllerGUI(ctk.CTk):
 
     def _get_device_coords(self, event):
         """Convert GUI coordinates to device coordinates"""
-        # Calculate coordinates in the resized (720p) space
         x_disp = event.x
         y_disp = event.y
-        
-        # Scale up from preview size to 720p size
-        x_720 = int(x_disp / self.preview_ratio)
-        y_720 = int(y_disp / self.preview_ratio)
-        
+
+        # Get actual display dimensions
+        display_width, display_height = self.actual_display_size
+
+        # Calculate scale from display to game resolution (720p)
+        game_width = self.controller.new_width
+        game_height = 720
+
+        # Convert from display coordinates to 720p game coordinates
+        x_720 = int((x_disp / display_width) * game_width)
+        y_720 = int((y_disp / display_height) * game_height)
+
         if self.is_portrait_frame:
-            w_orig_720 = int(self.img_size[1] / self.preview_ratio)
-            final_x_720 = w_orig_720 - y_720
+            # Handle portrait orientation
+            final_x_720 = game_width - y_720
             final_y_720 = x_720
         else:
             final_x_720 = x_720
             final_y_720 = y_720
-            
+
         # Clamp coordinates to valid range in 720p space
-        final_x_720 = max(0, min(final_x_720, self.controller.new_width))
-        final_y_720 = max(0, min(final_y_720, 720))
+        final_x_720 = max(0, min(final_x_720, game_width))
+        final_y_720 = max(0, min(final_y_720, game_height))
 
         # Scale to device resolution
         device_x = self.controller.scale_x(final_x_720)
         device_y = self.controller.scale_y(final_y_720)
-        
+
         return device_x, device_y
 
     def on_mouse_down(self, event):
-        if not self.debug_mode:
-            return
-            
         # Clear debug tool detections if active
-        if self.debug_tool is not None:
+        if self.debug_mode and self.debug_tool is not None:
             self.debug_tool.clean_detections()
-            
+
         x, y = self._get_device_coords(event)
         self.controller.client.control.touch(x, y, scrcpy.ACTION_DOWN)
 
     def on_mouse_move(self, event):
-        if not self.debug_mode:
-            return
         x, y = self._get_device_coords(event)
         self.controller.client.control.touch(x, y, scrcpy.ACTION_MOVE)
 
     def on_mouse_up(self, event):
-        if not self.debug_mode:
-            return
         x, y = self._get_device_coords(event)
         self.controller.client.control.touch(x, y, scrcpy.ACTION_UP)
+
+    def on_window_resize(self, event):
+        """Handle window resize events - images will scale automatically on next frame update"""
+        self._size_recalc_needed = True
 
     def open_screenshots_folder(self):
         """Open the screenshots folder in file explorer"""
@@ -996,19 +1043,19 @@ class ControllerGUI(ctk.CTk):
                 base_path = pathlib.Path(sys.executable).parent
             else:
                 base_path = pathlib.Path(__file__).parent
-                
+
             sc_dir = base_path / "sc"
-            
+
             # Create if it doesn't exist
             if not sc_dir.exists():
                 sc_dir.mkdir(exist_ok=True)
-                
+
             # Open folder based on OS
             if os.name == 'nt':  # Windows
                 os.startfile(str(sc_dir))
             elif os.name == 'posix':  # macOS/Linux
                 subprocess.run(['open' if sys.platform == 'darwin' else 'xdg-open', str(sc_dir)])
-                
+
             self.append_log("Opened screenshots folder", "info")
         except Exception as e:
             self.append_log(f"Error opening folder: {str(e)}", "error")
