@@ -23,7 +23,7 @@ class CommandFrame(ctk.CTkFrame):
 
         # Create scrollable container for parameters
         self.scroll_frame = ctk.CTkScrollableFrame(self)
-        self.scroll_frame.pack(expand=True, fill="both", padx=5, pady=5)
+        self.scroll_frame.pack(expand=True, fill="both", padx=5, pady=(5, 0))
 
         # Add a header for parameters
         header = ctk.CTkLabel(self.scroll_frame, text="Parameters", font=("Arial", 14, "bold"))
@@ -58,12 +58,37 @@ class CommandFrame(ctk.CTkFrame):
                 widget.set(param_config.get("default", param_config["choices"][0]))
                 widget.grid(row=1, column=0, padx=5, pady=(0, 5), sticky="w")
             elif param_config["type"] == "multiple_choice":
-                # Create a frame for checkboxes
-                checkbox_frame = ctk.CTkScrollableFrame(param_frame, height=150)
-                checkbox_frame.grid(row=1, column=0, padx=5, pady=(0, 5), sticky="nsew")
+                # Create a regular frame (not scrollable) for checkboxes to avoid nested scrolling
+                checkbox_container = ctk.CTkFrame(param_frame)
+                checkbox_container.grid(row=1, column=0, padx=5, pady=(0, 5), sticky="nsew")
+
+                # Add Select All / Deselect All buttons
+                button_frame = ctk.CTkFrame(checkbox_container)
+                button_frame.pack(fill="x", padx=5, pady=(0, 5))
+
+                checkbox_vars = []
+
+                def select_all():
+                    for choice, var in checkbox_vars:
+                        var.set(True)
+
+                def deselect_all():
+                    for choice, var in checkbox_vars:
+                        var.set(False)
+
+                select_all_btn = ctk.CTkButton(button_frame, text="Select All", width=100, height=25,
+                                               font=("Arial", 11), command=select_all)
+                select_all_btn.pack(side="left", padx=(0, 5))
+
+                deselect_all_btn = ctk.CTkButton(button_frame, text="Deselect All", width=100, height=25,
+                                                 font=("Arial", 11), command=deselect_all)
+                deselect_all_btn.pack(side="left")
+
+                # Create a frame for checkboxes with limited height but no internal scrolling
+                checkbox_frame = ctk.CTkFrame(checkbox_container)
+                checkbox_frame.pack(fill="both", expand=True, padx=5, pady=(0, 5))
 
                 # Store checkboxes in a list
-                checkbox_vars = []
                 for choice in param_config["choices"]:
                     if choice.startswith("--"):  # This is a separator/header
                         label = ctk.CTkLabel(checkbox_frame, text=choice, font=("Arial", 12, "bold"))
@@ -78,14 +103,10 @@ class CommandFrame(ctk.CTkFrame):
 
             self.param_widgets[param_name] = widget
 
-        # Create button container at the bottom of parameters
-        button_container = ctk.CTkFrame(self.scroll_frame)
-        button_container.pack(fill="x", padx=5, pady=(10, 5))
-
-        # If there are parameters and we're in normal mode, add the save defaults button
+        # If there are parameters and we're in normal mode, add the save defaults button inside scroll area
         if params and mode == "normal":
             save_button = ctk.CTkButton(
-                button_container,
+                self.scroll_frame,
                 text="Set Values as Defaults",
                 height=35,
                 font=("Arial", 13, "bold"),
@@ -93,7 +114,11 @@ class CommandFrame(ctk.CTkFrame):
                 hover_color="#2766b3",
                 command=lambda: self.save_params_as_defaults(command_name)
             )
-            save_button.pack(fill="x", padx=5, pady=(0, 10))
+            save_button.pack(fill="x", padx=5, pady=(10, 5))
+
+        # Create FIXED button container at the bottom (outside scroll area)
+        button_container = ctk.CTkFrame(self)
+        button_container.pack(fill="x", padx=5, pady=5, side="bottom")
 
         # Container for action buttons
         action_buttons = ctk.CTkFrame(button_container)

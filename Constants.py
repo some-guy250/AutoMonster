@@ -306,9 +306,10 @@ GUI_COMMANDS = {
         "number_of_ads": {"type": "int", "min": 1, "max": 4, "default": 4}
     },
     "Cavern": {
-        "ancestral": {
+        "caverns": {
             "type": "multiple_choice",
             "choices": [
+                "--Ancestral Caverns--",
                 "evaris",
                 "geneza",
                 "jestin",
@@ -317,13 +318,8 @@ GUI_COMMANDS = {
                 "tyr",
                 "robur",
                 "theton",
-                "griffania"
-            ],
-            "default": []
-        },
-        "era": {
-            "type": "multiple_choice",
-            "choices": [
+                "griffania",
+                "--Era Caverns--",
                 "misery",
                 "conspiracy",
                 "feral",

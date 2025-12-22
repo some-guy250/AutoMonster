@@ -668,7 +668,7 @@ class ControllerGUI(ctk.CTk):
             )
         elif command_name == "Cavern":
             return lambda **kwargs: self.controller.do_cavern(
-                *kwargs.pop("ancestral", []) + kwargs.pop("era", []),
+                *kwargs.pop("caverns", []),
                 max_rooms=kwargs.pop("max_rooms", 3),
                 change_team=kwargs.pop("change_team", True),
                 progress_callback=self.update_command_progress
