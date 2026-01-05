@@ -110,6 +110,16 @@ class ASSETS:
     Selected3 = "selected3.png"
     ActivityHub = "acthub.png"
     ClaimDaily = "claimdaily.png"
+    HatchDino = "hatchdino.png"
+    HatchPanda = "hatchpanda.png"
+    Mountain = "mountain.png"
+    Tree = "tree.png"
+    Hatchery = "hatchery.png"
+    HatchNotDone = "notdone.png"
+    Repeat = "repeat.png"
+    TakeEgg = "takeegg.png"
+    PlaceVault = "placevault.png"
+    Place = "place.png"
 
 
 class Region:
@@ -346,6 +356,10 @@ GUI_COMMANDS = {
         "reduce_box_time": {"type": "bool", "default": True}
     },
     "Era Saga": {},
+    "Breed Monsters": {
+        "num_breeds": {"type": "int", "min": 1, "max": 20, "default": 1},
+        "use_tree": {"type": "bool", "default": False}
+    },
     "Close Game": {
         "action": {
             "type": "choice",
@@ -373,7 +387,7 @@ SPIN_WHEEL_THRESHOLD = 0.85     # Spin wheel detection
 BATTLE_TIMEOUT_SECONDS = 600    # 10 minutes default
 
 # Slider retry limit before asking user for help
-SLIDER_MAX_RETRIES = 25
+SLIDER_MAX_RETRIES = 35
 
 # =============================================================================
 # GUI Command Descriptions
@@ -434,6 +448,18 @@ GUI_COMMAND_DESCRIPTIONS = {
             "era": "Select which era cavern dungeons to complete",
             "max_rooms": "Maximum number of rooms to explore",
             "change_team": "Enable team switching to use selected monsters"
+        }
+    },
+    "Breed Monsters": {
+        "title": "Breed Monsters",
+        "description": "Automatically breed monsters.\n\n"
+                       "Features:\n"
+                       "• Breed multiple times using the repeat button\n"
+                       "• Choose between Mountain or Tree breeding locations\n"
+                       "• Automatically handles the breeding sequence",
+        "parameters": {
+            "num_breeds": "Number of times to breed monsters",
+            "use_tree": "Use Tree instead of Mountain for breeding"
         }
     },
     "Close Game": {

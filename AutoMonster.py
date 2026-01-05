@@ -124,6 +124,110 @@ class Controller:
         cv2.imwrite(str(filepath), self.device_manager.get_last_screenshot())
         self.log_gui(f"Screenshot saved as {filepath.name}", "success")
 
+    def zoom_in(self):
+        """
+        Zoom in at screen center using pinch-out gesture.
+        Performs 1.5x pinch gestures (1 full + 1 half) for optimal zoom.
+        """
+        center_x = self.scale_x(640)
+        center_y = self.scale_y(360)
+
+        logger.info(f"Zoom IN - Center: ({center_x}, {center_y})")
+        self.log_gui(f"Zooming in...", "debug")
+
+        # First gesture: Full pinch (100px -> 300px)
+        start_offset = self.scale_x(100)
+        end_offset = self.scale_x(300)
+
+        self.client.control.touch(center_x - start_offset, center_y, scrcpy.ACTION_DOWN, touch_id=1)
+        self.client.control.touch(center_x + start_offset, center_y, scrcpy.ACTION_DOWN, touch_id=2)
+        time.sleep(0.02)
+
+        steps = 15
+        for step in range(steps):
+            progress = (step + 1) / steps
+            offset = int(start_offset + (end_offset - start_offset) * progress)
+            self.client.control.touch(center_x - offset, center_y, scrcpy.ACTION_MOVE, touch_id=1)
+            self.client.control.touch(center_x + offset, center_y, scrcpy.ACTION_MOVE, touch_id=2)
+            time.sleep(0.01)
+
+        self.client.control.touch(center_x - end_offset, center_y, scrcpy.ACTION_UP, touch_id=1)
+        self.client.control.touch(center_x + end_offset, center_y, scrcpy.ACTION_UP, touch_id=2)
+        time.sleep(0.05)
+
+        # Second gesture: Half pinch (100px -> 200px for gentler zoom)
+        start_offset = self.scale_x(100)
+        end_offset = self.scale_x(200)
+
+        self.client.control.touch(center_x - start_offset, center_y, scrcpy.ACTION_DOWN, touch_id=1)
+        self.client.control.touch(center_x + start_offset, center_y, scrcpy.ACTION_DOWN, touch_id=2)
+        time.sleep(0.02)
+
+        half_steps = 8  # Half the steps for quicker gesture
+        for step in range(half_steps):
+            progress = (step + 1) / half_steps
+            offset = int(start_offset + (end_offset - start_offset) * progress)
+            self.client.control.touch(center_x - offset, center_y, scrcpy.ACTION_MOVE, touch_id=1)
+            self.client.control.touch(center_x + offset, center_y, scrcpy.ACTION_MOVE, touch_id=2)
+            time.sleep(0.01)
+
+        self.client.control.touch(center_x - end_offset, center_y, scrcpy.ACTION_UP, touch_id=1)
+        self.client.control.touch(center_x + end_offset, center_y, scrcpy.ACTION_UP, touch_id=2)
+
+        self.log_gui("Zoomed in", "info")
+
+    def zoom_out(self):
+        """
+        Zoom out at screen center using pinch-in gesture.
+        Performs 1.5x pinch gestures (1 full + 1 half) for optimal zoom.
+        """
+        center_x = self.scale_x(640)
+        center_y = self.scale_y(360)
+
+        logger.info(f"Zoom OUT - Center: ({center_x}, {center_y})")
+        self.log_gui(f"Zooming out...", "debug")
+
+        # First gesture: Full pinch (300px -> 100px)
+        start_offset = self.scale_x(300)
+        end_offset = self.scale_x(100)
+
+        self.client.control.touch(center_x - start_offset, center_y, scrcpy.ACTION_DOWN, touch_id=1)
+        self.client.control.touch(center_x + start_offset, center_y, scrcpy.ACTION_DOWN, touch_id=2)
+        time.sleep(0.02)
+
+        steps = 15
+        for step in range(steps):
+            progress = (step + 1) / steps
+            offset = int(start_offset - (start_offset - end_offset) * progress)
+            self.client.control.touch(center_x - offset, center_y, scrcpy.ACTION_MOVE, touch_id=1)
+            self.client.control.touch(center_x + offset, center_y, scrcpy.ACTION_MOVE, touch_id=2)
+            time.sleep(0.01)
+
+        self.client.control.touch(center_x - end_offset, center_y, scrcpy.ACTION_UP, touch_id=1)
+        self.client.control.touch(center_x + end_offset, center_y, scrcpy.ACTION_UP, touch_id=2)
+        time.sleep(0.05)
+
+        # Second gesture: Half pinch (200px -> 100px for gentler zoom)
+        start_offset = self.scale_x(200)
+        end_offset = self.scale_x(100)
+
+        self.client.control.touch(center_x - start_offset, center_y, scrcpy.ACTION_DOWN, touch_id=1)
+        self.client.control.touch(center_x + start_offset, center_y, scrcpy.ACTION_DOWN, touch_id=2)
+        time.sleep(0.02)
+
+        half_steps = 8  # Half the steps for quicker gesture
+        for step in range(half_steps):
+            progress = (step + 1) / half_steps
+            offset = int(start_offset - (start_offset - end_offset) * progress)
+            self.client.control.touch(center_x - offset, center_y, scrcpy.ACTION_MOVE, touch_id=1)
+            self.client.control.touch(center_x + offset, center_y, scrcpy.ACTION_MOVE, touch_id=2)
+            time.sleep(0.01)
+
+        self.client.control.touch(center_x - end_offset, center_y, scrcpy.ACTION_UP, touch_id=1)
+        self.client.control.touch(center_x + end_offset, center_y, scrcpy.ACTION_UP, touch_id=2)
+
+        self.log_gui("Zoomed out", "info")
+
     def _get_cords(self, asset_code: str, screenshot=None, threshold=.9, gray_img=False) -> List[List[int]]:
         if screenshot is None:
             screenshot = self.take_screenshot()
@@ -227,15 +331,41 @@ class Controller:
         times = 0
         user_notified = False
         while len(cords) > 0:
+            # If we've exceeded max retries, stop trying and wait for user
+            if times > SLIDER_MAX_RETRIES:
+                if not user_notified:
+                    self.log_gui("Slider stuck - please move the slider manually on the device", "warning")
+                    logger.warning("Slider stuck after max retries - waiting for user to manually intervene")
+                    user_notified = True
+
+                # Stop trying to move slider, just wait for Continue button to appear
+                self.pause(0.5)
+                if len(con_coord := self._get_cords(ASSETS.Continue)) > 0:
+                    x, y = con_coord[0]
+                    self.client.control.touch(x, y, scrcpy.ACTION_DOWN)
+                    self.pause(.1)
+                    self.client.control.touch(x, y, scrcpy.ACTION_UP)
+                    count = 0
+                    while True:
+                        sc = self.take_screenshot()
+                        if len(self._get_cords(ASSETS.Slider, sc, threshold=SLIDER_THRESHOLD) + self._get_cords(ASSETS.Slider2, sc, threshold=SLIDER_THRESHOLD)) == 0:
+                            break
+                        self.pause(.5)
+                        if count > 5:
+                            raise AutoMonsterErrors.SliderError("Slider still present after clicking continue")
+                    logger.info("Skipped are you there")
+                    return True
+                # Check for new screenshot to see if user moved it
+                sc = self.take_screenshot()
+                cords = self._get_cords(ASSETS.Slider, sc, threshold=SLIDER_THRESHOLD) or self._get_cords(ASSETS.Slider2, sc, threshold=SLIDER_THRESHOLD)
+                continue
+
+            # Still under max retries, try to move slider automatically
             x, y = cords[0]
             self.client.control.swipe(x, y, x + 25, y)
             self.pause(.25)
             times += 1
-            if times > SLIDER_MAX_RETRIES and not user_notified:
-                # Notify user via GUI logger and continue trying
-                self.log_gui("Slider stuck - please move the slider manually on the device", "warning")
-                logger.warning("Slider stuck after max retries - user notified to manually intervene")
-                user_notified = True
+
             if len(con_coord := self._get_cords(ASSETS.Continue)) > 0:
                 x, y = con_coord[0]
                 self.client.control.touch(x, y, scrcpy.ACTION_DOWN)
@@ -700,6 +830,34 @@ class Controller:
                 break
 
         # Ensure progress shows complete even if we finish early
+        if progress_callback:
+            progress_callback(1.0)
+
+    def breed_monsters(self, num_breeds: int, use_tree: bool = False, progress_callback=None):
+        num_breeds_done = 0
+        breader = ASSETS.Tree if use_tree else ASSETS.Mountain
+
+        if progress_callback:
+            progress_callback(0)
+
+        while num_breeds_done < num_breeds:
+            self.follow_sequence(breader, ASSETS.Repeat, None)
+
+            self.pause(30)
+            self.wait_for(ASSETS.TakeEgg)
+            self.click(ASSETS.TakeEgg)
+
+            self.pause(30)
+            self.wait_for(ASSETS.HatchDino, ASSETS.HatchPanda)
+            self.click(ASSETS.HatchDino, ASSETS.HatchPanda)
+
+            self.follow_sequence(ASSETS.Place, ASSETS.PlaceVault, ASSETS.Cancel, raise_error=True)
+            self.click_back()
+            num_breeds_done += 1
+
+            if progress_callback:
+                progress_callback(num_breeds_done / num_breeds)
+
         if progress_callback:
             progress_callback(1.0)
 
