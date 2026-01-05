@@ -355,6 +355,30 @@ GUI_COMMANDS = {
     }
 }
 
+# =============================================================================
+# Configurable Thresholds and Timeouts
+# =============================================================================
+
+# Default template matching threshold (0.0 to 1.0)
+# Higher = more strict matching, Lower = more lenient
+DEFAULT_TEMPLATE_THRESHOLD = 0.85
+
+# Specific thresholds for assets that need different sensitivity
+SLIDER_THRESHOLD = 0.8          # Slider detection needs lower threshold
+BOX_SPEEDUP_THRESHOLD = 0.85    # Box speedup button detection
+CAVERN_THRESHOLD = 0.75         # Cavern dungeon icons
+SPIN_WHEEL_THRESHOLD = 0.85     # Spin wheel detection
+
+# Battle timeout in seconds (how long to wait before assuming battle is stuck)
+BATTLE_TIMEOUT_SECONDS = 600    # 10 minutes default
+
+# Slider retry limit before asking user for help
+SLIDER_MAX_RETRIES = 25
+
+# =============================================================================
+# GUI Command Descriptions
+# =============================================================================
+
 GUI_COMMAND_DESCRIPTIONS = {
     "PVP": {
         "title": "PVP Battles",

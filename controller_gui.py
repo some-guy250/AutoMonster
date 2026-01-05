@@ -84,29 +84,43 @@ class ControllerGUI(ctk.CTk):
         self.device_frame.disable_connect_btns()
         self.device_frame.show_loading("Connecting to device...")
 
+        # Store error message from thread
+        self._connection_error = None
+
         def initialize_controller():
             self.controller = None
+            self._connection_error = None
             try:
                 # Controller() handles everything: launch_game, wait, check resolution, open_game
                 self.controller = Controller(serial=device_serial)
-            except IndexError:
-                pass
+            except Exception as e:
+                self._connection_error = str(e)
+                logging.error(f"Failed to connect to device: {e}")
 
         thread = threading.Thread(target=initialize_controller, daemon=True)
         thread.start()
 
-        # Wait for controller to be initialized
-        while thread.is_alive():
-            self.update()
+        # Use after() to check thread status without blocking UI
+        self._check_connection_thread(thread)
+
+    def _check_connection_thread(self, thread):
+        """Check if connection thread is done, using after() to avoid blocking UI"""
+        if thread.is_alive():
+            # Check again in 100ms
+            self.after(100, lambda: self._check_connection_thread(thread))
+            return
+
+        # Thread is done - handle result
+        self.device_frame.hide_loading()
 
         if self.controller is None:
             self.device_frame.enable_connect_btns()
-            self.device_frame.hide_loading()
-            self.device_frame.status.configure(text="Failed to connect to device", text_color="red")
+            error_msg = self._connection_error or "Unknown error"
+            self.device_frame.status.configure(
+                text=f"Connection failed: {error_msg}\nSelect a device and try again",
+                text_color="red"
+            )
             return
-
-        # Hide loading progress
-        self.device_frame.hide_loading()
 
         self.init_main_interface()
         self.show_main_interface()
@@ -492,7 +506,7 @@ class ControllerGUI(ctk.CTk):
 
     def override_parameter_defaults(self):
         loaded_defaults = self.config_manager.defaults
-        print("Loaded defaults")
+        logging.debug("Loaded defaults")
         for cmd_name, params in self.commands.items():
             saved = loaded_defaults.get(cmd_name, {})
             for param_name, config in params.items():

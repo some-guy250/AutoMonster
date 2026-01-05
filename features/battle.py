@@ -1,6 +1,6 @@
 import logging
 from typing import Optional
-from Constants import ASSETS
+from Constants import ASSETS, BATTLE_TIMEOUT_SECONDS, SPIN_WHEEL_THRESHOLD
 import AutoMonsterErrors
 from utils.logger import setup_logger
 
@@ -27,12 +27,12 @@ class BattleManager:
             if self.controller.in_screen(ASSETS.NextPVP, screenshot=sc):
                 break
             counter += 1
-            if counter > 300:
-                raise AutoMonsterErrors.BattleError("Battle is not finished, after 5 minutes")
+            if counter > BATTLE_TIMEOUT_SECONDS:
+                raise AutoMonsterErrors.BattleError(f"Battle is not finished after {BATTLE_TIMEOUT_SECONDS // 60} minutes")
             self.controller.pause(1)
 
     def spin_wheel(self, screenshot=None):
-        if self.controller.in_screen(ASSETS.SpinWheel, gray_img=True, threshold=.9, screenshot=screenshot, retries=2):
+        if self.controller.in_screen(ASSETS.SpinWheel, gray_img=True, threshold=SPIN_WHEEL_THRESHOLD, screenshot=screenshot, retries=2):
             self.controller.follow_sequence(ASSETS.SpinWheel, ASSETS.ClaimSpin, ASSETS.Cancel, timeout=15, raise_error=True)
             return True
         return False

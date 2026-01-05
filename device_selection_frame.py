@@ -1,3 +1,4 @@
+import logging
 import customtkinter as ctk
 from adbutils import adb
 
@@ -136,7 +137,7 @@ class DeviceSelectionFrame(ctk.CTkFrame):
             self.on_device_selected(address)
         except Exception as e:
             self.status.configure(text=f"Connection failed: {str(e)}", text_color="red")
-            print(e)
+            logging.error(f"Wireless connection failed: {e}")
 
     def connect_selected_device(self):
         selection = self.device_var.get()

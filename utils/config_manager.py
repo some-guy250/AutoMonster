@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from typing import Dict, Any, Optional
 
@@ -34,7 +35,7 @@ class ConfigManager:
                 with open(filename, 'r') as f:
                     return json.load(f)
             except Exception as e:
-                print(f"Error loading {filename}: {e}")
+                logging.warning(f"Error loading {filename}: {e}")
         return {}
 
     def get_default(self, key: str, default_val=None):

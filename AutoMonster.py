@@ -9,7 +9,11 @@ from adbutils import adb
 
 import AutoMonsterErrors
 import Constants
-from Constants import ASSETS, Ancestral_Cavers, AdLocationsHorizontal, AdLocationsVertical, IN_GAME_ASSETS, ASSET_REGIONS, Region
+from Constants import (
+    ASSETS, Ancestral_Cavers, AdLocationsHorizontal, AdLocationsVertical,
+    IN_GAME_ASSETS, ASSET_REGIONS, Region, SLIDER_THRESHOLD, SLIDER_MAX_RETRIES,
+    BOX_SPEEDUP_THRESHOLD, CAVERN_THRESHOLD, DEFAULT_TEMPLATE_THRESHOLD
+)
 from HelperFunctions import *
 from utils.logger import setup_logger
 from utils.vision_manager import VisionManager
@@ -219,15 +223,19 @@ class Controller:
 
     def are_you_there_skip(self, screenshot) -> bool:
         # find slider asset and drag it a bit to the right
-        cords = self._get_cords(ASSETS.Slider, screenshot, threshold=0.8) or self._get_cords(ASSETS.Slider2, screenshot, threshold=0.8)
+        cords = self._get_cords(ASSETS.Slider, screenshot, threshold=SLIDER_THRESHOLD) or self._get_cords(ASSETS.Slider2, screenshot, threshold=SLIDER_THRESHOLD)
         times = 0
+        user_notified = False
         while len(cords) > 0:
             x, y = cords[0]
             self.client.control.swipe(x, y, x + 25, y)
             self.pause(.25)
             times += 1
-            if times > 50:
-                input("Please move the slider to the right and press enter")
+            if times > SLIDER_MAX_RETRIES and not user_notified:
+                # Notify user via GUI logger and continue trying
+                self.log_gui("Slider stuck - please move the slider manually on the device", "warning")
+                logger.warning("Slider stuck after max retries - user notified to manually intervene")
+                user_notified = True
             if len(con_coord := self._get_cords(ASSETS.Continue)) > 0:
                 x, y = con_coord[0]
                 self.client.control.touch(x, y, scrcpy.ACTION_DOWN)
@@ -236,7 +244,7 @@ class Controller:
                 count = 0
                 while True:
                     sc = self.take_screenshot()
-                    if len(self._get_cords(ASSETS.Slider, sc, threshold=0.8) + self._get_cords(ASSETS.Slider2, sc, threshold=0.8)) == 0:
+                    if len(self._get_cords(ASSETS.Slider, sc, threshold=SLIDER_THRESHOLD) + self._get_cords(ASSETS.Slider2, sc, threshold=SLIDER_THRESHOLD)) == 0:
                         break
                     self.pause(.5)
                     if count > 5:
@@ -246,7 +254,7 @@ class Controller:
             count = 0
             while True:
                 sc = self.take_screenshot()
-                cords = self._get_cords(ASSETS.Slider, sc, threshold=0.8) or self._get_cords(ASSETS.Slider2, sc, threshold=0.8)
+                cords = self._get_cords(ASSETS.Slider, sc, threshold=SLIDER_THRESHOLD) or self._get_cords(ASSETS.Slider2, sc, threshold=SLIDER_THRESHOLD)
                 if len(cords) != 0:
                     break
                 count += 1
@@ -291,7 +299,7 @@ class Controller:
         return False
 
     def wait_for(self, *assets: str | tuple[str, ...], timeout: float = 10, skip_ad_check=False,
-                 raise_error=False, pause_for: float = 0) -> bool:
+                 raise_error=False, pause_for: float = 0.5) -> bool:
         start_time = time.perf_counter()
         while time.perf_counter() - start_time < timeout:
             if self.in_screen(*assets, skip_ad_check=skip_ad_check, pause_for=0):
@@ -453,7 +461,7 @@ class Controller:
         logger.info("In Resource Dungeons")
 
     def _reduce_box_time(self) -> Optional[bool]:
-        if self.in_screen(ASSETS.BoxSpeedup, threshold=.85, gray_img=True):
+        if self.in_screen(ASSETS.BoxSpeedup, threshold=BOX_SPEEDUP_THRESHOLD, gray_img=True):
             logger.info("Reducing time for box")  # Changed from egg to box
             if not self.in_screen(ASSETS.ReduceTime, screenshot=self.get_last_screenshot()):
                 return False
@@ -487,9 +495,9 @@ class Controller:
     def _can_unlock(self, screenshot: Optional[np.ndarray] = None) -> bool:
         if screenshot is None:
             screenshot = self.take_screenshot()
-        if self.in_screen(ASSETS.BoxSpeedup, threshold=.85, gray_img=True, screenshot=screenshot):
+        if self.in_screen(ASSETS.BoxSpeedup, threshold=BOX_SPEEDUP_THRESHOLD, gray_img=True, screenshot=screenshot):
             return False
-        return self.in_screen(ASSETS.BoxToUnlock, threshold=.85, gray_img=True, screenshot=screenshot)
+        return self.in_screen(ASSETS.BoxToUnlock, threshold=BOX_SPEEDUP_THRESHOLD, gray_img=True, screenshot=screenshot)
 
     def do_pvp(self, num_battles: int, handle_boxes: bool = True, reduce_box_time: bool = True, progress_callback=None):
         wins = 0
@@ -618,9 +626,9 @@ class Controller:
         total_expected_rooms = max_rooms * num_dungeons  # Calculate total expected rooms
 
         self._goto_cavern()
-        while self.in_screen(ASSETS.RightArrow) and num_dungeons > 0:
+        while num_dungeons > 0:
             for dungeon in dungeons_to_do:
-                if dungeon in dungeons_done or not self.in_screen(dungeon, gray_img=True, threshold=.75):
+                if dungeon in dungeons_done or not self.in_screen(dungeon, gray_img=True, threshold=CAVERN_THRESHOLD):
                     continue
 
                 if self.click(ASSETS.EnterCavern, pause=2):
@@ -685,7 +693,11 @@ class Controller:
                 logger.info("Dungeon not available time might be up")
                 self.open_game(True)
                 break
-            self.click(ASSETS.RightArrow, pause=3)
+
+            # Try to move to next cavern, if there's no right arrow we've reached the end
+            if not self.click(ASSETS.RightArrow, pause=3):
+                logger.info("No more caverns to navigate to")
+                break
 
         # Ensure progress shows complete even if we finish early
         if progress_callback:
@@ -727,7 +739,8 @@ class Controller:
             logger.info("Didn't play any ads")
         else:
             delta = time.time() - now
-            print(f"Finished auto play ads ({played_ads}) {delta // 60}m {delta % 60:.2f}s")
+            logger.info(f"Finished auto play ads ({played_ads}) {delta // 60:.0f}m {delta % 60:.2f}s")
+            self.log_gui(f"Finished watching {played_ads} ads", "success")
 
     def do_resource_dungeons(self, wait_for_stamina_to_refill=False):
         self._goto_resource_dungeons()
@@ -741,8 +754,9 @@ class Controller:
                 elif self.in_screen(ASSETS.MazeCoinDungeon):
                     logger.info("Entering maze coin dungeon")
                 self.click(ASSETS.EnterCavern)
-                print(self.do_dungeon(True, False, True, max_losses=-1,
-                                      wait_for_stamina_to_refill=wait_for_stamina_to_refill))
+                result = self.do_dungeon(True, False, True, max_losses=-1,
+                                         wait_for_stamina_to_refill=wait_for_stamina_to_refill)
+                logger.debug(f"Dungeon result: {result}")
             if not self.click(ASSETS.RightArrow, pause=2):
                 break
         logger.info("Finished all resource dungeons")

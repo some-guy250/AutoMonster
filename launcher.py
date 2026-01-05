@@ -217,30 +217,35 @@ def compare_versions(version1, version2):
 
 def check_for_updates():
     try:
-        response = requests.get(f"{repo_url_api}/releases/latest")
+        response = requests.get(f"{repo_url_api}/releases/latest", timeout=10)
+        response.raise_for_status()
         latest_release = response.json()
         latest_version = latest_release['tag_name'].replace("v-", "")
         current_version = get_version()
-        
+
         app_update = compare_versions(latest_version, current_version) == 1
-        
+
         # Check launcher version as well
         launcher_update = False
         assets = latest_release.get('assets', [])
         version_asset = next((a for a in assets if a['name'] == 'launcher_version.txt'), None)
         if version_asset:
             try:
-                ver_response = requests.get(version_asset['browser_download_url'])
+                ver_response = requests.get(version_asset['browser_download_url'], timeout=10)
                 if ver_response.status_code == 200:
                     remote_launcher_ver = ver_response.text.strip()
                     local_launcher_ver = get_launcher_version()
                     if compare_versions(remote_launcher_ver, local_launcher_ver) == 1:
                         launcher_update = True
-            except:
-                pass
-                
+            except (requests.RequestException, ValueError, KeyError) as e:
+                print(f"Warning: Could not check launcher version: {e}")
+
         return (app_update or launcher_update, latest_version)
-    except:
+    except requests.RequestException as e:
+        print(f"Network error checking for updates: {e}")
+        return (False, None)
+    except (ValueError, KeyError) as e:
+        print(f"Error parsing update response: {e}")
         return (False, None)
 
 
@@ -563,8 +568,9 @@ def cleanup_old_launcher():
                 try:
                     os.remove(old_exe)
                     break  # Successfully deleted
-                except:
-                    pass  
+                except (OSError, PermissionError):
+                    # File may still be in use, retry after delay
+                    pass
                 time.sleep(1)
 
 
