@@ -849,9 +849,11 @@ class Controller:
 
             self.pause(30)
             self.wait_for(ASSETS.HatchDino, ASSETS.HatchPanda)
-            self.click(ASSETS.HatchDino, ASSETS.HatchPanda)
+            self.follow_sequence((ASSETS.HatchDino, ASSETS.HatchPanda), ASSETS.Place, ASSETS.PlaceVault)
 
-            self.follow_sequence(ASSETS.Place, ASSETS.PlaceVault, ASSETS.Cancel, raise_error=True)
+            self.pause(2)
+
+            self.follow_sequence(ASSETS.PlaceVault, ASSETS.Cancel, raise_error=True)
             self.click_back()
             num_breeds_done += 1
 
