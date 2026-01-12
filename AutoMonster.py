@@ -21,6 +21,7 @@ from device_manager import DeviceManager
 from features.ads import AdManager
 from features.game import GameManager
 from features.battle import BattleManager
+from features.monster import MonsterManager
 
 logger = setup_logger()
 
@@ -36,6 +37,7 @@ class Controller:
         self.ad_manager = AdManager(self)
         self.game_manager = GameManager(self)
         self.battle_manager = BattleManager(self)
+        self.monster_manager = MonsterManager(self)
 
         # Only launch game if not skipping (for faster GUI startup)
         if not skip_game_launch:
@@ -833,35 +835,11 @@ class Controller:
         if progress_callback:
             progress_callback(1.0)
 
+    def feed_and_sell_monsters(self, num_monsters: int, progress_callback=None):
+        return self.monster_manager.feed_and_sell_monsters(num_monsters, progress_callback)
+
     def breed_monsters(self, num_breeds: int, use_tree: bool = False, progress_callback=None):
-        num_breeds_done = 0
-        breader = ASSETS.Tree if use_tree else ASSETS.Mountain
-
-        if progress_callback:
-            progress_callback(0)
-
-        while num_breeds_done < num_breeds:
-            self.follow_sequence(breader, ASSETS.Repeat, None)
-
-            self.pause(30)
-            self.wait_for(ASSETS.TakeEgg)
-            self.click(ASSETS.TakeEgg)
-
-            self.pause(30)
-            self.wait_for(ASSETS.HatchDino, ASSETS.HatchPanda)
-            self.follow_sequence((ASSETS.HatchDino, ASSETS.HatchPanda), ASSETS.Place, ASSETS.PlaceVault)
-
-            self.pause(2)
-
-            self.follow_sequence(ASSETS.PlaceVault, ASSETS.Cancel, raise_error=True)
-            self.click_back()
-            num_breeds_done += 1
-
-            if progress_callback:
-                progress_callback(num_breeds_done / num_breeds)
-
-        if progress_callback:
-            progress_callback(1.0)
+        return self.monster_manager.breed_monsters(num_breeds, use_tree, progress_callback)
 
     def play_ads(self):
         played_ads = 0

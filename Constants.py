@@ -114,12 +114,25 @@ class ASSETS:
     HatchPanda = "hatchpanda.png"
     Mountain = "mountain.png"
     Tree = "tree.png"
-    Hatchery = "hatchery.png"
-    HatchNotDone = "notdone.png"
     Repeat = "repeat.png"
     TakeEgg = "takeegg.png"
     PlaceVault = "placevault.png"
     Place = "place.png"
+    Element = "element.png"
+    ElementFire = "elementfire.png"
+    ElementFireSelected = "elementfires.png"
+    Rarity = "rarity.png"
+    RarityUC = "rarityuc.png"
+    RarityR = "rarityr.png"
+    RarityUCSelected = "rarityucs.png"
+    RarityRSelected = "rarityrs.png"
+    Sell = "sell.png"
+    Feed = "feed.png"
+    MonsterUC = "monsteruc.png"
+    MonsterR = "monsterr.png"
+    MonsterInfo = "monsterinfo.png"
+    Unlock = "unlock.png"
+    MonsterEmpty = "monsterempty.png"
 
 
 class Region:
@@ -227,7 +240,28 @@ ASSET_REGIONS = {
     ASSETS.HavingFun: Region.TOP,
     ASSETS.No: Region.BOTTOM_LEFT,
     ASSETS.DiscardPVP: Region.BOTTOM_RIGHT,
-    ASSETS.PVPNoPoints: Region.BOTTOM_RIGHT
+    ASSETS.PVPNoPoints: Region.BOTTOM_RIGHT,
+
+    ASSETS.Rarity: Region.BOTTOM_LEFT,
+    ASSETS.RarityRSelected: Region.BOTTOM,
+    ASSETS.RarityUCSelected: Region.BOTTOM,
+    ASSETS.ElementFireSelected: Region.BOTTOM,
+    ASSETS.Element: Region.BOTTOM_RIGHT,
+    ASSETS.ElementFire: Region.BOTTOM_RIGHT,
+    ASSETS.MonsterUC: Region.ALL,
+    ASSETS.MonsterR: Region.ALL,
+    ASSETS.RarityUC: Region.BOTTOM_LEFT,
+    ASSETS.RarityR: Region.BOTTOM_LEFT,
+    ASSETS.Feed: Region.BOTTOM_LEFT,
+    ASSETS.MonsterInfo: Region.TOP,
+    ASSETS.Sell: Region.BOTTOM_RIGHT,
+    ASSETS.Yes: Region.BOTTOM_RIGHT,
+    ASSETS.MonsterEmpty: Region.ALL,
+    ASSETS.Unlock: Region.ALL,
+
+    ASSETS.Repeat: Region.BOTTOM_RIGHT,
+    ASSETS.TakeEgg: Region.BOTTOM,
+    ASSETS.Place: Region.BOTTOM_LEFT
 }
 
 IN_GAME_ASSETS = (
@@ -357,8 +391,11 @@ GUI_COMMANDS = {
     },
     "Era Saga": {},
     "Breed Monsters": {
-        "num_breeds": {"type": "int", "min": 1, "max": 20, "default": 1},
+        "num_breeds": {"type": "int", "min": 1, "max": 100, "default": 10},
         "use_tree": {"type": "bool", "default": False}
+    },
+    "Feed and Sell Monsters": {
+        "num_monsters": {"type": "int", "min": 1, "max": 100, "default": 10}
     },
     "Close Game": {
         "action": {
@@ -460,6 +497,17 @@ GUI_COMMAND_DESCRIPTIONS = {
         "parameters": {
             "num_breeds": "Number of times to breed monsters",
             "use_tree": "Use Tree instead of Mountain for breeding"
+        }
+    },
+    "Feed and Sell Monsters": {
+        "title": "Feed and Sell Monsters",
+        "description": "Automatically feed and sell monsters.\n\n"
+                       "Features:\n"
+                       "• Process multiple monsters in sequence\n"
+                       "• Feed monsters to level them up\n"
+                       "• Sell unwanted monsters for resources",
+        "parameters": {
+            "num_monsters": "Number of monsters to feed and sell"
         }
     },
     "Close Game": {
