@@ -81,6 +81,8 @@ class MonsterManager:
             progress_callback(1.0)
 
     def breed_monsters(self, num_breeds: int, use_tree: bool = False, progress_callback=None):
+        self.controller.zoom_in()
+
         num_breeds_done = 0
         breader = ASSETS.Tree if use_tree else ASSETS.Mountain
 
@@ -88,21 +90,35 @@ class MonsterManager:
             progress_callback(0)
 
         while num_breeds_done < num_breeds:
-            self.controller.follow_sequence(breader, ASSETS.Repeat, None)
+            count = 0
+            while True:
+                self.controller.follow_sequence(breader, ASSETS.Repeat, None, max_tries=2, raise_error=True, timeout=5)
+                if count == 2:
+                    break
+                self.controller.pause(25)
+                self.controller.wait_for(ASSETS.TakeEgg)
+                self.controller.click(ASSETS.TakeEgg, pause=1.5)
+                if self.controller.in_screen(ASSETS.FullHatchery, pause_for=0):
+                    self.controller.click_back()
+                    break
+                num_breeds_done += 1
+                count += 1
 
-            self.controller.pause(30)
-            self.controller.wait_for(ASSETS.TakeEgg)
-            self.controller.click(ASSETS.TakeEgg)
+            self.controller.click(ASSETS.Hatchery, pause=1.5)
 
-            self.controller.pause(30)
-            self.controller.wait_for(ASSETS.HatchDino, ASSETS.HatchPanda)
-            self.controller.follow_sequence((ASSETS.HatchDino, ASSETS.HatchPanda), ASSETS.Place, ASSETS.PlaceVault)
-
-            self.controller.pause(2)
-
-            self.controller.follow_sequence(ASSETS.PlaceVault, ASSETS.Cancel, raise_error=True)
-            self.controller.click_back()
-            num_breeds_done += 1
+            while self.controller.in_screen(ASSETS.HatchDino, ASSETS.HatchPanda, pause_for=0):
+                self.controller.click(ASSETS.HatchDino, ASSETS.HatchPanda, pause=1.5)
+                timeout = 0
+                if not self.controller.in_screen(ASSETS.Place, pause_for=0):
+                    while self.controller.in_screen(ASSETS.HatchNotYet, pause_for=0):
+                        self.controller.pause(2)
+                        timeout += 2
+                        if timeout >= 30:
+                            raise Exception("Hatching timed out")
+                    self.controller.click(ASSETS.HatchDino, ASSETS.HatchPanda, pause=1.5)
+                
+                self.controller.follow_sequence(ASSETS.Place, ASSETS.PlaceVault, ASSETS.Cancel, timeout=10, raise_error=True)
+                self.controller.click_back()
 
             if progress_callback:
                 progress_callback(num_breeds_done / num_breeds)

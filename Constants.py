@@ -133,7 +133,9 @@ class ASSETS:
     MonsterInfo = "monsterinfo.png"
     Unlock = "unlock.png"
     MonsterEmpty = "monsterempty.png"
-
+    Hatchery = "hatchery.png"
+    HatchNotYet = "hatchnotyet.png"
+    FullHatchery = "fullhatchery.png"
 
 class Region:
     ALL = 0
