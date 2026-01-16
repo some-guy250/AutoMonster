@@ -1,6 +1,6 @@
 import logging
 from typing import Optional
-from Constants import ASSETS, BATTLE_TIMEOUT_SECONDS, SPIN_WHEEL_THRESHOLD
+from Constants import ASSETS, BATTLE_TIMEOUT_SECONDS, SPIN_WHEEL_THRESHOLD, TEAM_SELECTION_THRESHOLD
 import AutoMonsterErrors
 from utils.logger import setup_logger
 
@@ -40,7 +40,7 @@ class BattleManager:
     def change_team(self, second_team=False) -> bool:
         def has_selected():
             for index in range(len(selected_team)):
-                if self.controller.in_screen(selected_team[index], gray_img=True, threshold=.8):
+                if self.controller.in_screen(selected_team[index], gray_img=True, threshold=TEAM_SELECTION_THRESHOLD):
                     selected_team.pop(index)
                     non_selected_team.pop(index)
                     non_selected_team_synergy.pop(index)
@@ -50,15 +50,15 @@ class BattleManager:
         def check_and_select_team():
             if has_selected():
                 return True
-            if not self.controller.click(*non_selected_team, gray_img=True, threshold=.8):
-                self.controller.click(*non_selected_team_synergy, gray_img=True, threshold=.8)
+            if not self.controller.click(*non_selected_team, gray_img=True, threshold=TEAM_SELECTION_THRESHOLD):
+                self.controller.click(*non_selected_team_synergy, gray_img=True, threshold=TEAM_SELECTION_THRESHOLD)
             return has_selected()
 
         def full_team_already_selected():
             screenshot = self.controller.take_screenshot()
-            one = min(self.controller.count(ASSETS.Selected1, gray_img=True, screenshot=screenshot, threshold=.8), 1)
-            two = min(self.controller.count(ASSETS.Selected2, gray_img=True, screenshot=screenshot, threshold=.8), 1)
-            three = min(self.controller.count(ASSETS.Selected3, gray_img=True, screenshot=screenshot, threshold=.8), 1)
+            one = min(self.controller.count(ASSETS.Selected1, gray_img=True, screenshot=screenshot, threshold=TEAM_SELECTION_THRESHOLD), 1)
+            two = min(self.controller.count(ASSETS.Selected2, gray_img=True, screenshot=screenshot, threshold=TEAM_SELECTION_THRESHOLD), 1)
+            three = min(self.controller.count(ASSETS.Selected3, gray_img=True, screenshot=screenshot, threshold=TEAM_SELECTION_THRESHOLD), 1)
 
             return one + two + three == 3
 

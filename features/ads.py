@@ -2,7 +2,7 @@ import logging
 import time
 import pathlib
 import scrcpy
-from Constants import ASSETS, AdLocationsHorizontal, AdLocationsVertical, ADS_DIR
+from Constants import ASSETS, AdLocationsHorizontal, AdLocationsVertical, ADS_DIR, TEAM_SELECTION_THRESHOLD
 import AutoMonsterErrors
 from utils.logger import setup_logger
 
@@ -21,7 +21,7 @@ class AdManager:
             return False
 
         for ad_key in ad_keys:
-            if self.controller.click(ad_key, skip_ad_check=True, threshold=.8, screenshot=screenshot, gray_img=True):
+            if self.controller.click(ad_key, skip_ad_check=True, threshold=TEAM_SELECTION_THRESHOLD, screenshot=screenshot, gray_img=True):
                 self.controller.log_gui(f"Ad detected: {ad_key}", "debug")
                 if self.controller.click(ASSETS.ResumeAd, skip_ad_check=True):
                     return None

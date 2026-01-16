@@ -12,7 +12,7 @@ import Constants
 from Constants import (
     ASSETS, Ancestral_Cavers, AdLocationsHorizontal, AdLocationsVertical,
     IN_GAME_ASSETS, ASSET_REGIONS, Region, SLIDER_THRESHOLD, SLIDER_MAX_RETRIES,
-    BOX_SPEEDUP_THRESHOLD, CAVERN_THRESHOLD, DEFAULT_TEMPLATE_THRESHOLD
+    BOX_SPEEDUP_THRESHOLD, CAVERN_THRESHOLD, DEFAULT_TEMPLATE_THRESHOLD, TEAM_SELECTION_THRESHOLD
 )
 from HelperFunctions import *
 from utils.logger import setup_logger
@@ -230,18 +230,18 @@ class Controller:
 
         self.log_gui("Zoomed out", "info")
 
-    def _get_cords(self, asset_code: str, screenshot=None, threshold=.9, gray_img=False) -> List[List[int]]:
+    def _get_cords(self, asset_code: str, screenshot=None, threshold=DEFAULT_TEMPLATE_THRESHOLD, gray_img=False) -> List[List[int]]:
         if screenshot is None:
             screenshot = self.take_screenshot()
         return self.vision_manager.get_cords(asset_code, screenshot, threshold, gray_img)
 
-    def count(self, *assets, gray_img=False, threshold=.9, screenshot=None):
+    def count(self, *assets, gray_img=False, threshold=DEFAULT_TEMPLATE_THRESHOLD, screenshot=None):
         if screenshot is None:
             screenshot = self.take_screenshot()
         return self.vision_manager.count(*assets, screenshot=screenshot, gray_img=gray_img, threshold=threshold)
 
     def debug_get_cords_in_image(self, *assets: Optional[str | tuple[str, ...]], show_asset=False, gray_img=False,
-                                 threshold=.9) -> \
+                                 threshold=DEFAULT_TEMPLATE_THRESHOLD) -> \
             List[np.ndarray]:
         screenshot = self.take_screenshot()
         result = []
@@ -300,7 +300,7 @@ class Controller:
         return result
 
     def click(self, *assets: Optional[str | tuple[str, ...]], skip_ad_check=False, pause: float = 0.5, screenshot=None,
-              raise_error=False, index=0, gray_img=False, threshold=.9) -> bool:
+              raise_error=False, index=0, gray_img=False, threshold=DEFAULT_TEMPLATE_THRESHOLD) -> bool:
         if screenshot is None:
             screenshot = self.take_screenshot()
         for asset in assets:
@@ -395,7 +395,7 @@ class Controller:
         return False
 
     def in_screen(self, *assets: str, screenshot=None, skip_ad_check=False, retries: int = 1, gray_img=False,
-                  threshold=.9, pause_for=0.5) -> bool:
+                  threshold=DEFAULT_TEMPLATE_THRESHOLD, pause_for=0.5) -> bool:
         for i in range(retries):
             if screenshot is None:
                 screenshot = self.take_screenshot()

@@ -80,6 +80,21 @@ class MonsterManager:
         if progress_callback:
             progress_callback(1.0)
 
+    def click_left_moster(self):
+        screenshot = self.controller.take_screenshot()
+        dino = self.controller._get_cords(ASSETS.HatchDino, screenshot=screenshot) 
+        panda = self.controller._get_cords(ASSETS.HatchPanda, screenshot=screenshot)
+
+        if not dino:
+            self.controller.click(ASSETS.HatchPanda, pause=1.5, screenshot=screenshot)
+        elif not panda:
+            self.controller.click(ASSETS.HatchDino, pause=1.5, screenshot=screenshot)
+        else:
+            if dino[0][0] < panda[0][0]:
+                self.controller.click(ASSETS.HatchDino, pause=1.5, screenshot=screenshot)
+            else:
+                self.controller.click(ASSETS.HatchPanda, pause=1.5, screenshot=screenshot)
+
     def breed_monsters(self, num_breeds: int, use_tree: bool = False, progress_callback=None):
         self.controller.zoom_in()
 
@@ -107,7 +122,7 @@ class MonsterManager:
             self.controller.click(ASSETS.Hatchery, pause=1.5)
 
             while self.controller.in_screen(ASSETS.HatchDino, ASSETS.HatchPanda, pause_for=0):
-                self.controller.click(ASSETS.HatchDino, ASSETS.HatchPanda, pause=1.5)
+                self.click_left_moster()
                 timeout = 0
                 if not self.controller.in_screen(ASSETS.Place, pause_for=0):
                     while self.controller.in_screen(ASSETS.HatchNotYet, pause_for=0):
@@ -115,9 +130,9 @@ class MonsterManager:
                         timeout += 2
                         if timeout >= 30:
                             raise Exception("Hatching timed out")
-                    self.controller.click(ASSETS.HatchDino, ASSETS.HatchPanda, pause=1.5)
+                    self.click_left_moster()
                 
-                self.controller.follow_sequence(ASSETS.Place, ASSETS.PlaceVault, ASSETS.Cancel, timeout=10, raise_error=True)
+                self.controller.follow_sequence(ASSETS.Place, ASSETS.PlaceVault, ASSETS.Cancel, timeout=15, raise_error=True)
                 self.controller.click_back()
 
             if progress_callback:

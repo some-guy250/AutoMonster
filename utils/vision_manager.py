@@ -4,7 +4,7 @@ import pathlib
 from typing import List, Optional, Tuple
 import logging
 
-from Constants import ASSETS, ASSET_REGIONS, Region, ADS_DIR, AD_REGION
+from Constants import ASSETS, ASSET_REGIONS, Region, ADS_DIR, AD_REGION, DEFAULT_TEMPLATE_THRESHOLD
 from utils.logger import setup_logger
 
 logger = setup_logger()
@@ -223,7 +223,7 @@ class VisionManager:
         
         return final_locations
 
-    def count(self, *assets, screenshot: np.ndarray, gray_img=False, threshold=.9):
+    def count(self, *assets, screenshot: np.ndarray, gray_img=False, threshold=DEFAULT_TEMPLATE_THRESHOLD):
         total = 0
         for a in assets:
             total += len(self.get_cords(a, screenshot, gray_img=gray_img, threshold=threshold))
