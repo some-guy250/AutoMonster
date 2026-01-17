@@ -95,6 +95,8 @@ class MonsterManager:
             else:
                 self.controller.click(ASSETS.HatchPanda, pause=1.5, screenshot=screenshot)
 
+        self.controller.click(ASSETS.Place, pause=1.5)
+
     def breed_monsters(self, num_breeds: int, use_tree: bool = False, progress_callback=None):
         self.controller.zoom_in()
 
@@ -104,11 +106,12 @@ class MonsterManager:
         if progress_callback:
             progress_callback(0)
 
+        max_count = 2
         while num_breeds_done < num_breeds:
             count = 0
             while True:
                 self.controller.follow_sequence(breader, ASSETS.Repeat, None, max_tries=2, raise_error=True, timeout=5)
-                if count == 2:
+                if count == max_count:
                     break
                 self.controller.pause(25)
                 self.controller.wait_for(ASSETS.TakeEgg)
@@ -120,7 +123,7 @@ class MonsterManager:
                 count += 1
 
             self.controller.click(ASSETS.Hatchery, pause=1.5)
-
+            max_count = -1
             while self.controller.in_screen(ASSETS.HatchDino, ASSETS.HatchPanda, pause_for=0):
                 self.click_left_moster()
                 timeout = 0
@@ -132,8 +135,10 @@ class MonsterManager:
                             raise Exception("Hatching timed out")
                     self.click_left_moster()
                 
-                self.controller.follow_sequence(ASSETS.Place, ASSETS.PlaceVault, ASSETS.Cancel, timeout=15, raise_error=True)
+                self.controller.follow_sequence(ASSETS.PlaceVault, ASSETS.Cancel, timeout=15, raise_error=True)
                 self.controller.click_back()
+                max_count += 1
+            max_count = 2 if max_count > 2 else max_count
 
             if progress_callback:
                 progress_callback(num_breeds_done / num_breeds)
