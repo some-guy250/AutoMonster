@@ -110,7 +110,11 @@ class MonsterManager:
         while num_breeds_done < num_breeds:
             count = 0
             while True:
-                self.controller.follow_sequence(breader, ASSETS.Repeat, None, max_tries=2, raise_error=True, timeout=5)
+                while not self.controller.in_screen(ASSETS.Repeat, ASSETS.SpeedUp, pause_for=0):
+                    self.controller.click(breader, raise_error=True)
+                while not self.controller.in_screen(ASSETS.Repeat, pause_for=0):
+                    self.controller.pause(1)
+                self.controller.click(ASSETS.Repeat, raise_error=True)
                 if count == max_count:
                     break
                 self.controller.pause(25)

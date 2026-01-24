@@ -136,6 +136,7 @@ class ASSETS:
     Hatchery = "hatchery.png"
     HatchNotYet = "hatchnotyet.png"
     FullHatchery = "fullhatchery.png"
+    SpeedUp = "speedup.png"
 
 class Region:
     ALL = 0
