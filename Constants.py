@@ -422,7 +422,7 @@ SLIDER_THRESHOLD = 0.8          # Slider detection needs lower threshold
 BOX_SPEEDUP_THRESHOLD = 0.85    # Box speedup button detection
 CAVERN_THRESHOLD = 0.75         # Cavern dungeon icons
 SPIN_WHEEL_THRESHOLD = 0.85     # Spin wheel detection
-TEAM_SELECTION_THRESHOLD = 0.8  # Team selection and battle UI detection
+TEAM_SELECTION_THRESHOLD = 0.75  # Team selection and battle UI detection
 
 # Battle timeout in seconds (how long to wait before assuming battle is stuck)
 BATTLE_TIMEOUT_SECONDS = 600    # 10 minutes default
