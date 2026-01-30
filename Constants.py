@@ -237,7 +237,8 @@ ASSET_REGIONS = {
     ASSETS.EnterBattlePVP: Region.BOTTOM_RIGHT,
     ASSETS.BoxDone: Region.BOTTOM,
     ASSETS.EnterMultiplayer: Region.BOTTOM,
-    ASSETS.ReduceTime: Region.BOTTOM,
+    ASSETS.ReduceTime: Region.BOTTOM_RIGHT,
+    ASSETS.ReduceTimeGold: Region.BOTTOM_RIGHT,
     ASSETS.NextPVP: Region.BOTTOM_RIGHT,
 
     ASSETS.HavingFun: Region.TOP,
