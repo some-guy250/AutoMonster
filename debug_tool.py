@@ -4,6 +4,7 @@ import numpy as np
 from PIL import Image
 import threading
 import importlib
+import inspect
 import sys
 import os
 import subprocess
@@ -299,15 +300,18 @@ class DebugTool(ctk.CTkFrame):
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        # Main container - just use full width since we're reusing main viewer
-        main_container = ctk.CTkFrame(self)
-        main_container.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
-        main_container.grid_columnconfigure(0, weight=1)
-        main_container.grid_rowconfigure(0, weight=1)
+        # TabView container
+        self.tabview = ctk.CTkTabview(self)
+        self.tabview.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        self.tabview.add("Assets")
+        self.tabview.add("Functions")
+
+        # Select Assets tab by default
+        self.tabview.set("Assets")
 
         # ===== ASSET SELECTION PANEL =====
-        left_panel = ctk.CTkFrame(main_container)
-        left_panel.grid(row=0, column=0, sticky="nsew")
+        left_panel = ctk.CTkFrame(self.tabview.tab("Assets"))
+        left_panel.pack(fill="both", expand=True)
         left_panel.grid_columnconfigure(0, weight=1)
         left_panel.grid_rowconfigure(6, weight=1)  # Make asset list expandable (row 6 now)
 
@@ -514,6 +518,9 @@ class DebugTool(ctk.CTkFrame):
 
         # Debouncing for search
         self._filter_after_id = None
+
+        # Setup Functions Tab
+        self._setup_functions_tab()
 
         # Load assets
         self.load_assets()
@@ -1012,6 +1019,95 @@ class DebugTool(ctk.CTkFrame):
         """Get the assigned color for an asset"""
         # Return the color that was assigned when the asset was selected
         return self.asset_colors.get(asset_name, (0, 255, 0))  # Default to green if not found
+
+    def _setup_functions_tab(self):
+        tab = self.tabview.tab("Functions")
+        tab.grid_columnconfigure(0, weight=1)
+        tab.grid_rowconfigure(1, weight=1) # Code area expands
+        
+        # --- Code Area ---
+        # Header
+        ctk.CTkLabel(tab, text="Scripting (Implicit 'controller' context)", font=("Arial", 12, "bold")).grid(row=0, column=0, sticky="w", padx=10, pady=(10, 5))
+
+        self.code_input = ctk.CTkTextbox(tab, font=("Consolas", 12))
+        self.code_input.grid(row=1, column=0, sticky="nsew", padx=10, pady=5)
+        
+        # --- Actions ---
+        action_frame = ctk.CTkFrame(tab, fg_color="transparent")
+        action_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=5)
+        action_frame.grid_columnconfigure(0, weight=1)
+
+        self.run_btn = ctk.CTkButton(action_frame, text="Run Code (Ctrl+Enter)", command=self.run_debug_code, height=32)
+        self.run_btn.grid(row=0, column=0, sticky="ew", padx=(0, 5))
+
+        ctk.CTkButton(
+            action_frame, 
+            text="Clear", 
+            width=60,
+            fg_color="#e74c3c", 
+            hover_color="#c0392b",
+            command=lambda: self.code_input.delete("1.0", "end")
+        ).grid(row=0, column=1)
+
+        # Bind Ctrl+Enter to run
+        self.code_input.bind("<Control-Return>", lambda e: self.run_debug_code())
+
+        # --- Output Log ---
+        ctk.CTkLabel(tab, text="Output:", font=("Arial", 12, "bold")).grid(row=3, column=0, sticky="w", padx=10, pady=(5,0))
+        
+        self.output_log = ctk.CTkTextbox(tab, height=120, font=("Consolas", 11), state="disabled")
+        self.output_log.grid(row=4, column=0, sticky="ew", padx=10, pady=(0,10))
+
+    def run_debug_code(self):
+        code = self.code_input.get("1.0", "end-1c")
+        if not code.strip():
+            return
+            
+        self.run_btn.configure(state="disabled", text="Running...")
+        self.log_output(f">>> Running code...")
+        
+        def thread_target():
+            try:
+                # Helper to log to our window safely
+                def custom_print(*args, **kwargs):
+                    text = " ".join(map(str, args))
+                    self.after(0, lambda: self.log_output(text))
+                    
+                # Execute
+                local_vars = {
+                    'controller': self.controller,
+                    'print': custom_print,
+                    'ctk': ctk,
+                    'cv2': cv2,
+                    'np': np,
+                    'self': self,
+                }
+                
+                # Inject controller attributes for implicit access
+                # e.g. battle_manager.auto_battle() instead of controller.battle_manager.auto_battle()
+                for name in dir(self.controller):
+                    if not name.startswith('_'): # Skip private/protected
+                        try:
+                            local_vars[name] = getattr(self.controller, name)
+                        except Exception:
+                            pass
+                
+                exec(code, globals(), local_vars)
+                self.after(0, lambda: self.log_output(">>> Execution finished."))
+            except Exception as e:
+                import traceback
+                tb = traceback.format_exc()
+                self.after(0, lambda: self.log_output(f"!!! Error:\n{tb}"))
+            finally:
+                self.after(0, lambda: self.run_btn.configure(state="normal", text="Run Code"))
+
+        threading.Thread(target=thread_target, daemon=True).start()
+
+    def log_output(self, message):
+        self.output_log.configure(state="normal")
+        self.output_log.insert("end", str(message) + "\n")
+        self.output_log.see("end")
+        self.output_log.configure(state="disabled")
 
     def update_threshold_label(self, value):
         """Update the threshold label text"""
