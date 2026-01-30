@@ -1040,6 +1040,17 @@ class DebugTool(ctk.CTkFrame):
         self.run_btn = ctk.CTkButton(action_frame, text="Run Code (Ctrl+Enter)", command=self.run_debug_code, height=32)
         self.run_btn.grid(row=0, column=0, sticky="ew", padx=(0, 5))
 
+        self.stop_btn = ctk.CTkButton(
+            action_frame, 
+            text="Stop", 
+            width=60,
+            fg_color="#e67e22", 
+            hover_color="#d35400",
+            state="disabled",
+            command=self.stop_debug_code
+        )
+        self.stop_btn.grid(row=0, column=1, padx=(0, 5))
+
         ctk.CTkButton(
             action_frame, 
             text="Clear", 
@@ -1047,7 +1058,7 @@ class DebugTool(ctk.CTkFrame):
             fg_color="#e74c3c", 
             hover_color="#c0392b",
             command=lambda: self.code_input.delete("1.0", "end")
-        ).grid(row=0, column=1)
+        ).grid(row=0, column=2)
 
         # Bind Ctrl+Enter to run
         self.code_input.bind("<Control-Return>", lambda e: self.run_debug_code())
@@ -1058,13 +1069,23 @@ class DebugTool(ctk.CTkFrame):
         self.output_log = ctk.CTkTextbox(tab, height=120, font=("Consolas", 11), state="disabled")
         self.output_log.grid(row=4, column=0, sticky="ew", padx=10, pady=(0,10))
 
+    def stop_debug_code(self):
+        if self.controller:
+            self.controller.cancel_flag = True
+            self.log_output("!!! Stop signal sent to controller.")
+
     def run_debug_code(self):
         code = self.code_input.get("1.0", "end-1c")
         if not code.strip():
             return
             
         self.run_btn.configure(state="disabled", text="Running...")
+        self.stop_btn.configure(state="normal")
         self.log_output(f">>> Running code...")
+        
+        # Reset cancel flag before starting
+        if self.controller:
+            self.controller.cancel_flag = False
         
         def thread_target():
             try:
@@ -1095,11 +1116,16 @@ class DebugTool(ctk.CTkFrame):
                 exec(code, globals(), local_vars)
                 self.after(0, lambda: self.log_output(">>> Execution finished."))
             except Exception as e:
-                import traceback
-                tb = traceback.format_exc()
-                self.after(0, lambda: self.log_output(f"!!! Error:\n{tb}"))
+                # Catch the special ExecutionFlag error often used to stop
+                if "ExecutionFlag" in str(type(e)):
+                    self.after(0, lambda: self.log_output("!!! Execution stopped by user."))
+                else:
+                    import traceback
+                    tb = traceback.format_exc()
+                    self.after(0, lambda: self.log_output(f"!!! Error:\n{tb}"))
             finally:
                 self.after(0, lambda: self.run_btn.configure(state="normal", text="Run Code"))
+                self.after(0, lambda: self.stop_btn.configure(state="disabled"))
 
         threading.Thread(target=thread_target, daemon=True).start()
 
