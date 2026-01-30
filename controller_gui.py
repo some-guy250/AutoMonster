@@ -896,6 +896,21 @@ class ControllerGUI(ctk.CTk):
             self.stop_macro = True
             self.controller.cancel_flag = True
 
+    def start_temporary_macro(self, steps, options):
+        """Start running a temporary macro in a thread"""
+        self.macro_running = True
+        self.stop_macro = False
+        self.run_macro_btn.configure(text="⬛ Stop Macro", fg_color="red")
+        self.macro_dropdown.configure(state="disabled")
+        self.edit_macro_btn.configure(state="disabled")
+        # Disable command controls
+        self.command_dropdown.configure(state="disabled")
+        if self.param_frame:
+            self.param_frame.run_button.configure(state="disabled")
+
+        # Start macro thread
+        threading.Thread(target=self._run_macro_thread, args=("Temporary Macro", steps, options), daemon=True).start()
+
     def start_macro(self):
         """Start running the selected macro in a thread"""
         macro_name = self.selected_macro.get()
@@ -913,22 +928,25 @@ class ControllerGUI(ctk.CTk):
             # Start macro thread
             threading.Thread(target=self._run_macro_thread, args=(macro_name,), daemon=True).start()
 
-    def _run_macro_thread(self, name):
+    def _run_macro_thread(self, name, steps=None, options=None):
         """Execute macro steps in a separate thread"""
         try:
+            macro_steps = steps if steps is not None else self.macros[name]
+            current_options = options if options is not None else self.macro_options
+
             # Show and reset progress bar
             self.macro_progress.pack(fill="x", padx=5, pady=(5, 0))
             self.macro_progress.set(0)
-            total_steps = len(self.macros[name])
+            total_steps = len(macro_steps)
             
             # Handle pre-macro options
             lowered_brightness = False
-            if self.macro_options.get("lower_brightness", False):
+            if current_options.get("lower_brightness", False):
                 lowered_brightness = True
                 self.append_log("Lowering brightness before macro execution", "info")
                 self.controller.lower_brightness()
 
-            for i, step in enumerate(self.macros[name]):
+            for i, step in enumerate(macro_steps):
                 if self.stop_macro:
                     self.append_log("Macro execution stopped by user", "warning")
                     break
@@ -968,7 +986,7 @@ class ControllerGUI(ctk.CTk):
                         self.append_log(f"Error in macro step {command}: {str(e)}", "error")
                         break
 
-            if not self.stop_macro and self.macro_options.get("lock_device", False):
+            if not self.stop_macro and current_options.get("lock_device", False):
                 self.append_log("Locking device after macro completion", "info")
                 self.controller.lock_device()
 

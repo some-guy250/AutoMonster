@@ -4,6 +4,7 @@ import os
 from command_frame import CommandFrame
 
 DEFAULT_MACROS_FILE = "macros.json"
+TEMP_MACRO_NAME = "(Quick Run)"
 
 class MacroDialog(ctk.CTkToplevel):
     def __init__(self, parent, commands):
@@ -18,6 +19,11 @@ class MacroDialog(ctk.CTkToplevel):
         
         # Now load macros which will set the option values
         self.macros = self.load_macros()
+        
+        # Add temporary macro for quick execution
+        if TEMP_MACRO_NAME not in self.macros:
+            self.macros[TEMP_MACRO_NAME] = []
+            
         self.param_widgets = {}  # Initialize param_widgets dictionary
         
         # Make dialog modal
@@ -66,7 +72,11 @@ class MacroDialog(ctk.CTkToplevel):
         macro_label = ctk.CTkLabel(top_frame, text="Select Macro:", font=("Arial", 12))
         macro_label.pack(side="left", padx=5)
 
-        self.macro_names = list(self.macros.keys())
+        # Ensure Quick Run is at the top of the list
+        self.macro_names = [name for name in self.macros.keys() if name != TEMP_MACRO_NAME]
+        self.macro_names.sort()
+        self.macro_names.insert(0, TEMP_MACRO_NAME)
+        
         if not self.macro_names:
             self.macro_names = ["No macros"]
         
@@ -191,6 +201,13 @@ class MacroDialog(ctk.CTkToplevel):
             text="Save & Close",
             command=self.save_and_close
         ).pack(side="right", padx=5)
+
+        self.run_once_btn = ctk.CTkButton(
+            bottom_frame,
+            text="Run Once",
+            command=self.run_once
+        )
+        self.run_once_btn.pack(side="right", padx=5)
 
         # Add macro options frame
         options_frame = ctk.CTkFrame(bottom_frame)
@@ -335,6 +352,13 @@ class MacroDialog(ctk.CTkToplevel):
         return command
 
     def on_macro_selected(self, name):
+        # Update delete button text for temp macro
+        if method := getattr(self, "delete_btn", None):
+            if name == TEMP_MACRO_NAME:
+                method.configure(text="Clear")
+            else:
+                method.configure(text="Delete Macro")
+
         # Clear any existing selection first
         self.selected_step_index = None
         self.update_step_buttons()
@@ -357,6 +381,8 @@ class MacroDialog(ctk.CTkToplevel):
         has_macros = self.macro_names != ["No macros"]
         state = "normal" if has_macros else "disabled"
         self.delete_btn.configure(state=state)
+        if hasattr(self, 'run_once_btn'):
+            self.run_once_btn.configure(state=state)
 
     def center_input_dialog(self, dialog):
         """Center the input dialog relative to the macro dialog"""
@@ -395,6 +421,12 @@ class MacroDialog(ctk.CTkToplevel):
     def delete_macro(self):
         name = self.selected_macro.get()
         if name and name in self.macros:
+            # Handle special case for temporary macro
+            if name == TEMP_MACRO_NAME:
+                self.macros[name] = []
+                self.on_macro_selected(name)
+                return
+
             # Create confirmation dialog
             confirm_dialog = ctk.CTkToplevel(self)
             confirm_dialog.title("Confirm Delete")
@@ -478,10 +510,29 @@ class MacroDialog(ctk.CTkToplevel):
             self.macros[name].append({"command": command, "params": params})
             self.on_macro_selected(name)  # Refresh steps display
 
+    def run_once(self):
+        """Run the current macro steps immediately without saving to file"""
+        name = self.selected_macro.get()
+        if name and name in self.macros:
+            steps = self.macros[name]
+            options = {
+                "lower_brightness": self.lower_brightness.get(),
+                "lock_device": self.lock_device.get()
+            }
+            # Close dialog first
+            self.destroy()
+            # Run macro
+            self.parent.start_temporary_macro(steps, options)
+
     def save_and_close(self):
         """Save macros and options to file"""
+        # Create a copy to save, excluding the temporary macro
+        macros_to_save = self.macros.copy()
+        if TEMP_MACRO_NAME in macros_to_save:
+            del macros_to_save[TEMP_MACRO_NAME]
+
         macro_data = {
-            "macros": self.macros,
+            "macros": macros_to_save,
             "options": {
                 "lower_brightness": self.lower_brightness.get(),
                 "lock_device": self.lock_device.get()
@@ -505,8 +556,14 @@ class MacroDialog(ctk.CTkToplevel):
 
     def save_macros(self):
         """Persist macros to JSON file."""
+        # Create a copy to save, excluding the temporary macro
+        macros_to_save = self.macros.copy()
+        start = self.selected_macro.get()
+        if TEMP_MACRO_NAME in macros_to_save:
+            del macros_to_save[TEMP_MACRO_NAME]
+            
         with open(DEFAULT_MACROS_FILE, "w") as f:
-            json.dump(self.macros, f, indent=4)
+            json.dump(macros_to_save, f, indent=4)
 
     def add_step_to_macro(self, macro_name, command, params):
         """Append a step with command and parameters."""
