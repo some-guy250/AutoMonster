@@ -39,7 +39,7 @@ class MonsterManager:
         self.filter_to_uncommon_monsters()
         num_fed = 0
         monster_asset = ASSETS.MonsterUC
-        feeding_list = [(3.5, 3.5), (2.5, 3), (12, 0)]
+        feeding_list = [(4.5, 3), (3.5, 3), (12, 0)]
         while num_fed < num_monsters:
             if progress_callback:
                 progress_callback(num_fed / num_monsters)
