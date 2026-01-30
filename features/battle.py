@@ -40,7 +40,7 @@ class BattleManager:
     def change_team(self, second_team=False) -> bool:
         def has_selected():
             for index in range(len(selected_team)):
-                if self.controller.in_screen(selected_team[index], gray_img=True, threshold=TEAM_SELECTION_THRESHOLD):
+                if self.controller.in_screen(selected_team[index], threshold=TEAM_SELECTION_THRESHOLD):
                     selected_team.pop(index)
                     non_selected_team.pop(index)
                     non_selected_team_synergy.pop(index)
