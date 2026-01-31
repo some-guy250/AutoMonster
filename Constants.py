@@ -262,10 +262,19 @@ ASSET_REGIONS = {
     ASSETS.Yes: Region.BOTTOM_RIGHT,
     ASSETS.MonsterEmpty: Region.ALL,
     ASSETS.Unlock: Region.ALL,
-
     ASSETS.Repeat: Region.BOTTOM_RIGHT,
     ASSETS.TakeEgg: Region.BOTTOM,
-    ASSETS.Place: Region.BOTTOM_LEFT
+    ASSETS.Place: Region.BOTTOM_LEFT,
+    ASSETS.Tree: Region.ALL,
+    ASSETS.Mountain: Region.ALL,
+    ASSETS.FullHatchery: Region.TOP_RIGHT,
+    ASSETS.Hatchery: Region.ALL,
+    ASSETS.HatchDino: Region.BOTTOM,
+    ASSETS.HatchPanda: Region.BOTTOM,
+    ASSETS.PlaceVault: Region.ALL,
+    ASSETS.HatchNotYet: Region.TOP_RIGHT,
+
+    ASSETS.ClaimDaily: Region.BOTTOM,
 }
 
 IN_GAME_ASSETS = (

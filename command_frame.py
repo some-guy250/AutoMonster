@@ -30,6 +30,7 @@ class CommandFrame(ctk.CTkFrame):
         header.pack(pady=(5, 10), anchor="w")
 
         self.param_frames = {}
+        self.param_labels = {}
 
         # Create parameter inputs
         for param_name, param_config in params.items():
@@ -50,10 +51,35 @@ class CommandFrame(ctk.CTkFrame):
 
             if param_config["type"] == "int":
                 value_label = ctk.CTkLabel(param_frame, text=str(param_config.get("default", 0)), width=30)
+                self.param_labels[param_name] = value_label
+
+                def slider_callback(val, p_name=param_name):
+                    self.param_labels[p_name].configure(text=str(int(val)))
+                    if p_name == "num_breeds":
+                        batch_slider = self.param_widgets.get("batch_size")
+                        batch_label = self.param_labels.get("batch_size")
+                        if batch_slider:
+                            # Check if it was at the previous max to make it "sticky"
+                            old_max = batch_slider.cget("to")
+                            was_at_max = batch_slider.get() >= old_max
+                            
+                            new_max = int(val)
+                            batch_slider.configure(to=new_max)
+                            
+                            if was_at_max or batch_slider.get() > new_max:
+                                batch_slider.set(new_max)
+                                if batch_label:
+                                    batch_label.configure(text=str(new_max))
+                            else:
+                                # Force visual update of handle position
+                                batch_slider.set(batch_slider.get())
+                            
+                            self.update_idletasks()
+
                 widget = ctk.CTkSlider(param_frame,
                                        from_=param_config.get("min", 0),
                                        to=param_config.get("max", 100),
-                                       command=lambda val, lbl=value_label: lbl.configure(text=str(int(val))))
+                                       command=slider_callback)
                 widget.set(param_config.get("default", 0))
                 widget.grid(row=1, column=0, padx=5, pady=(0, 5), sticky="ew")
                 value_label.grid(row=1, column=1, padx=5, pady=(0, 5))
@@ -122,6 +148,27 @@ class CommandFrame(ctk.CTkFrame):
                 widget = checkbox_vars
 
             self.param_widgets[param_name] = widget
+
+        # Initial synchronization between dependent parameters
+        if "num_breeds" in self.param_widgets and "batch_size" in self.param_widgets:
+            num_breeds_val = int(self.param_widgets["num_breeds"].get())
+            batch_slider = self.param_widgets["batch_size"]
+            batch_label = self.param_labels.get("batch_size")
+            
+            # If default batch_size is same as default num_breeds, it should stay at max
+            # Otherwise just set the range
+            old_max = batch_slider.cget("to")
+            was_at_max = batch_slider.get() >= old_max
+            
+            batch_slider.configure(to=num_breeds_val)
+            if was_at_max or batch_slider.get() > num_breeds_val:
+                batch_slider.set(num_breeds_val)
+                if batch_label:
+                    batch_label.configure(text=str(num_breeds_val))
+            else:
+                batch_slider.set(batch_slider.get())
+            
+            self.update_idletasks()
 
         # If there are parameters and we're in normal mode, add the save defaults button inside scroll area
         if params and mode == "normal":
