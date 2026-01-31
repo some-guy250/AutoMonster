@@ -35,15 +35,12 @@ class MonsterManager:
         while not self.controller.in_screen(monster_asset, ASSETS.MonsterEmpty, ASSETS.Unlock):
             self._scroll_monsters()
 
-    def feed_and_sell_monsters(self, num_monsters: int, progress_callback=None):
+    def feed_and_sell_monsters(self):
         self.filter_to_uncommon_monsters()
         num_fed = 0
         monster_asset = ASSETS.MonsterUC
         feeding_list = [(4.5, 3), (3.5, 3), (12, 0)]
-        while num_fed < num_monsters:
-            if progress_callback:
-                progress_callback(num_fed / num_monsters)
-
+        while True:
             if not self.controller.in_screen(monster_asset):
                 self.scroll_until_monster_found(monster_asset)
                 
@@ -77,9 +74,6 @@ class MonsterManager:
             num_fed += 1
             logger.info(f"Fed and Sold {num_fed} monsters")
 
-        if progress_callback:
-            progress_callback(1.0)
-
     def click_left_moster(self):
         screenshot = self.controller.take_screenshot()
         dino = self.controller._get_cords(ASSETS.HatchDino, screenshot=screenshot) 
@@ -97,7 +91,7 @@ class MonsterManager:
 
         self.controller.click(ASSETS.Place, pause=1.5)
 
-    def breed_monsters(self, num_breeds: int, use_tree: bool = False, progress_callback=None):
+    def breed_monsters(self, num_breeds: int, use_tree: bool = False, feed_and_sell_monsters: bool = False, batch_size: int = 15, progress_callback=None):
         self.controller.zoom_in()
 
         num_breeds_done = 0
@@ -123,11 +117,11 @@ class MonsterManager:
                 if self.controller.in_screen(ASSETS.FullHatchery, pause_for=0):
                     self.controller.click_back()
                     break
-                num_breeds_done += 1
                 count += 1
 
             self.controller.click(ASSETS.Hatchery, pause=1.5)
             max_count = -1
+            number_of_monsters = self.controller.count(ASSETS.HatchDino, ASSETS.HatchPanda)
             while self.controller.in_screen(ASSETS.HatchDino, ASSETS.HatchPanda, pause_for=0):
                 self.click_left_moster()
                 timeout = 0
@@ -140,12 +134,14 @@ class MonsterManager:
                     self.click_left_moster()
                 
                 self.controller.follow_sequence(ASSETS.PlaceVault, ASSETS.Cancel, timeout=15, raise_error=True)
-                self.controller.click_back()
+                num_breeds_done += 1
                 max_count += 1
+                if progress_callback:
+                    progress_callback(num_breeds_done / num_breeds)
+                if feed_and_sell_monsters and (num_breeds_done % batch_size == 0 or (max_count + 1 == number_of_monsters and num_breeds_done >= num_breeds)):
+                    self.feed_and_sell_monsters()
+                self.controller.click_back()
             max_count = 2 if max_count > 2 else max_count
-
-            if progress_callback:
-                progress_callback(num_breeds_done / num_breeds)
 
         if progress_callback:
             progress_callback(1.0)

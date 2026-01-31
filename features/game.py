@@ -15,12 +15,7 @@ class GameManager:
 
     def close_game(self):
         if self.controller.in_game():
-            # _goto_islands is likely a method in Controller or another feature. 
-            # If it's in Controller, we can call it. If it's in another feature, we might need to rethink.
-            # Let's assume it's in Controller for now or we will move it here if it's simple.
-            # Checking AutoMonster.py for _goto_islands...
-            if hasattr(self.controller, '_goto_islands'):
-                self.controller._goto_islands()
+            self.controller._goto_islands()
             
             self.controller.click_back()
             self.controller.click(ASSETS.Yes)

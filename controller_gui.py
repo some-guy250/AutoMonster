@@ -547,8 +547,8 @@ class ControllerGUI(ctk.CTk):
 
         command_name = self.command_var.get()
         try:
-            # Reset progress bar only for PVP, Cavern, Breed Monsters, and Feed and Sell Monsters
-            if command_name in ["PVP", "Cavern", "Breed Monsters", "Feed and Sell Monsters"]:
+            # Reset progress bar only for PVP, Cavern, and Breed Monsters
+            if command_name in ["PVP", "Cavern", "Breed Monsters"]:
                 self.update_command_progress(0)
             if self.param_frame and hasattr(self.param_frame, 'progress'):
                 self.param_frame.progress.set(0)
@@ -584,7 +584,7 @@ class ControllerGUI(ctk.CTk):
                 self.macro_dropdown.configure(state="normal")
                 self.edit_macro_btn.configure(state="normal")
             # Hide progress bar if visible
-            if command_name in ["PVP", "Cavern", "Breed Monsters", "Feed and Sell Monsters"]:
+            if command_name in ["PVP", "Cavern", "Breed Monsters"]:
                 self.progress_frame.pack_forget()
 
     def run_command(self):
@@ -691,13 +691,12 @@ class ControllerGUI(ctk.CTk):
             return lambda **kwargs: self.controller.breed_monsters(
                 kwargs.pop("num_breeds", 1),
                 kwargs.pop("use_tree", False),
+                kwargs.pop("feed_and_sell_monsters", False),
+                batch_size=kwargs.pop("batch_size", 15),
                 progress_callback=self.update_command_progress
             )
         elif command_name == "Feed and Sell Monsters":
-            return lambda **kwargs: self.controller.feed_and_sell_monsters(
-                kwargs.pop("num_monsters", 10),
-                progress_callback=self.update_command_progress
-            )
+            return lambda **kwargs: self.controller.feed_and_sell_monsters()
         elif command_name == "Close Game":
             return lambda **kwargs: self.controller.close_game(
                 action=kwargs.pop("action", "Close Game Only")
@@ -713,8 +712,8 @@ class ControllerGUI(ctk.CTk):
         if self.macro_running and hasattr(self, 'current_macro_command'):
             command = self.current_macro_command
 
-        # Only show progress for PVP, Cavern, Breed Monsters, and Feed and Sell Monsters commands
-        if command not in ["PVP", "Cavern", "Breed Monsters", "Feed and Sell Monsters"]:
+        # Only show progress for PVP, Cavern, and Breed Monsters commands
+        if command not in ["PVP", "Cavern", "Breed Monsters"]:
             return
 
         def show_progress():
@@ -959,8 +958,8 @@ class ControllerGUI(ctk.CTk):
                     try:
                         self.append_log(f"Running macro step: {command} ({i+1}/{total_steps})", "info")
 
-                        # Reset command progress bar for PVP, Cavern, Breed Monsters, and Feed and Sell Monsters commands
-                        if command in ["PVP", "Cavern", "Breed Monsters", "Feed and Sell Monsters"]:
+                        # Reset command progress bar for PVP, Cavern, and Breed Monsters commands
+                        if command in ["PVP", "Cavern", "Breed Monsters"]:
                             self.update_command_progress(0)
 
                         result = callback(**params)
@@ -972,7 +971,7 @@ class ControllerGUI(ctk.CTk):
                             return
 
                         # Hide command progress after completion
-                        if command in ["PVP", "Cavern", "Breed Monsters", "Feed and Sell Monsters"]:
+                        if command in ["PVP", "Cavern", "Breed Monsters"]:
                             self.after(0, self.progress_frame.pack_forget)
                             
                         # Update macro progress bar

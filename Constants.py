@@ -395,12 +395,12 @@ GUI_COMMANDS = {
     },
     "Era Saga": {},
     "Breed Monsters": {
-        "num_breeds": {"type": "int", "min": 1, "max": 100, "default": 10},
-        "use_tree": {"type": "bool", "default": False}
+        "num_breeds": {"type": "int", "min": 1, "max": 100, "default": 20},
+        "use_tree": {"type": "bool", "default": False},
+        "feed_and_sell_monsters": {"type": "bool", "default": False},
+        "batch_size": {"type": "int", "min": 1, "max": 200, "default": 15, "hidden": True}
     },
-    "Feed and Sell Monsters": {
-        "num_monsters": {"type": "int", "min": 1, "max": 100, "default": 10}
-    },
+    "Feed and Sell Monsters": {},
     "Close Game": {
         "action": {
             "type": "choice",
@@ -498,22 +498,22 @@ GUI_COMMAND_DESCRIPTIONS = {
                        "Features:\n"
                        "• Breed multiple times using the repeat button\n"
                        "• Choose between Mountain or Tree breeding locations\n"
-                       "• Automatically handles the breeding sequence",
+                       "• Automatically handles the breeding sequence\n"
+                       "• Optional automatic feeding and selling of monsters",
         "parameters": {
             "num_breeds": "Number of times to breed monsters",
-            "use_tree": "Use Tree instead of Mountain for breeding"
+            "use_tree": "Use Tree instead of Mountain for breeding",
+            "feed_and_sell_monsters": "Automatically feed and sell monsters every 20 breeds"
         }
     },
     "Feed and Sell Monsters": {
         "title": "Feed and Sell Monsters",
         "description": "Automatically feed and sell monsters.\n\n"
                        "Features:\n"
-                       "• Process multiple monsters in sequence\n"
+                       "• Process all monsters in sequence\n"
                        "• Feed monsters to level them up\n"
                        "• Sell unwanted monsters for resources",
-        "parameters": {
-            "num_monsters": "Number of monsters to feed and sell"
-        }
+        "parameters": {}
     },
     "Close Game": {
         "title": "Close Game",

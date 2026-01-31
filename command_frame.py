@@ -29,11 +29,20 @@ class CommandFrame(ctk.CTkFrame):
         header = ctk.CTkLabel(self.scroll_frame, text="Parameters", font=("Arial", 14, "bold"))
         header.pack(pady=(5, 10), anchor="w")
 
+        self.param_frames = {}
+
         # Create parameter inputs
         for param_name, param_config in params.items():
             # Create parameter container frame
             param_frame = ctk.CTkFrame(self.scroll_frame)
-            param_frame.pack(fill="x", padx=5, pady=2)
+            self.param_frames[param_name] = param_frame
+
+            if not param_config.get("hidden", False):
+                param_frame.pack(fill="x", padx=5, pady=2)
+            elif param_name == "batch_size" and "feed_and_sell_monsters" in self.param_widgets:
+                if self.param_widgets["feed_and_sell_monsters"].get():
+                    param_frame.pack(fill="x", padx=5, pady=2)
+
             param_frame.grid_columnconfigure(0, weight=1)
 
             label = ctk.CTkLabel(param_frame, text=param_name)
@@ -52,6 +61,17 @@ class CommandFrame(ctk.CTkFrame):
                 widget = ctk.CTkCheckBox(param_frame, text="")
                 if param_config.get("default"):
                     widget.select()
+
+                if param_name == "feed_and_sell_monsters":
+                    def toggle_batch_size(w=widget):
+                        batch_frame = self.param_frames.get("batch_size")
+                        if batch_frame:
+                            if w.get():
+                                batch_frame.pack(fill="x", padx=5, pady=2, after=self.param_frames["feed_and_sell_monsters"])
+                            else:
+                                batch_frame.pack_forget()
+                    widget.configure(command=toggle_batch_size)
+
                 widget.grid(row=1, column=0, padx=5, pady=(0, 5), sticky="w")
             elif param_config["type"] == "choice":
                 widget = ctk.CTkOptionMenu(param_frame, values=param_config["choices"], width=150)

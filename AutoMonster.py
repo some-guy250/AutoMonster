@@ -835,11 +835,11 @@ class Controller:
         if progress_callback:
             progress_callback(1.0)
 
-    def feed_and_sell_monsters(self, num_monsters: int, progress_callback=None):
-        return self.monster_manager.feed_and_sell_monsters(num_monsters, progress_callback)
+    def feed_and_sell_monsters(self):
+        return self.monster_manager.feed_and_sell_monsters()
 
-    def breed_monsters(self, num_breeds: int, use_tree: bool = False, progress_callback=None):
-        return self.monster_manager.breed_monsters(num_breeds, use_tree, progress_callback)
+    def breed_monsters(self, num_breeds: int, use_tree: bool = False, feed_and_sell_monsters: bool = False, batch_size: int = 15, progress_callback=None):
+        return self.monster_manager.breed_monsters(num_breeds, use_tree, feed_and_sell_monsters, batch_size, progress_callback)
 
     def play_ads(self):
         played_ads = 0
