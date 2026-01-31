@@ -64,7 +64,11 @@ class CommandFrame(ctk.CTkFrame):
                             was_at_max = batch_slider.get() >= old_max
                             
                             new_max = int(val)
-                            batch_slider.configure(to=new_max)
+                            from_val = batch_slider.cget("from_")
+                            
+                            # Ensure to > from_ to avoid ZeroDivisionError
+                            safe_max = max(new_max, from_val + 1)
+                            batch_slider.configure(to=safe_max)
                             
                             if was_at_max or batch_slider.get() > new_max:
                                 batch_slider.set(new_max)
@@ -159,8 +163,12 @@ class CommandFrame(ctk.CTkFrame):
             # Otherwise just set the range
             old_max = batch_slider.cget("to")
             was_at_max = batch_slider.get() >= old_max
+            from_val = batch_slider.cget("from_")
             
-            batch_slider.configure(to=num_breeds_val)
+            # Ensure to > from_ to avoid ZeroDivisionError
+            safe_max = max(num_breeds_val, from_val + 1)
+            batch_slider.configure(to=safe_max)
+            
             if was_at_max or batch_slider.get() > num_breeds_val:
                 batch_slider.set(num_breeds_val)
                 if batch_label:
