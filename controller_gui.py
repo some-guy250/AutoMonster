@@ -727,6 +727,7 @@ class ControllerGUI(ctk.CTk):
                 self.command_progress.update()
             
             self.command_progress.set(progress)
+            self.command_progress.update()  # Force update to ensure UI refresh
             
             if progress >= 1:
                 # Hide progress when complete
@@ -935,8 +936,7 @@ class ControllerGUI(ctk.CTk):
             current_options = options if options is not None else self.macro_options
 
             # Show and reset progress bar
-            self.macro_progress.pack(fill="x", padx=5, pady=(5, 0))
-            self.macro_progress.set(0)
+            self.after(0, lambda: [self.macro_progress.pack(fill="x", padx=5, pady=(5, 0)), self.macro_progress.set(0)])
             total_steps = len(macro_steps)
             
             # Handle pre-macro options
@@ -977,7 +977,7 @@ class ControllerGUI(ctk.CTk):
                             
                         # Update macro progress bar
                         progress = (i + 1) / total_steps
-                        self.macro_progress.set(progress)
+                        self.after(0, lambda p=progress: [self.macro_progress.set(p), self.macro_progress.update()])
                         
                     except AutoMonsterErrors.ExecutionFlag:
                         self.append_log(f"Macro step {command} stopped", "warning")
