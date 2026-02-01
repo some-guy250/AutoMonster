@@ -127,6 +127,7 @@ class ASSETS:
     RarityUCSelected = "rarityucs.png"
     RarityRSelected = "rarityrs.png"
     Sell = "sell.png"
+    SellOwned = "sellowned.png"
     Feed = "feed.png"
     MonsterUC = "monsteruc.png"
     MonsterR = "monsterr.png"
@@ -259,6 +260,7 @@ ASSET_REGIONS = {
     ASSETS.Feed: Region.BOTTOM_LEFT,
     ASSETS.MonsterInfo: Region.TOP,
     ASSETS.Sell: Region.BOTTOM_RIGHT,
+    ASSETS.SellOwned: Region.BOTTOM_RIGHT,
     ASSETS.Yes: Region.BOTTOM_RIGHT,
     ASSETS.MonsterEmpty: Region.ALL,
     ASSETS.Unlock: Region.ALL,

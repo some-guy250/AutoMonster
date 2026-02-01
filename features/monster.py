@@ -70,7 +70,7 @@ class MonsterManager:
                 self.controller.client.control.touch(x, y, scrcpy.ACTION_UP)
                 self.controller.pause(pause_time)
 
-            self.controller.follow_sequence(ASSETS.MonsterInfo, ASSETS.Sell, ASSETS.Yes, ASSETS.Cancel)
+            self.controller.follow_sequence(ASSETS.MonsterInfo, ASSETS.SellOwned, ASSETS.Yes, ASSETS.Cancel)
             num_fed += 1
             logger.info(f"Fed and Sold {num_fed} monsters")
 
