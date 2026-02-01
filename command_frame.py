@@ -40,8 +40,9 @@ class CommandFrame(ctk.CTkFrame):
 
             if not param_config.get("hidden", False):
                 param_frame.pack(fill="x", padx=5, pady=2)
-            elif param_name == "batch_size" and "feed_and_sell_monsters" in self.param_widgets:
-                if self.param_widgets["feed_and_sell_monsters"].get():
+            elif param_name == "batch_size":
+                is_feed_checked = self.param_widgets.get("feed_and_sell_monsters").get() if "feed_and_sell_monsters" in self.param_widgets else False
+                if is_feed_checked:
                     param_frame.pack(fill="x", padx=5, pady=2)
 
             param_frame.grid_columnconfigure(0, weight=1)
@@ -92,15 +93,27 @@ class CommandFrame(ctk.CTkFrame):
                 if param_config.get("default"):
                     widget.select()
 
-                if param_name == "feed_and_sell_monsters":
-                    def toggle_batch_size(w=widget):
-                        batch_frame = self.param_frames.get("batch_size")
-                        if batch_frame:
-                            if w.get():
-                                batch_frame.pack(fill="x", padx=5, pady=2, after=self.param_frames["feed_and_sell_monsters"])
-                            else:
-                                batch_frame.pack_forget()
-                    widget.configure(command=toggle_batch_size)
+                def toggle_monster_logic(w=widget, p_name=param_name):
+                    feed_widget = self.param_widgets.get("feed_and_sell_monsters")
+                    sell_widget = self.param_widgets.get("sell")
+                    batch_frame = self.param_frames.get("batch_size")
+                    
+                    if p_name == "feed_and_sell_monsters" and w.get():
+                        if sell_widget:
+                            sell_widget.deselect()
+                    elif p_name == "sell" and w.get():
+                        if feed_widget:
+                            feed_widget.deselect()
+                    
+                    if batch_frame:
+                        is_feed_checked = feed_widget.get() if feed_widget else False
+                        if is_feed_checked:
+                            batch_frame.pack(fill="x", padx=5, pady=2, after=self.param_frames["feed_and_sell_monsters"])
+                        else:
+                            batch_frame.pack_forget()
+
+                if param_name in ["feed_and_sell_monsters", "sell"]:
+                    widget.configure(command=toggle_monster_logic)
 
                 widget.grid(row=1, column=0, padx=5, pady=(0, 5), sticky="w")
             elif param_config["type"] == "choice":

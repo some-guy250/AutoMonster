@@ -838,8 +838,8 @@ class Controller:
     def feed_and_sell_monsters(self):
         return self.monster_manager.feed_and_sell_monsters()
 
-    def breed_monsters(self, num_breeds: int, use_tree: bool = False, feed_and_sell_monsters: bool = False, batch_size: int = 15, progress_callback=None):
-        return self.monster_manager.breed_monsters(num_breeds, use_tree, feed_and_sell_monsters, batch_size, progress_callback)
+    def breed_monsters(self, num_breeds: int, use_tree: bool = False, feed_and_sell_monsters: bool = False, sell: bool = False, batch_size: int = 15, progress_callback=None):
+        return self.monster_manager.breed_monsters(num_breeds, use_tree, feed_and_sell_monsters, sell, batch_size, progress_callback)
 
     def play_ads(self):
         played_ads = 0

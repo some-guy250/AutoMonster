@@ -407,6 +407,7 @@ GUI_COMMANDS = {
         "num_breeds": {"type": "int", "min": 1, "max": 100, "default": 20},
         "use_tree": {"type": "bool", "default": False},
         "feed_and_sell_monsters": {"type": "bool", "default": False},
+        "sell": {"type": "bool", "default": False},
         "batch_size": {"type": "int", "min": 1, "max": 200, "default": 15, "hidden": True}
     },
     "Feed and Sell Monsters": {},
@@ -512,7 +513,8 @@ GUI_COMMAND_DESCRIPTIONS = {
         "parameters": {
             "num_breeds": "Number of times to breed monsters",
             "use_tree": "Use Tree instead of Mountain for breeding",
-            "feed_and_sell_monsters": "Automatically feed and sell monsters every 20 breeds"
+            "feed_and_sell_monsters": "Automatically feed and sell monsters every 20 breeds",
+            "sell": "Automatically sell monsters after hatching"
         }
     },
     "Feed and Sell Monsters": {

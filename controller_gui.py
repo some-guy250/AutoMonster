@@ -692,6 +692,7 @@ class ControllerGUI(ctk.CTk):
                 kwargs.pop("num_breeds", 1),
                 kwargs.pop("use_tree", False),
                 kwargs.pop("feed_and_sell_monsters", False),
+                kwargs.pop("sell", False),
                 batch_size=kwargs.pop("batch_size", 15),
                 progress_callback=self.update_command_progress
             )

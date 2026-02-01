@@ -74,24 +74,27 @@ class MonsterManager:
             num_fed += 1
             logger.info(f"Fed and Sold {num_fed} monsters")
 
-    def click_left_moster(self):
+    def click_left_moster(self, sell: bool = False):
         screenshot = self.controller.take_screenshot()
         dino = self.controller._get_cords(ASSETS.HatchDino, screenshot=screenshot) 
         panda = self.controller._get_cords(ASSETS.HatchPanda, screenshot=screenshot)
 
         if not dino:
-            self.controller.click(ASSETS.HatchPanda, pause=1.5, screenshot=screenshot)
+            self.controller.click(ASSETS.HatchPanda, screenshot=screenshot)
         elif not panda:
-            self.controller.click(ASSETS.HatchDino, pause=1.5, screenshot=screenshot)
+            self.controller.click(ASSETS.HatchDino, screenshot=screenshot)
         else:
             if dino[0][0] < panda[0][0]:
-                self.controller.click(ASSETS.HatchDino, pause=1.5, screenshot=screenshot)
+                self.controller.click(ASSETS.HatchDino, screenshot=screenshot)
             else:
-                self.controller.click(ASSETS.HatchPanda, pause=1.5, screenshot=screenshot)
+                self.controller.click(ASSETS.HatchPanda, screenshot=screenshot)
 
-        self.controller.click(ASSETS.Place, pause=1.5)
+        self.controller.pause(1.5)
 
-    def breed_monsters(self, num_breeds: int, use_tree: bool = False, feed_and_sell_monsters: bool = False, batch_size: int = 15, progress_callback=None):
+        if not sell:
+            self.controller.click(ASSETS.Place, pause=1.5)
+
+    def breed_monsters(self, num_breeds: int, use_tree: bool = False, feed_and_sell_monsters: bool = False, sell: bool = False, batch_size: int = 15, progress_callback=None):
         self.controller.zoom_in()
 
         num_breeds_done = 0
@@ -123,7 +126,7 @@ class MonsterManager:
             max_count = -1
             number_of_monsters = self.controller.count(ASSETS.HatchDino, ASSETS.HatchPanda)
             while self.controller.in_screen(ASSETS.HatchDino, ASSETS.HatchPanda, pause_for=0):
-                self.click_left_moster()
+                self.click_left_moster(sell=sell)
                 timeout = 0
                 if not self.controller.in_screen(ASSETS.Place, pause_for=0):
                     while self.controller.in_screen(ASSETS.HatchNotYet, pause_for=0):
@@ -131,16 +134,19 @@ class MonsterManager:
                         timeout += 2
                         if timeout >= 30:
                             raise Exception("Hatching timed out")
-                    self.click_left_moster()
+                    self.click_left_moster(sell=sell)
                 
-                self.controller.follow_sequence(ASSETS.PlaceVault, ASSETS.Cancel, timeout=15, raise_error=True)
                 num_breeds_done += 1
                 max_count += 1
                 if progress_callback:
                     progress_callback(num_breeds_done / num_breeds)
-                if feed_and_sell_monsters and (num_breeds_done % batch_size == 0 or (max_count + 1 == number_of_monsters and num_breeds_done >= num_breeds)):
-                    self.feed_and_sell_monsters()
-                self.controller.click_back()
+                if sell:
+                    self.controller.follow_sequence(ASSETS.Sell, ASSETS.Yes, ASSETS.Hatchery)
+                else:
+                    self.controller.follow_sequence(ASSETS.PlaceVault, ASSETS.Cancel, timeout=15, raise_error=True)
+                    if feed_and_sell_monsters and (num_breeds_done % batch_size == 0 or (max_count + 1 == number_of_monsters and num_breeds_done >= num_breeds)):
+                        self.feed_and_sell_monsters()
+                    self.controller.click_back()
             max_count = 2 if max_count > 2 else max_count
 
         if progress_callback:
