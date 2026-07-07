@@ -1,6 +1,6 @@
 #define MyAppName "AutoMonster"
 #define MyAppPublisher "some-guy250"
-#define MyAppURL "https://github.com/some-guy250/AutoMonster"
+#define MyAppURL "https://github.com/MinsUR4/AutoMonster"
 #define MyAppExeName "LauncherAutoMonster.exe"
 
 ; Static version for the bootstrap installer

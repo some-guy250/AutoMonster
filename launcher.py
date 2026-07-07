@@ -12,8 +12,8 @@ import unicodedata
 
 import requests
 
-repo_url_api = "https://api.github.com/repos/some-guy250/AutoMonster"
-repo_url = "https://github.com/some-guy250/AutoMonster"
+repo_url_api = "https://api.github.com/repos/MinsUR4/AutoMonster"
+repo_url = "https://github.com/MinsUR4/AutoMonster"
 
 
 class ModernProgressWindow:
