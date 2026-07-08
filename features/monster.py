@@ -2,6 +2,7 @@ import logging
 import scrcpy
 from utils.assets import ASSETS, RUNE_LEVEL_TO_ASSET, RUNE_TYPE_TO_ASSET, get_rune_asset
 from config.config import SCROLL_START_Y_FRACTION
+from utils.AutoMonsterErrors import *
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +135,7 @@ class MonsterManager:
                         self.controller.pause(2)
                         timeout += 2
                         if timeout >= 30:
-                            raise Exception("Hatching timed out")
+                            raise AutoMonsterError("Hatching timed out")
                     self.click_left_moster(sell=sell)
                 
                 num_breeds_done += 1
@@ -198,7 +199,7 @@ class MonsterManager:
                     
                     if not self.controller.in_screen(rune_asset, screenshot=sc):
                         logger.debug(f"    Drag {drag_num+1}: Rune not found, stopping")
-                        raise Exception(f"Rune {rune_asset} not found on screen, cannot craft rune.")
+                        raise AutoMonsterError(f"Rune {rune_asset} not found on screen, cannot craft rune.")
                     
                     self.controller.drag(rune_asset, ASSETS.RuneDrop, screenshot=sc)
                     self.controller.pause(0.25)
@@ -214,6 +215,11 @@ class MonsterManager:
             if progress_callback:
                 progress_callback(1.0)
             
+        except ExecutionFlag:
+            logger.debug("Rune crafting cancelled")
+            raise
+        except AutoMonsterError:
+            raise
         except Exception as e:
             logger.error(f"Error crafting runes: {e}")
             raise

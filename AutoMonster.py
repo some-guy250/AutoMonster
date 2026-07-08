@@ -1,3 +1,4 @@
+import os
 import pathlib
 import sys
 import time
@@ -100,6 +101,13 @@ class Controller:
         self.device_manager.set_auto_brightness()
         self._brightness_was_lowered = False
 
+    def _reset_brightness_if_lowered(self) -> None:
+        """Reset brightness to auto if it was previously lowered."""
+        if getattr(self, '_brightness_was_lowered', False):
+            self.set_auto_brightness()
+            self.log_gui("Reset device brightness to auto mode", "info")
+            self._brightness_was_lowered = False
+
     def get_brightness_info(self) -> Tuple[str, str]:
         return self.device_manager.get_brightness_info()
 
@@ -119,17 +127,17 @@ class Controller:
     def get_last_screenshot(self) -> Optional[np.ndarray]:
         return self.device_manager.get_last_screenshot()
 
+    def _sc_dir(self) -> pathlib.Path:
+        """Get the path to the screenshots directory (next to exe or script)."""
+        if getattr(sys, 'frozen', False):
+            return pathlib.Path(sys.executable).parent / "sc"
+        return pathlib.Path(__file__).parent / "sc"
+
     def save_screen(self, name: str = "sc", take_new: bool = False) -> None:
         if take_new:
             self.take_screenshot()
-            
-        # Determine base path to ensure we save next to the executable/script
-        if getattr(sys, 'frozen', False):
-            base_path = pathlib.Path(sys.executable).parent
-        else:
-            base_path = pathlib.Path(__file__).parent
-            
-        sc_dir = base_path / "sc"
+
+        sc_dir = self._sc_dir()
         sc_dir.mkdir(exist_ok=True)
         
         i = 0
@@ -178,8 +186,8 @@ class Controller:
         Zoom in at screen center using pinch-out gesture.
         Performs 1.5x pinch gestures (1 full + 1 half) for optimal zoom.
         """
-        center_x = self.scale_x(640)
-        center_y = self.scale_y(360)
+        center_x = self.scale_x(GAME_WIDTH // 2)
+        center_y = self.scale_y(GAME_HEIGHT // 2)
 
         logger.debug(f"Zoom IN - Center: ({center_x}, {center_y})")
         self.log_gui(f"Zooming in...", "debug")
@@ -230,8 +238,8 @@ class Controller:
         Zoom out at screen center using pinch-in gesture.
         Performs 1.5x pinch gestures (1 full + 1 half) for optimal zoom.
         """
-        center_x = self.scale_x(640)
-        center_y = self.scale_y(360)
+        center_x = self.scale_x(GAME_WIDTH // 2)
+        center_y = self.scale_y(GAME_HEIGHT // 2)
 
         logger.debug(f"Zoom OUT - Center: ({center_x}, {center_y})")
         self.log_gui(f"Zooming out...", "debug")
@@ -289,19 +297,12 @@ class Controller:
         # Dynamic rune variants (rune{level}{type}{s/t}.png) need higher threshold
         if threshold == DEFAULT_TEMPLATE_THRESHOLD and asset_code.startswith(('rune1', 'rune2', 'rune3', 'rune4', 'rune5')):
             threshold = RUNE_THRESHOLD
-        # Check for per-asset gray image override (ASSETS enum or string key)
-        if isinstance(ASSET_GRAY_IMG, set):
-            for key in ASSET_GRAY_IMG:
-                key_str = key.value if hasattr(key, 'value') else key
-                if asset_code == key_str:
-                    gray_img = True
-                    break
-        else:
-            for key, value in ASSET_GRAY_IMG.items():
-                key_str = key.value if hasattr(key, 'value') else key
-                if asset_code == key_str:
-                    gray_img = value
-                    break
+        # Check for per-asset gray image override
+        for key in ASSET_GRAY_IMG:
+            key_str = key.value if hasattr(key, 'value') else key
+            if asset_code == key_str:
+                gray_img = True
+                break
         return self.vision_manager.get_cords(asset_code, screenshot, threshold, gray_img)
 
     def count(self, *assets: Optional[str | tuple[str, ...]], gray_img: bool = False, threshold: float = DEFAULT_TEMPLATE_THRESHOLD, screenshot: Optional[np.ndarray] = None) -> int:
@@ -570,10 +571,7 @@ class Controller:
         time.sleep(2)  # Give time for the game to close
         
         # Reset brightness before locking device (if it was lowered)
-        if hasattr(self, '_brightness_was_lowered') and self._brightness_was_lowered:
-            self.set_auto_brightness()
-            self.log_gui("Reset device brightness to auto mode", "info")
-            self._brightness_was_lowered = False
+        self._reset_brightness_if_lowered()
         
         # Lock device after closing game
         self.log_gui("Locking device...", "info")
@@ -746,8 +744,9 @@ class Controller:
                 counter = 0
                 while self.in_screen(ASSETS.SeePVP):
                     if counter > 5:
-                        raise Exception('PVP is not working')
+                        raise PVPError('PVP is not working')
                     self.click_back()
+                    counter += 1
             else:
                 losses += 1
             self.log_gui(f'Wins: {wins}, Losses: {losses}')

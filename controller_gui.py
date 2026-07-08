@@ -556,8 +556,7 @@ class ControllerGUI(ctk.CTk):
                 self.controller.lock_device()
 
             if lowered_brightness:
-                self.controller.set_auto_brightness()
-                self.append_log("Reset device brightness to auto mode", "info")
+                self.controller._reset_brightness_if_lowered()
 
         finally:
             if hasattr(self, 'current_macro_command'):
@@ -595,12 +594,7 @@ class ControllerGUI(ctk.CTk):
 
     def open_screenshots_folder(self) -> None:
         try:
-            if getattr(sys, 'frozen', False):
-                base_path = pathlib.Path(sys.executable).parent
-            else:
-                base_path = pathlib.Path(__file__).parent
-
-            sc_dir = base_path / "sc"
+            sc_dir = self.controller._sc_dir()
             if not sc_dir.exists():
                 sc_dir.mkdir(exist_ok=True)
 
