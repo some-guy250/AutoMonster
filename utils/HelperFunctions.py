@@ -1,4 +1,5 @@
 import os
+import pathlib
 import cv2
 import logging
 from PIL import Image
@@ -34,8 +35,6 @@ def crush_png(image_path):
 
 def crush_assets():
     """Crush all PNG assets in asset_images/ and asset_images/ads/."""
-    import pathlib
-
     for file in os.listdir("assets"):
         if file.endswith(".png"):
             crush_png(f"asset_images/{file}")

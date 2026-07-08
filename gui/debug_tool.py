@@ -9,12 +9,14 @@ import subprocess
 import logging
 from pathlib import Path
 
-from config.regions import ASSET_REGIONS, Region
+
 from utils.region_utils import recommend_region, format_region_display
 
 logger = logging.getLogger(__name__)
-from utils.assets import ASSETS
+from utils.assets import ASSETS, ADS_DIR
 from .debug_widgets import SimpleMultiSelectListbox
+from gui.asset_capture_tool import AssetCaptureTool
+from utils.HelperFunctions import crush_assets
 
 
 class DebugTool(ctk.CTkFrame):
@@ -283,7 +285,6 @@ class DebugTool(ctk.CTkFrame):
                         self.all_assets[attr] = value
             
             # Load ads
-            from utils.assets import ADS_DIR
             ads_dir = ADS_DIR
             ads_path = Path('asset_images') / ads_dir
             if ads_path.exists():
@@ -350,7 +351,6 @@ class DebugTool(ctk.CTkFrame):
     def open_capture_tool(self):
         """Open the asset capture tool."""
         try:
-            from gui.asset_capture_tool import AssetCaptureTool
             AssetCaptureTool(self, self.controller)
         except Exception as e:
             self.status_label.configure(text=f"Error opening capture tool: {e}", text_color="red")
@@ -362,9 +362,6 @@ class DebugTool(ctk.CTkFrame):
 
         def do_refresh():
             try:
-                # Import crush_assets function
-                from utils.HelperFunctions import crush_assets
-
                 # Run crush_assets to optimize assets
                 crush_assets()
 
@@ -720,7 +717,7 @@ class DebugTool(ctk.CTkFrame):
 
                         for x, y in points:
                             # Use unified region utility (center-based on the scanned frame)
-                            region_str = recommend_region(x, y, w, h, frame_w, frame_h)
+                            region_str = recommend_region(x, y, w, h)
                             match_regions.append(format_region_display(region_str))
                             
                             # Scale points for drawing on the original frame

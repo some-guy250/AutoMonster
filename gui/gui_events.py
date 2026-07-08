@@ -8,6 +8,7 @@ from datetime import datetime
 
 import cv2
 import scrcpy
+import customtkinter as ctk
 from PIL import Image
 from config.config import GAME_HEIGHT
 
@@ -71,7 +72,6 @@ def update_image(gui, frame):
 
     image = Image.fromarray(cv2.cvtColor(resized_frame, cv2.COLOR_BGR2RGB))
 
-    import customtkinter as ctk
     ctk_image = ctk.CTkImage(light_image=image, dark_image=image, size=(display_width, display_height))
     gui.preview_label.configure(image=ctk_image)
     gui.preview_label.image = ctk_image

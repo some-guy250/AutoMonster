@@ -1,4 +1,3 @@
-import logging
 import pathlib
 import sys
 import time
@@ -7,14 +6,12 @@ from typing import List, Callable, Optional, Tuple
 import cv2
 import numpy as np
 import scrcpy
-from adbutils import adb
 
 from utils.AutoMonsterErrors import *
 from utils.assets import (
     ASSETS, IN_GAME_ASSETS, Ancestral_Cavers, AdLocationsHorizontal, AdLocationsVertical,
     CAVERN_TO_ASSETS
 )
-from config.regions import Region, AD_REGION, ASSET_REGIONS
 from config.config import (
     SLIDER_MAX_RETRIES,
     DEFAULT_TEMPLATE_THRESHOLD,
@@ -25,6 +22,7 @@ from config.config import (
 from utils.HelperFunctions import compare_imgs
 from config.config import GAME_WIDTH, GAME_HEIGHT
 from utils.logger import setup_logger
+from utils.region_utils import init as init_region_utils
 from utils.vision_manager import VisionManager
 from device_manager import DeviceManager
 from features.ads import AdManager
@@ -41,7 +39,11 @@ class Controller:
         self.gui_logger = None
         self.device_manager = DeviceManager(serial=serial)
         self.client = self.device_manager.client
-        
+
+        # Set screen dimensions for region recommendations
+        sw = self.device_manager.new_width if self.device_manager.new_width else GAME_WIDTH
+        init_region_utils(sw, GAME_HEIGHT)
+
         self.vision_manager = VisionManager(self.device_manager)
 
         self.ad_manager = AdManager(self)
@@ -73,6 +75,7 @@ class Controller:
 
     def refresh_resolution(self) -> None:
         self.device_manager.check_resolution()
+        init_region_utils(self.device_manager.new_width, GAME_HEIGHT)
 
     def get_battery_level(self) -> str:
         return self.device_manager.get_battery_level()
@@ -549,8 +552,6 @@ class Controller:
                 - "Close Game & Exit Program": Close game and exit AutoMonster
                 - "Close Game & Shutdown Computer": Close game, exit, and shutdown PC
         """
-        import os
-        
         self.log_gui("Closing game...", "info")
         self.game_manager.close_game()
         time.sleep(2)  # Give time for the game to close

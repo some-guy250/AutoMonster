@@ -1,8 +1,8 @@
-import logging
 from typing import Optional
 from utils.assets import ASSETS
 from config.config import BATTLE_TIMEOUT_SECONDS
 from utils.AutoMonsterErrors import *
+from utils.HelperFunctions import compare_imgs
 from utils.logger import setup_logger
 
 logger = setup_logger()
@@ -127,8 +127,6 @@ class BattleManager:
                     self.controller.client.control.swipe(self.controller.scale_x(300), self.controller.scale_y(550), self.controller.scale_x(300),
                                               self.controller.scale_y(300))
                     self.controller.pause(.5)
-                    # Assuming compare_imgs is available. It needs to be imported.
-                    from HelperFunctions import compare_imgs
                     if compare_imgs(crop_img(sc), crop_img(self.controller.take_screenshot()), True):
                         logger.warning("Could not find team")
                         self.controller.log_gui("Could not find team", "warning")

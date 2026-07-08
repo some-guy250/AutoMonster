@@ -3,12 +3,10 @@
 Delegates UI construction to gui_frames.py and event handling to gui_events.py.
 """
 
-import json
 import logging
 import os
 import sys
 import threading
-import time
 from datetime import datetime
 from typing import Callable, Optional
 import pathlib

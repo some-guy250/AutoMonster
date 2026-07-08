@@ -1,7 +1,7 @@
 """Tool for capturing and cropping new assets from screenshots."""
 
 import customtkinter as ctk
-from tkinter import messagebox
+from tkinter import messagebox, simpledialog
 from pathlib import Path
 from typing import Optional, List, Tuple
 import cv2
@@ -249,7 +249,6 @@ class AssetCaptureTool(ctk.CTkToplevel):
         cropped = self.screenshot[y1:y2, x1:x2]
         
         # Prompt for name
-        from tkinter import simpledialog
         crop_num = len(self.crops) + 1
         default_name = f"Asset{crop_num}"
         name = simpledialog.askstring("Asset Name", "Enter name for this asset:", parent=self, initialvalue=default_name)

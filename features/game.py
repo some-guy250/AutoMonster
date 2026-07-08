@@ -1,5 +1,4 @@
 import time
-import logging
 from utils.assets import ASSETS
 from utils.AutoMonsterErrors import *
 from utils.logger import setup_logger

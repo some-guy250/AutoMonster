@@ -4,6 +4,7 @@ Extracted from controller_gui.py to keep the orchestrator thin.
 """
 
 import customtkinter as ctk
+import scrcpy
 from config.config import GAME_HEIGHT
 
 
@@ -252,7 +253,6 @@ def _build_preview_frame(gui):
     gui._size_recalc_needed = False
 
     # Bind events
-    import scrcpy
     gui.controller.client.add_listener(scrcpy.EVENT_FRAME, lambda frame: gui.update_image_safe(frame))
     gui.bind("<Configure>", gui.on_window_resize)
     gui.bind("<F3>", gui.toggle_debug_mode)

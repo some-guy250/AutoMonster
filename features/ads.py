@@ -1,10 +1,7 @@
-import logging
-import time
-import pathlib
 import scrcpy
-from utils.assets import ASSETS, AdLocationsHorizontal, AdLocationsVertical, ADS_DIR
-from config.config import TEAM_SELECTION_THRESHOLD
+from utils.assets import ASSETS, AdLocationsHorizontal, AdLocationsVertical
 from utils.AutoMonsterErrors import *
+from utils.HelperFunctions import compare_imgs
 from utils.logger import setup_logger
 
 logger = setup_logger()
@@ -99,9 +96,6 @@ class AdManager:
     def _check_for_change(self, t: float = 0):
         sc = self.controller.take_screenshot()
         self.controller.pause(t)
-        # Assuming compare_imgs is available or imported. 
-        # It was imported from HelperFunctions in AutoMonster.py
-        from HelperFunctions import compare_imgs
         return compare_imgs(sc, self.controller.take_screenshot(), transform_to_black=True)
 
     def _ad_wait_out(self, max_time=18):

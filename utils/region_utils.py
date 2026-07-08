@@ -1,16 +1,22 @@
 # =============================================================================
 # Unified region recommendation utility
 # =============================================================================
-# Single source of truth for determining which Region a coordinate falls into
-# on the 1280x720 landscape game screen.
+# Single source of truth for determining which Region a coordinate falls into.
+# Screen dimensions are set once at startup from the device manager.
 # =============================================================================
 
 from config.regions import Region
 
-SCREEN_WIDTH = 1280
-SCREEN_HEIGHT = 720
-MID_X = SCREEN_WIDTH // 2   # 640
-MID_Y = SCREEN_HEIGHT // 2  # 360
+# Screen dimensions — set at startup from device_manager
+SCREEN_W: int = 1280
+SCREEN_H: int = 720
+
+
+def init(screen_w: int, screen_h: int) -> None:
+    """Update screen dimensions at startup."""
+    global SCREEN_W, SCREEN_H
+    SCREEN_W = screen_w
+    SCREEN_H = screen_h
 
 # Map bitmask -> exact Region constant name (for composite regions)
 _BITMASK_TO_NAME = {
@@ -25,23 +31,11 @@ _BITMASK_TO_NAME = {
 }
 
 
-def recommend_region(
-    x: int, y: int, w: int = 0, h: int = 0,
-    screen_w: int = SCREEN_WIDTH, screen_h: int = SCREEN_HEIGHT,
-) -> str:
-    """Recommend a Region string for a match/crop based on its position.
+def recommend_region(x: int, y: int, w: int = 0, h: int = 0) -> str:
+    """Recommend a Region string based on asset position.
 
     Uses the **center** of the asset to determine the quadrant.
-
-    Parameters
-    ----------
-    x, y : int
-        Top-left coordinate of the match or crop.
-    w, h : int
-        Width and height of the asset (0 for crop-only calls where x1/y1/x2/y2
-        are already the full bounds).
-    screen_w, screen_h : int
-        Screen dimensions (defaults to 1280x720).
+    Screen dimensions are read from module-level SCREEN_W/SCREEN_H (set at startup via init()).
 
     Returns
     -------
@@ -52,11 +46,11 @@ def recommend_region(
     center_y = y + h / 2
 
     r = 0
-    if center_y < screen_h / 2:
+    if center_y < SCREEN_H / 2:
         r |= Region.TOP
     else:
         r |= Region.BOTTOM
-    if center_x < screen_w / 2:
+    if center_x < SCREEN_W / 2:
         r |= Region.LEFT
     else:
         r |= Region.RIGHT
@@ -64,18 +58,8 @@ def recommend_region(
     if r == 0:
         return "Region.ALL"
 
-    # Try exact composite name first
-    name = _BITMASK_TO_NAME.get(r)
-    if name:
-        return f"Region.{name}"
-
-    # Fallback: build composite string
-    parts = []
-    if r & Region.TOP: parts.append("TOP")
-    if r & Region.BOTTOM: parts.append("BOTTOM")
-    if r & Region.LEFT: parts.append("LEFT")
-    if r & Region.RIGHT: parts.append("RIGHT")
-    return " | ".join(f"Region.{p}" for p in parts)
+    name = _BITMASK_TO_NAME[r]
+    return f"Region.{name}"
 
 
 def format_region_display(region_str: str) -> str:

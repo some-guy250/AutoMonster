@@ -1,8 +1,7 @@
 import cv2
 import numpy as np
 import pathlib
-from typing import List, Optional, Tuple
-import logging
+from typing import List, Optional
 
 from utils.assets import ASSETS, ADS_DIR
 from config.regions import ASSET_REGIONS, AD_REGION, Region
@@ -189,7 +188,7 @@ class VisionManager:
 
             # Suggest region optimization only for assets not defined in ASSET_REGIONS
             if asset_code not in ASSET_REGIONS:
-                suggested_str = recommend_region(x, y, w, h, sw, sh)
+                suggested_str = recommend_region(x, y, w, h)
                 asset_name = self.asset_reverse_map.get(asset_code)
                 if asset_name:
                     logger.debug(f"Optimization Suggestion: ASSETS.{asset_name}: {suggested_str},")

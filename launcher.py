@@ -8,12 +8,10 @@ from tempfile import gettempdir
 from tkinter import ttk
 import concurrent.futures
 import shutil
-import unicodedata
-
 import requests
 import logging
 
-from update_utils import compare_versions, format_time, calculate_eta, format_size
+from utils.update_utils import compare_versions, calculate_eta, format_size
 
 logger = logging.getLogger(__name__)
 
