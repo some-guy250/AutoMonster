@@ -120,17 +120,21 @@ class BattleManager:
                     self.controller.pause(.1)
                 self.controller.pause(1)
 
-                for _ in range(50):
+                for _ in range(15):
                     sc = self.controller.take_screenshot()
                     if check_and_select_team():
                         break
                     self.controller.client.control.swipe(self.controller.scale_x(300), self.controller.scale_y(550), self.controller.scale_x(300),
                                               self.controller.scale_y(300))
-                    self.controller.pause(.5)
+                    self.controller.pause(0.5)
                     if compare_imgs(crop_img(sc), crop_img(self.controller.take_screenshot()), True):
                         logger.warning("Could not find team")
                         self.controller.log_gui("Could not find team", "warning")
                         return False
+                else:
+                    logger.warning("Could not find team")
+                    self.controller.log_gui("Could not find team", "warning")
+                    return False
             self.controller.click_back()
 
         self.controller.click_back()
@@ -175,13 +179,14 @@ class BattleManager:
             return None
         ct = True
         if change_team:
-            # We need to implement change_team in this class or call it from controller if it's still there.
-            # I'll assume for now we call the one in this class (which currently calls controller)
-            # But wait, if I move it here, I should implement it here.
-            # I'll leave it as self.controller.change_team for now to avoid breaking if I don't move it yet.
             ct = self.controller.change_team()
-        if not ct:
-            return None
+            if not ct:
+                # Team change failed (all monsters dead) — go back to dungeon select
+                logger.warning("Could not change team, returning to dungeon")
+                self.controller.log_gui("Could not change team, returning to dungeon", "warning")
+                for _ in range(3):
+                    self.controller.click_back()
+                return None  # Signals do_dungeon to try next dungeon, not count as loss
         if self.controller.in_screen(ASSETS.StartBattleGray):
             return None
         self.auto_battle()
@@ -203,9 +208,11 @@ class BattleManager:
                 break
             result = self.do_node(has_wheel=has_wheel, has_cutscene=has_cutscene, change_team=change_team)
             change_team = False
-            if not result:
-                waited_for_stamina = False
-                if has_stamina and result is None:
+            if result is None:
+                # None = either stamina empty or team change failed
+                # Team change failure: do_node already clicked back, just try next dungeon
+                # Stamina empty: handle below
+                if has_stamina:
                     if self.controller.in_screen(ASSETS.RefillStamina, screenshot=self.controller.get_last_screenshot()):
                         # wait for 10 minutes for stamina to refill
                         logger.warning("Stamina is empty")
@@ -215,14 +222,15 @@ class BattleManager:
                                 self.controller.pause(60)
                                 self.controller.take_screenshot()
                             self.controller.click_back()
-                            waited_for_stamina = True
+                            continue
                         else:
                             return False
-                if not waited_for_stamina:
-                    losses += 1
-                    if max_losses != -1 and losses >= max_losses:
-                        logger.debug("Reached max losses")
-                        return False
+            elif not result:
+                # False = actual battle loss
+                losses += 1
+                if max_losses != -1 and losses >= max_losses:
+                    logger.debug("Reached max losses")
+                    return False
             else:
                 nodes += 1
                 losses = 0
