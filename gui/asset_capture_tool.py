@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageTk
 from utils.logger import setup_logger
+from utils.region_utils import recommend_region
 
 logger = setup_logger()
 
@@ -356,7 +357,8 @@ class AssetCaptureTool(ctk.CTkToplevel):
             filename = crop['name'].lower() + ".png"
             x1, y1, x2, y2 = crop['x1'], crop['y1'], crop['x2'], crop['y2']
             w, h = x2 - x1, y2 - y1
-            msg = f"  - {name_upper} = \"{filename}\" (region: {x1},{y1},{w}x{h})"
+            region = recommend_region(x1, y1, w, h)
+            msg = f"  - {name_upper} = \"{filename}\" (region: {x1},{y1},{w}x{h}, recommended: {region})"
             logger.info(msg)
             self.controller.log_gui(msg, "info")
         logger.info("Add to: utils/assets.py + config/regions.py")

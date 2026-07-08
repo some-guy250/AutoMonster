@@ -8,6 +8,7 @@ from utils.assets import ASSETS, ADS_DIR
 from config.regions import ASSET_REGIONS, AD_REGION, Region
 from config.config import DEFAULT_TEMPLATE_THRESHOLD
 from utils.logger import setup_logger
+from utils.region_utils import recommend_region
 
 logger = setup_logger()
 
@@ -16,7 +17,6 @@ class VisionManager:
         self.device_manager = device_manager
         self.template_dict = {}
         self.asset_reverse_map = {v: k for k, v in ASSETS.__dict__.items() if not k.startswith('__')}
-        self.region_reverse_map = {v: k for k, v in Region.__dict__.items() if not k.startswith('__')}
         self.load_templates()
 
     def load_templates(self):
@@ -188,41 +188,13 @@ class VisionManager:
             y += crop_y
 
             # Suggest region optimization only for assets not defined in ASSET_REGIONS
-            # Skip assets that are manually set to Region.ALL
             if asset_code not in ASSET_REGIONS:
-                r = 0
-                # Vertical check
-                if y + h <= sh // 2:
-                    r |= Region.TOP
-                elif y >= sh // 2:
-                    r |= Region.BOTTOM
-
-                # Horizontal check
-                if x + w <= sw // 2:
-                    r |= Region.LEFT
-                elif x >= sw // 2:
-                    r |= Region.RIGHT
-
-                if r != 0:
-                    # Try to find exact match in Region constants first
-                    region_name = self.region_reverse_map.get(r)
-
-                    if region_name:
-                        suggested_str = f"Region.{region_name}"
-                    else:
-                        # Fallback to composite
-                        region_names = []
-                        if r & Region.TOP: region_names.append("TOP")
-                        if r & Region.BOTTOM: region_names.append("BOTTOM")
-                        if r & Region.LEFT: region_names.append("LEFT")
-                        if r & Region.RIGHT: region_names.append("RIGHT")
-                        suggested_str = " | ".join(["Region." + name for name in region_names])
-
-                    asset_name = self.asset_reverse_map.get(asset_code)
-                    if asset_name:
-                        logger.debug(f"Optimization Suggestion: ASSETS.{asset_name}: {suggested_str},")
-                    else:
-                        logger.debug(f"Optimization Suggestion: Asset '{asset_code}' found in {suggested_str}")
+                suggested_str = recommend_region(x, y, w, h, sw, sh)
+                asset_name = self.asset_reverse_map.get(asset_code)
+                if asset_name:
+                    logger.debug(f"Optimization Suggestion: ASSETS.{asset_name}: {suggested_str},")
+                else:
+                    logger.debug(f"Optimization Suggestion: Asset '{asset_code}' found in {suggested_str}")
 
             # add half the width and height of the template to the location and cast to int
             # Use device_manager for scaling

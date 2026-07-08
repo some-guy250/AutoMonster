@@ -97,7 +97,7 @@ ASSET_REGIONS = {
     ASSETS.ChangeTeam: Region.BOTTOM_LEFT,
     ASSETS.BackPVP: Region.TOP_LEFT,
     ASSETS.Back: Region.TOP_LEFT,
-    ASSETS.NotFullTeam: Region.BOTTOM,
+    ASSETS.NotFullTeam: Region.BOTTOM_LEFT,
     ASSETS.FlashRaid: Region.TOP,
 
     ASSETS.BoxSpeedup: Region.BOTTOM,

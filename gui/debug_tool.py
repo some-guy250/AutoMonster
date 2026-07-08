@@ -10,6 +10,7 @@ import logging
 from pathlib import Path
 
 from config.regions import ASSET_REGIONS, Region
+from utils.region_utils import recommend_region, format_region_display
 
 logger = logging.getLogger(__name__)
 from utils.assets import ASSETS
@@ -718,33 +719,9 @@ class DebugTool(ctk.CTkFrame):
                             scaled_h = dm.scale_y(h)
 
                         for x, y in points:
-                            # Region logic uses unscaled coordinates (relative to the scanned frame)
-                            # Check if the ENTIRE asset fits within the quadrant boundaries
-                            # If it crosses the center line, it belongs to the broader region (e.g. Top instead of Top-Left)
-                            
-                            r = 0
-                            # Vertical check
-                            if y + h <= frame_h // 2:
-                                r |= Region.TOP
-                            elif y >= frame_h // 2:
-                                r |= Region.BOTTOM
-                            
-                            # Horizontal check
-                            if x + w <= frame_w // 2:
-                                r |= Region.LEFT
-                            elif x >= frame_w // 2:
-                                r |= Region.RIGHT
-                            
-                            region_name = []
-                            if r == 0:
-                                region_name.append("All")
-                            else:
-                                if r & Region.TOP: region_name.append("Top")
-                                if r & Region.BOTTOM: region_name.append("Bottom")
-                                if r & Region.LEFT: region_name.append("Left")
-                                if r & Region.RIGHT: region_name.append("Right")
-                            
-                            match_regions.append("-".join(region_name))
+                            # Use unified region utility (center-based on the scanned frame)
+                            region_str = recommend_region(x, y, w, h, frame_w, frame_h)
+                            match_regions.append(format_region_display(region_str))
                             
                             # Scale points for drawing on the original frame
                             if dm.resized:
