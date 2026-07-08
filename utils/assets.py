@@ -31,7 +31,6 @@ class ASSETS:
     PlayCutscene = "playcut.png"
     Skip = "skip.png"
     EnterMultiplayer = "entermultiplayer.png"
-    EnterPVP = "enterpvp.png"
     EnterBattlePVP = "enterbattlepvp.png"
     BattleLog = "battlelog.png"
     DiscardPVP = "discardpvp.png"
