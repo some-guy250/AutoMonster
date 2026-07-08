@@ -166,7 +166,7 @@ class BattleManager:
         if not skip_part:
             if not self.controller.follow_sequence((ASSETS.EnterBattleRankUp, ASSETS.EnterBattleStamina),
                                         (ASSETS.StartBattle, ASSETS.StartBattleRankUp, ASSETS.StartBattleGray,
-                                         ASSETS.RefillStamina, ASSETS.NoMonsterLeft, ASSETS.NotFullTeam,
+                                         ASSETS.RefillStamina, ASSETS.NoMonsterLeft, ASSETS.NoMonsterLeft,ASSETS.NotFullTeam,
                                          ASSETS.NoUndefeated, ASSETS.SelectTeam, ASSETS.ChangeTeam), timeout=timeout):
                 return None
 
@@ -176,6 +176,8 @@ class BattleManager:
 
         if self.controller.in_screen(ASSETS.RefillStamina, ASSETS.NoMonsterLeft, ASSETS.NotFullTeam, ASSETS.NoUndefeated,
                           screenshot=self.controller.get_last_screenshot()):
+            for _ in range(2):
+                self.controller.click_back()
             return None
         ct = True
         if change_team:

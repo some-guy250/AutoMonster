@@ -2,6 +2,8 @@
 # Configurable thresholds, timeouts, and runtime configuration
 # =============================================================================
 
+from utils.assets import ASSETS
+
 # Default template matching threshold (0.0 to 1.0)
 # Higher = more strict matching, Lower = more lenient
 DEFAULT_TEMPLATE_THRESHOLD = 0.85
@@ -14,81 +16,90 @@ SPIN_WHEEL_THRESHOLD = 0.85     # Spin wheel detection
 TEAM_SELECTION_THRESHOLD = 0.85  # Team selection and battle UI detection
 RUNE_THRESHOLD = 0.93           # Rune assets are very small and similar, need strict threshold
 
-# Per-asset gray image overrides (asset_name: use_gray_img)
+# Assets that should use grayscale template matching
 ASSET_GRAY_IMG = {
     # Box buttons
-    "boxspeedup.png": True,
-    "boxtounlock.png": True,
+    ASSETS.BoxSpeedup,
+    ASSETS.BoxToUnlock,
     # Cavern icons
-    "cavernmisery.png": True,
-    "cavernconspiracy.png": True,
-    "cavernferal.png": True,
-    "cavernhistoria.png": True,
-    "cavernmultiverse.png": True,
-    "cavernevaris.png": True,
-    "caverngeneza.png": True,
-    "cavernjestin.png": True,
-    "cavernbaba.png": True,
-    "cavernkhalorc.png": True,
-    "caverntyr.png": True,
-    "cavernrobur.png": True,
-    "caverntheton.png": True,
-    "caverngriffania.png": True,
-    "cavernalpine.png": True,
-    "cavernabyssal.png": True,
-    "caverngalactic.png": True,
-    "cavernblossom.png": True,
-    "caverndoomed.png": True,
-    "cavernmetro.png": True,
-    "caverncorrupted.png": True,
-    "caverncosmic.png": True,
-    "cavernoriginal.png": True,
+    ASSETS.CavernMisery,
+    ASSETS.CavernConspiracy,
+    ASSETS.CavernFeral,
+    ASSETS.CavernHistoria,
+    ASSETS.CavernMultiverse,
+    ASSETS.CavernEvaris,
+    ASSETS.CavernGeneza,
+    ASSETS.CavernJestin,
+    ASSETS.CavernBaBa,
+    ASSETS.CavernKhalorc,
+    ASSETS.CavernTyr,
+    ASSETS.CavernRobur,
+    ASSETS.CavernTheton,
+    ASSETS.CavernGriffania,
+    ASSETS.CavernAlpine,
+    ASSETS.CavernAbyssal,
+    ASSETS.CavernGalactic,
+    ASSETS.CavernBlossom,
+    ASSETS.CavernDoomed,
+    ASSETS.CavernMetro,
+    ASSETS.CavernCorrupted,
+    ASSETS.CavernCosmic,
+    ASSETS.CavernOriginal,
     # Spin wheel
-    "spinwheel.png": True,
+    ASSETS.SpinWheel,
     # Team selection
-    "selected1.png": True,
-    "selected2.png": True,
-    "selected3.png": True,
+    ASSETS.RankUp1,
+    ASSETS.RankUp2,
+    ASSETS.RankUp3,
+    ASSETS.RankUp4,
+    ASSETS.RankUp5,
+    ASSETS.RankUp6,
+    ASSETS.RankUp1Synergy,
+    ASSETS.RankUp2Synergy,
+    ASSETS.RankUp3Synergy,
+    ASSETS.RankUp4Synergy,
+    ASSETS.RankUp5Synergy,
+    ASSETS.RankUp6Synergy,
 }
 
 # Per-asset threshold overrides (asset_name: threshold)
 ASSET_THRESHOLDS = {
     # Slider detection
-    "slider.png": SLIDER_THRESHOLD,
-    "slider2.png": SLIDER_THRESHOLD,
+    ASSETS.Slider: SLIDER_THRESHOLD,
+    ASSETS.Slider2: SLIDER_THRESHOLD,
     # Box buttons
-    "boxspeedup.png": BOX_SPEEDUP_THRESHOLD,
-    "boxtounlock.png": BOX_SPEEDUP_THRESHOLD,
+    ASSETS.BoxSpeedup: BOX_SPEEDUP_THRESHOLD,
+    ASSETS.BoxToUnlock: BOX_SPEEDUP_THRESHOLD,
     # Cavern icons
-    "cavernmisery.png": CAVERN_THRESHOLD,
-    "cavernconspiracy.png": CAVERN_THRESHOLD,
-    "cavernferal.png": CAVERN_THRESHOLD,
-    "cavernhistoria.png": CAVERN_THRESHOLD,
-    "cavernmultiverse.png": CAVERN_THRESHOLD,
-    "cavernevaris.png": CAVERN_THRESHOLD,
-    "caverngeneza.png": CAVERN_THRESHOLD,
-    "cavernjestin.png": CAVERN_THRESHOLD,
-    "cavernbaba.png": CAVERN_THRESHOLD,
-    "cavernkhalorc.png": CAVERN_THRESHOLD,
-    "caverntyr.png": CAVERN_THRESHOLD,
-    "cavernrobur.png": CAVERN_THRESHOLD,
-    "caverntheton.png": CAVERN_THRESHOLD,
-    "caverngriffania.png": CAVERN_THRESHOLD,
-    "cavernalpine.png": CAVERN_THRESHOLD,
-    "cavernabyssal.png": CAVERN_THRESHOLD,
-    "caverngalactic.png": CAVERN_THRESHOLD,
-    "cavernblossom.png": CAVERN_THRESHOLD,
-    "caverndoomed.png": CAVERN_THRESHOLD,
-    "cavernmetro.png": CAVERN_THRESHOLD,
-    "caverncorrupted.png": CAVERN_THRESHOLD,
-    "caverncosmic.png": CAVERN_THRESHOLD,
-    "cavernoriginal.png": CAVERN_THRESHOLD,
+    ASSETS.CavernMisery: CAVERN_THRESHOLD,
+    ASSETS.CavernConspiracy: CAVERN_THRESHOLD,
+    ASSETS.CavernFeral: CAVERN_THRESHOLD,
+    ASSETS.CavernHistoria: CAVERN_THRESHOLD,
+    ASSETS.CavernMultiverse: CAVERN_THRESHOLD,
+    ASSETS.CavernEvaris: CAVERN_THRESHOLD,
+    ASSETS.CavernGeneza: CAVERN_THRESHOLD,
+    ASSETS.CavernJestin: CAVERN_THRESHOLD,
+    ASSETS.CavernBaBa: CAVERN_THRESHOLD,
+    ASSETS.CavernKhalorc: CAVERN_THRESHOLD,
+    ASSETS.CavernTyr: CAVERN_THRESHOLD,
+    ASSETS.CavernRobur: CAVERN_THRESHOLD,
+    ASSETS.CavernTheton: CAVERN_THRESHOLD,
+    ASSETS.CavernGriffania: CAVERN_THRESHOLD,
+    ASSETS.CavernAlpine: CAVERN_THRESHOLD,
+    ASSETS.CavernAbyssal: CAVERN_THRESHOLD,
+    ASSETS.CavernGalactic: CAVERN_THRESHOLD,
+    ASSETS.CavernBlossom: CAVERN_THRESHOLD,
+    ASSETS.CavernDoomed: CAVERN_THRESHOLD,
+    ASSETS.CavernMetro: CAVERN_THRESHOLD,
+    ASSETS.CavernCorrupted: CAVERN_THRESHOLD,
+    ASSETS.CavernCosmic: CAVERN_THRESHOLD,
+    ASSETS.CavernOriginal: CAVERN_THRESHOLD,
     # Spin wheel
-    "spinwheel.png": SPIN_WHEEL_THRESHOLD,
+    ASSETS.SpinWheel: SPIN_WHEEL_THRESHOLD,
     # Team selection
-    "selected1.png": TEAM_SELECTION_THRESHOLD,
-    "selected2.png": TEAM_SELECTION_THRESHOLD,
-    "selected3.png": TEAM_SELECTION_THRESHOLD,
+    ASSETS.RankUpSelected1: TEAM_SELECTION_THRESHOLD,
+    ASSETS.RankUpSelected2: TEAM_SELECTION_THRESHOLD,
+    ASSETS.RankUpSelected3: TEAM_SELECTION_THRESHOLD,
 }
 
 # Battle timeout in seconds (how long to wait before assuming battle is stuck)

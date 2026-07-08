@@ -280,15 +280,28 @@ class Controller:
     def _get_cords(self, asset_code: str, screenshot: Optional[np.ndarray] = None, threshold: float = DEFAULT_TEMPLATE_THRESHOLD, gray_img: bool = False) -> List[List[int]]:
         if screenshot is None:
             screenshot = self.take_screenshot()
-        # Check for per-asset overrides
-        if asset_code in ASSET_THRESHOLDS:
-            threshold = ASSET_THRESHOLDS[asset_code]
+        # Check for per-asset threshold override (ASSETS enum or string key)
+        for key, value in ASSET_THRESHOLDS.items():
+            key_str = key.value if hasattr(key, 'value') else key
+            if asset_code == key_str:
+                threshold = value
+                break
         # Dynamic rune variants (rune{level}{type}{s/t}.png) need higher threshold
-        elif asset_code.startswith(('rune1', 'rune2', 'rune3', 'rune4', 'rune5')):
+        if threshold == DEFAULT_TEMPLATE_THRESHOLD and asset_code.startswith(('rune1', 'rune2', 'rune3', 'rune4', 'rune5')):
             threshold = RUNE_THRESHOLD
-        # Check for per-asset gray image override
-        if asset_code in ASSET_GRAY_IMG:
-            gray_img = ASSET_GRAY_IMG[asset_code]
+        # Check for per-asset gray image override (ASSETS enum or string key)
+        if isinstance(ASSET_GRAY_IMG, set):
+            for key in ASSET_GRAY_IMG:
+                key_str = key.value if hasattr(key, 'value') else key
+                if asset_code == key_str:
+                    gray_img = True
+                    break
+        else:
+            for key, value in ASSET_GRAY_IMG.items():
+                key_str = key.value if hasattr(key, 'value') else key
+                if asset_code == key_str:
+                    gray_img = value
+                    break
         return self.vision_manager.get_cords(asset_code, screenshot, threshold, gray_img)
 
     def count(self, *assets: Optional[str | tuple[str, ...]], gray_img: bool = False, threshold: float = DEFAULT_TEMPLATE_THRESHOLD, screenshot: Optional[np.ndarray] = None) -> int:
