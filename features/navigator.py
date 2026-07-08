@@ -33,7 +33,8 @@ class Navigator:
         self.controller.follow_sequence(
             ASSETS.EnterMultiplayer, ASSETS.BattleLog, timeout=15
         )
-        if not self.controller.wait_for(ASSETS.EnterBattlePVP, ASSETS.PVPNoPoints, pause_for=0, timeout=5):
+        self.controller.pause(5)
+        if not self.controller.wait_for(ASSETS.EnterBattlePVP, ASSETS.PVPNoPoints, pause_for=0, timeout=2):
             self.controller.click_back()
         if self.controller.in_screen(ASSETS.EnterBattlePVP, ASSETS.PVPNoPoints):
             logger.debug("In PVP")
