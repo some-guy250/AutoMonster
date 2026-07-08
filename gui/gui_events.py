@@ -29,6 +29,7 @@ def update_image(gui, frame):
 
     gui.is_portrait_frame = frame.shape[0] > frame.shape[1]
 
+    # Only recalculate size when explicitly needed or widget size changes significantly
     available_width = gui.preview_label.winfo_width()
     available_height = gui.preview_label.winfo_height()
 
@@ -48,9 +49,14 @@ def update_image(gui, frame):
         display_width = int(game_width * scale)
         display_height = int(game_height * scale)
         gui.actual_display_size = (display_width, display_height)
-
         gui._last_preview_size = current_size
         gui._size_recalc_needed = False
+
+    # Use cached display size to avoid resizing every frame
+    display_width, display_height = gui.actual_display_size
+    if display_width <= 0 or display_height <= 0:
+        # Fallback to initial size from gui_frames
+        display_width, display_height = gui.img_size if gui.img_size != (0, 0) else (800, 600)
 
     img_size = (gui.controller.new_width, GAME_HEIGHT)
     if gui.is_portrait_frame:
@@ -66,7 +72,7 @@ def update_image(gui, frame):
     image = Image.fromarray(cv2.cvtColor(resized_frame, cv2.COLOR_BGR2RGB))
 
     import customtkinter as ctk
-    ctk_image = ctk.CTkImage(light_image=image, dark_image=image, size=gui.actual_display_size)
+    ctk_image = ctk.CTkImage(light_image=image, dark_image=image, size=(display_width, display_height))
     gui.preview_label.configure(image=ctk_image)
     gui.preview_label.image = ctk_image
 
