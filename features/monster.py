@@ -1,6 +1,7 @@
 import logging
 import scrcpy
-from Constants import ASSETS
+from utils.assets import ASSETS, RUNE_LEVEL_TO_ASSET, RUNE_TYPE_TO_ASSET, get_rune_asset
+from config.config import SCROLL_START_Y_FRACTION
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +11,7 @@ class MonsterManager:
         self.controller = controller
         screen_width, screen_height = self.controller.client.resolution
         self.screen_mid_x = screen_width // 2
-        self.scroll_start_y = int(screen_height * 0.55)
+        self.scroll_start_y = int(screen_height * SCROLL_START_Y_FRACTION)
         self.scroll_end_y = int(screen_height * 0.25)
 
     def _scroll_monsters(self):
@@ -45,7 +46,7 @@ class MonsterManager:
                 self.scroll_until_monster_found(monster_asset)
                 
                 if monster_asset == ASSETS.MonsterR and not self.controller.in_screen(monster_asset, screenshot=self.controller.get_last_screenshot()):
-                    logger.info("No more monsters to feed")
+                    logger.debug("No more monsters to feed")
                     break
 
                 monster_asset = ASSETS.MonsterR
@@ -54,7 +55,7 @@ class MonsterManager:
                 self.filter_to_rare_monsters()
                 self.scroll_until_monster_found(monster_asset)
                 if not self.controller.in_screen(monster_asset, screenshot=self.controller.get_last_screenshot()):
-                    logger.info("No more monsters to feed")
+                    logger.debug("No more monsters to feed")
                     break
 
             self.controller.follow_sequence(monster_asset, ASSETS.Feed)
@@ -72,7 +73,7 @@ class MonsterManager:
 
             self.controller.follow_sequence(ASSETS.MonsterInfo, ASSETS.SellOwned, ASSETS.Yes, ASSETS.Cancel)
             num_fed += 1
-            logger.info(f"Fed and Sold {num_fed} monsters")
+            logger.debug(f"Fed and Sold {num_fed} monsters")
 
     def click_left_moster(self, sell: bool = False):
         screenshot = self.controller.take_screenshot()
@@ -151,3 +152,68 @@ class MonsterManager:
 
         if progress_callback:
             progress_callback(1.0)
+
+    def craft_runes(self, num_runes: int, level: str = "I", rune_type: str = "Life", team: bool = False, progress_callback=None):
+        """Craft runes for monsters.
+        
+        Args:
+            num_runes: Number of runes to craft
+            level: Rune level (Roman numeral: I, II, III, IV, V)
+            rune_type: Type of rune (Life, Strength, Stamina, Speed, Gold)
+            team: Whether to craft for team monsters
+            progress_callback: Optional callback(progress, message) for progress updates
+        """
+        # Roman numeral to int mapping
+        roman_to_int = {"I": 1, "II": 2, "III": 3, "IV": 4, "V": 5}
+        level_int = roman_to_int.get(level, 1)
+        
+        try:
+            level_asset = RUNE_LEVEL_TO_ASSET.get(level_int, ASSETS.RuneLevel1)
+            type_asset = RUNE_TYPE_TO_ASSET.get(rune_type, ASSETS.RuneLife)
+            
+            if not self.controller.in_screen(level_asset, pause_for=0):
+                self.controller.click(ASSETS.RuneLevel, raise_error=True)
+                self.controller.pause(1)
+            self.controller.click(level_asset, raise_error=True)
+            self.controller.click(ASSETS.RuneType, raise_error=True)
+            self.controller.pause(1)
+            self.controller.click(type_asset, raise_error=True)
+            
+            self.controller.click(ASSETS.RuneType, raise_error=True)
+            
+            rune_asset = get_rune_asset(level_int, rune_type, team)
+            logger.info(f"Crafting {num_runes} runes: {rune_asset}")
+            
+            if progress_callback:
+                progress_callback(0)
+            
+            for rune_num in range(num_runes):
+                logger.debug(f"  Rune {rune_num+1}/{num_runes}")
+                
+                if progress_callback:
+                    progress_callback((rune_num + 1) / num_runes)
+                
+                for drag_num in range(4):
+                    sc = self.controller.take_screenshot()
+                    
+                    if not self.controller.in_screen(rune_asset, screenshot=sc):
+                        logger.debug(f"    Drag {drag_num+1}: Rune not found, stopping")
+                        raise Exception(f"Rune {rune_asset} not found on screen, cannot craft rune.")
+                    
+                    self.controller.drag(rune_asset, ASSETS.RuneDrop, screenshot=sc)
+                    self.controller.pause(0.25)
+
+                # Craft the rune
+                self.controller.wait_for(ASSETS.RuneCraft, timeout=5, raise_error=True)
+                self.controller.click(ASSETS.RuneCraft, screenshot=self.controller.get_last_screenshot())
+                while not self.controller.click(ASSETS.RuneCollect):
+                    self.controller.pause(5)
+
+                logger.info(f"Crafted rune {rune_num+1}/{num_runes}: {rune_asset}")
+            
+            if progress_callback:
+                progress_callback(1.0)
+            
+        except Exception as e:
+            logger.error(f"Error crafting runes: {e}")
+            raise

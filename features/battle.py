@@ -1,7 +1,8 @@
 import logging
 from typing import Optional
-from Constants import ASSETS, BATTLE_TIMEOUT_SECONDS, SPIN_WHEEL_THRESHOLD, TEAM_SELECTION_THRESHOLD
-import AutoMonsterErrors
+from utils.assets import ASSETS
+from config.config import BATTLE_TIMEOUT_SECONDS
+from utils.AutoMonsterErrors import *
 from utils.logger import setup_logger
 
 logger = setup_logger()
@@ -13,7 +14,7 @@ class BattleManager:
     def auto_battle(self):
         if not self.controller.follow_sequence((ASSETS.StartBattle, ASSETS.StartBattleRankUp, ASSETS.StartBattlePVP),
                                     ASSETS.AutoBattle, None):
-            raise AutoMonsterErrors.BattleError("Failed to start battle")
+            raise  BattleError("Failed to start battle")
         self.controller.pause(5)
         counter = 5
         while True:
@@ -23,16 +24,16 @@ class BattleManager:
                 if self.controller.in_game(screenshot=sc):
                     break
                 else:
-                    logger.info("Ancestral monster awakened")
+                    logger.debug("Ancestral monster awakened")
             if self.controller.in_screen(ASSETS.NextPVP, screenshot=sc):
                 break
             counter += 1
             if counter > BATTLE_TIMEOUT_SECONDS:
-                raise AutoMonsterErrors.BattleError(f"Battle is not finished after {BATTLE_TIMEOUT_SECONDS // 60} minutes")
+                raise  BattleError(f"Battle is not finished after {BATTLE_TIMEOUT_SECONDS // 60} minutes")
             self.controller.pause(1)
 
     def spin_wheel(self, screenshot=None):
-        if self.controller.in_screen(ASSETS.SpinWheel, gray_img=True, threshold=SPIN_WHEEL_THRESHOLD, screenshot=screenshot, retries=2):
+        if self.controller.in_screen(ASSETS.SpinWheel, screenshot=screenshot, retries=2):
             self.controller.follow_sequence(ASSETS.SpinWheel, ASSETS.ClaimSpin, ASSETS.Cancel, timeout=15, raise_error=True)
             return True
         return False
@@ -40,7 +41,7 @@ class BattleManager:
     def change_team(self, second_team=False) -> bool:
         def has_selected():
             for index in range(len(selected_team)):
-                if self.controller.in_screen(selected_team[index], threshold=TEAM_SELECTION_THRESHOLD):
+                if self.controller.in_screen(selected_team[index]):
                     selected_team.pop(index)
                     non_selected_team.pop(index)
                     non_selected_team_synergy.pop(index)
@@ -50,15 +51,15 @@ class BattleManager:
         def check_and_select_team():
             if has_selected():
                 return True
-            if not self.controller.click(*non_selected_team, gray_img=True, threshold=TEAM_SELECTION_THRESHOLD):
-                self.controller.click(*non_selected_team_synergy, gray_img=True, threshold=TEAM_SELECTION_THRESHOLD)
+            if not self.controller.click(*non_selected_team):
+                self.controller.click(*non_selected_team_synergy)
             return has_selected()
 
         def full_team_already_selected():
             screenshot = self.controller.take_screenshot()
-            one = min(self.controller.count(ASSETS.Selected1, gray_img=True, screenshot=screenshot, threshold=TEAM_SELECTION_THRESHOLD), 1)
-            two = min(self.controller.count(ASSETS.Selected2, gray_img=True, screenshot=screenshot, threshold=TEAM_SELECTION_THRESHOLD), 1)
-            three = min(self.controller.count(ASSETS.Selected3, gray_img=True, screenshot=screenshot, threshold=TEAM_SELECTION_THRESHOLD), 1)
+            one = min(self.controller.count(ASSETS.Selected1, screenshot=screenshot), 1)
+            two = min(self.controller.count(ASSETS.Selected2, screenshot=screenshot), 1)
+            three = min(self.controller.count(ASSETS.Selected3, screenshot=screenshot), 1)
 
             return one + two + three == 3
 
@@ -152,7 +153,7 @@ class BattleManager:
                         if self.controller.in_screen(ASSETS.EraSagaDone, ASSETS.EnterEraSaga, retries=3):
                             return True
                         if not self.controller.in_screen(ASSETS.StartBattle, ASSETS.StartBattleRankUp, ASSETS.PlayCutscene, retries=3):
-                            raise AutoMonsterErrors.BattleError("Failed to skip cutscene")
+                            raise  BattleError("Failed to skip cutscene")
                     self.controller.pause(3)
                     if self.controller.in_screen(ASSETS.StartBattle, ASSETS.StartBattleRankUp):
                         skip_part = True
@@ -200,7 +201,7 @@ class BattleManager:
             if not self.controller.wait_for(ASSETS.EnterBattleRankUp, ASSETS.EnterBattleStamina, ASSETS.PlayCutscene):
                 break
             if max_nodes is not None and nodes >= max_nodes:
-                logger.info("Reached max nodes")
+                logger.debug("Reached max nodes")
                 break
             result = self.do_node(has_wheel=has_wheel, has_cutscene=has_cutscene, change_team=change_team)
             change_team = False
@@ -211,7 +212,7 @@ class BattleManager:
                         # wait for 10 minutes for stamina to refill
                         logger.warning("Stamina is empty")
                         if wait_for_stamina_to_refill:
-                            logger.info("Waiting for stamina to refill")
+                            logger.debug("Waiting for stamina to refill")
                             for _ in range(10):
                                 self.controller.pause(60)
                                 self.controller.take_screenshot()
@@ -222,7 +223,7 @@ class BattleManager:
                 if not waited_for_stamina:
                     losses += 1
                     if max_losses != -1 and losses >= max_losses:
-                        logger.info("Reached max losses")
+                        logger.debug("Reached max losses")
                         return False
             else:
                 nodes += 1

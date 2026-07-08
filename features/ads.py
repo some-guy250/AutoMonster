@@ -2,8 +2,9 @@ import logging
 import time
 import pathlib
 import scrcpy
-from Constants import ASSETS, AdLocationsHorizontal, AdLocationsVertical, ADS_DIR, TEAM_SELECTION_THRESHOLD
-import AutoMonsterErrors
+from utils.assets import ASSETS, AdLocationsHorizontal, AdLocationsVertical, ADS_DIR
+from config.config import TEAM_SELECTION_THRESHOLD
+from utils.AutoMonsterErrors import *
 from utils.logger import setup_logger
 
 logger = setup_logger()
@@ -21,7 +22,7 @@ class AdManager:
             return False
 
         for ad_key in ad_keys:
-            if self.controller.click(ad_key, skip_ad_check=True, threshold=TEAM_SELECTION_THRESHOLD, screenshot=screenshot, gray_img=True):
+            if self.controller.click(ad_key, skip_ad_check=True, screenshot=screenshot):
                 self.controller.log_gui(f"Ad detected: {ad_key}", "debug")
                 if self.controller.click(ASSETS.ResumeAd, skip_ad_check=True):
                     return None
@@ -51,7 +52,7 @@ class AdManager:
 
         while not self.controller.in_game():
             if counter > max_it:
-                raise AutoMonsterErrors.SkipAdError("Failed to skip ad")
+                raise  SkipAdError("Failed to skip ad")
 
             if self.controller.in_screen(ASSETS.Wheel, skip_ad_check=True, retries=5):
                 counter = 0
@@ -62,7 +63,7 @@ class AdManager:
 
             if self._check_for_common_ads():
                 check_no_ads()
-                logger.info("Skipped common ad")
+                logger.debug("Skipped common ad")
                 return True
 
             ad_locations = AdLocationsHorizontal
@@ -89,7 +90,7 @@ class AdManager:
             self.controller.pause(.25)
 
         if counter:
-            logger.info(f"Skipped ad in {counter} iterations")
+            logger.debug(f"Skipped ad in {counter} iterations")
             self.controller.click(ASSETS.Exit, skip_ad_check=True)
             check_no_ads()
             return True
@@ -110,10 +111,10 @@ class AdManager:
                 result = self._check_for_common_ads()
                 if result is None:
                     ban = True
-                    logger.info("Resumed ad")
+                    logger.debug("Resumed ad")
                     continue
                 if result:
-                    logger.info("Skipped common ad in wait")
+                    logger.debug("Skipped common ad in wait")
                     return
                 if self._check_for_change(.5):
                     logger.debug("Ad is not moving")

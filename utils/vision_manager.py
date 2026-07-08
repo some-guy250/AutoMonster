@@ -4,7 +4,9 @@ import pathlib
 from typing import List, Optional, Tuple
 import logging
 
-from Constants import ASSETS, ASSET_REGIONS, Region, ADS_DIR, AD_REGION, DEFAULT_TEMPLATE_THRESHOLD
+from utils.assets import ASSETS, ADS_DIR
+from config.regions import ASSET_REGIONS, AD_REGION, Region
+from config.config import DEFAULT_TEMPLATE_THRESHOLD
 from utils.logger import setup_logger
 
 logger = setup_logger()
@@ -21,8 +23,6 @@ class VisionManager:
         """Reload all templates from disk and Constants.py"""
         self.template_dict = {}
         self.ad_keys = []
-        pathlib.Path('assets').mkdir(parents=True, exist_ok=True)
-        
         for asset in dir(ASSETS):
             if asset.startswith('__'):
                 continue
@@ -33,17 +33,17 @@ class VisionManager:
             elif ASSET_REGIONS[png_file] == Region.ALL:
                 logger.debug(f"Asset '{png_file}' (ASSETS.{asset}) is using Region.ALL. Consider optimizing.")
 
-            if pathlib.Path(f'assets/{png_file}').exists():
-                img = cv2.imread(f'assets/{png_file}')
+            if pathlib.Path(f'asset_images/{png_file}').exists():
+                img = cv2.imread(f'asset_images/{png_file}')
                 if img is None:
-                    logger.warning(f"Failed to load image: assets/{png_file}")
+                    logger.warning(f"Failed to load image: asset_images/{png_file}")
                     continue
                 self.template_dict[png_file] = (img, img.shape[0], img.shape[1])
             else:
                 logger.warning(f'Asset {png_file} is missing')
 
         # Load ads
-        ads_path = pathlib.Path('assets') / ADS_DIR
+        ads_path = pathlib.Path('asset_images') / ADS_DIR
         if ads_path.exists():
             for file in ads_path.glob('*.png'):
                 key = f"{ADS_DIR}/{file.name}"
@@ -51,6 +51,16 @@ class VisionManager:
                 if img is not None:
                     self.template_dict[key] = (img, img.shape[0], img.shape[1])
                     self.ad_keys.append(key)
+        
+        # Load rune variants dynamically
+        asset_images_path = pathlib.Path('asset_images')
+        for file in asset_images_path.glob('rune*.png'):
+            # Only load dynamic rune variants (rune{level}{type}{s/t}.png)
+            if file.name.startswith(('rune1', 'rune2', 'rune3', 'rune4', 'rune5')):
+                img = cv2.imread(str(file))
+                if img is not None:
+                    self.template_dict[file.name] = (img, img.shape[0], img.shape[1])
+                    ASSET_REGIONS[file.name] = Region.BOTTOM
 
     def get_cords(self, asset_code: str, screenshot: np.ndarray, threshold: float = .9, gray_img: bool = False) -> List[List[int]]:
         if asset_code not in self.template_dict:
@@ -210,9 +220,9 @@ class VisionManager:
 
                     asset_name = self.asset_reverse_map.get(asset_code)
                     if asset_name:
-                        logger.info(f"Optimization Suggestion: ASSETS.{asset_name}: {suggested_str},")
+                        logger.debug(f"Optimization Suggestion: ASSETS.{asset_name}: {suggested_str},")
                     else:
-                        logger.info(f"Optimization Suggestion: Asset '{asset_code}' found in {suggested_str}")
+                        logger.debug(f"Optimization Suggestion: Asset '{asset_code}' found in {suggested_str}")
 
             # add half the width and height of the template to the location and cast to int
             # Use device_manager for scaling

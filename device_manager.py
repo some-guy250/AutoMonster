@@ -1,13 +1,20 @@
 import time
 import logging
+import threading
 from typing import Optional, Tuple
 import numpy as np
 import cv2
 import scrcpy
 from adbutils import adb
 
-import AutoMonsterErrors
+from utils.AutoMonsterErrors import *
 from utils.logger import setup_logger
+from config.config import (
+    RECOMMENDED_WIDTH, RECOMMENDED_HEIGHT,
+    DEFAULT_DEVICE_WIDTH, DEFAULT_DEVICE_HEIGHT,
+    GAME_HEIGHT,
+    SWIPE_START_Y_FRACTION, SWIPE_END_Y_FRACTION
+)
 
 logger = setup_logger()
 
@@ -20,17 +27,17 @@ class DeviceManager:
         self.resized: bool = False
         self.__last_screenshot: Optional[np.ndarray] = None
         self._paused: bool = False
-        self.cancel_flag: bool = False
+        self._cancel_event = threading.Event()  # Thread-safe cancellation signal
 
         self.connect(serial)
 
     def pause(self, seconds: float):
         start = time.time()
         while time.time() - start < seconds:
-            if self.cancel_flag:
-                self.cancel_flag = False
-                logger.info("Cancelled current operation in pause")
-                raise AutoMonsterErrors.ExecutionFlag
+            if self._cancel_event.is_set():
+                self._cancel_event.clear()
+                logger.debug("Cancelled current operation in pause")
+                raise  ExecutionFlag
             time.sleep(min(0.1, seconds - (time.time() - start)))
 
     def connect(self, serial: Optional[str] = None):
@@ -67,7 +74,7 @@ class DeviceManager:
         self.new_width = size[0]
         self.resized = False
         
-        if size[0] != 1280 or size[1] != 720:
+        if size[0] != RECOMMENDED_WIDTH or size[1] != RECOMMENDED_HEIGHT:
             self.resized = True
             # Wait for a frame to be available before accessing it
             image = self.client.last_frame
@@ -89,12 +96,12 @@ class DeviceManager:
                 logger.error("Could not get frame from device after 1 second. Device may not be responding.")
                 raise Exception("Failed to get frame from device - device connection failed")
 
-            self.new_width = int(720 * image.shape[1] / image.shape[0])
-            resized_image = cv2.resize(image, (self.new_width, 720))
+            self.new_width = int(GAME_HEIGHT * image.shape[1] / image.shape[0])
+            resized_image = cv2.resize(image, (self.new_width, GAME_HEIGHT))
             width_original, height_original = image.shape[1], image.shape[0]
             width_resized, height_resized = resized_image.shape[1], resized_image.shape[0]
             self.ratio = (width_original / width_resized, height_original / height_resized)
-            logger.info(f"Screen resolution is {size[0]}x{size[1]}, recommended resolution is 1280x720, resizing to "
+            logger.debug(f"Screen resolution is {size[0]}x{size[1]}, recommended resolution is 1280x720, resizing to "
                         f"{self.new_width}x720 might cause some issues")
 
     def scale_x(self, x: int) -> int:
@@ -134,17 +141,17 @@ class DeviceManager:
         self.client.device.shell("settings put system show_touches 0")
 
     def take_screenshot(self) -> np.ndarray:
-        if self.cancel_flag:
-            self.cancel_flag = False
-            logger.info("Cancelled current operation in take_screenshot")
-            raise AutoMonsterErrors.ExecutionFlag
+        if self._cancel_event.is_set():
+            self._cancel_event.clear()
+            logger.debug("Cancelled current operation in take_screenshot")
+            raise  ExecutionFlag
 
         while self._paused:
             self.pause(5)
-            if self.cancel_flag:
-                self.cancel_flag = False
-                logger.info("Cancelled current operation")
-                raise AutoMonsterErrors.ExecutionFlag
+            if self._cancel_event.is_set():
+                self._cancel_event.clear()
+                logger.debug("Cancelled current operation")
+                raise  ExecutionFlag
 
         self.__last_screenshot = self.client.last_frame
         if self.resized:
@@ -176,7 +183,7 @@ class DeviceManager:
             is_screen_on = "mWakefulness=Awake" in dump_power
             
             if not is_screen_on:
-                logger.info("Screen is off, turning it on...")
+                logger.debug("Screen is off, turning it on...")
                 # KEYCODE_WAKEUP (224) is more reliable than POWER (26) as it doesn't toggle off if already on
                 self.device.shell("input keyevent KEYCODE_WAKEUP")
                 time.sleep(1.0) # Critical delay to allow screen to fully wake up
@@ -189,7 +196,7 @@ class DeviceManager:
                         "showing=true" in dump_policy.lower())
             
             if is_locked:
-                logger.info("Device is locked. Executing robust unlock sequence...")
+                logger.debug("Device is locked. Executing robust unlock sequence...")
                 
                 # Method A: Menu Key (82)
                 # This key event often triggers the "unlock" action on swipe screens
@@ -204,7 +211,7 @@ class DeviceManager:
                 # Method C: Swipe Up (The most common manual action)
                 # Get resolution to calculate swipe coordinates
                 wm_size = self.device.shell("wm size")
-                width, height = 1080, 1920 # Safe defaults
+                width, height = DEFAULT_DEVICE_WIDTH, DEFAULT_DEVICE_HEIGHT
                 if "Physical size:" in wm_size:
                     try:
                         for line in wm_size.splitlines():
@@ -218,7 +225,7 @@ class DeviceManager:
 
                 # Calculate swipe points
                 center_x = width // 2
-                start_y = int(height * 0.85) # Start lower down (85%)
+                start_y = int(height * SWIPE_START_Y_FRACTION)
                 end_y = int(height * 0.15)   # End higher up (15%)
                 
                 # Try a "Fling" swipe (faster duration = 300ms)
@@ -231,7 +238,7 @@ class DeviceManager:
                 is_still_locked = ("mIsShowing=true" in dump_policy_retry or 
                                   "mKeyguardShowing=true" in dump_policy_retry)
                 if is_still_locked:
-                     logger.info("Still locked, trying alternative longer swipe...")
+                     logger.debug("Still locked, trying alternative longer swipe...")
                      # Try a slower, longer swipe (1000ms)
                      self.device.shell(f"input swipe {center_x} {int(height * 0.9)} {center_x} {int(height * 0.1)} 1000")
 

@@ -11,6 +11,11 @@ import shutil
 import unicodedata
 
 import requests
+import logging
+
+from update_utils import compare_versions, format_time, calculate_eta, format_size
+
+logger = logging.getLogger(__name__)
 
 repo_url_api = "https://api.github.com/repos/some-guy250/AutoMonster"
 repo_url = "https://github.com/some-guy250/AutoMonster"
@@ -25,8 +30,8 @@ class ModernProgressWindow:
         self.root.configure(bg='#2b2b2b')
 
         # Set window icon
-        if os.path.exists("assets/favicon.ico"):
-            self.root.iconbitmap("assets/favicon.ico")
+        if os.path.exists("asset_images/favicon.ico"):
+            self.root.iconbitmap("asset_images/favicon.ico")
 
         # Center window
         screen_width = self.root.winfo_screenwidth()
@@ -202,18 +207,6 @@ def get_version():
     return "0.0.0"
 
 
-def compare_versions(version1, version2):
-    v1_parts = version1.split('.')
-    v2_parts = version2.split('.')
-    for i in range(max(len(v1_parts), len(v2_parts))):
-        v1_part = int(v1_parts[i]) if i < len(v1_parts) else 0
-        v2_part = int(v2_parts[i]) if i < len(v2_parts) else 0
-        if v1_part < v2_part:
-            return -1
-        elif v1_part > v2_part:
-            return 1
-    return 0
-
 
 def check_for_updates():
     try:
@@ -238,53 +231,16 @@ def check_for_updates():
                     if compare_versions(remote_launcher_ver, local_launcher_ver) == 1:
                         launcher_update = True
             except (requests.RequestException, ValueError, KeyError) as e:
-                print(f"Warning: Could not check launcher version: {e}")
+                logger.warning(f"Could not check launcher version: {e}")
 
         return (app_update or launcher_update, latest_version)
     except requests.RequestException as e:
-        print(f"Network error checking for updates: {e}")
+        logger.error(f"Network error checking for updates: {e}")
         return (False, None)
     except (ValueError, KeyError) as e:
-        print(f"Error parsing update response: {e}")
+        logger.error(f"Error parsing update response: {e}")
         return (False, None)
 
-
-def format_time(seconds):
-    """Convert seconds to human readable time"""
-    if seconds < 60:
-        return f"{int(seconds)}s"
-    elif seconds < 3600:
-        minutes = int(seconds / 60)
-        seconds = int(seconds % 60)
-        return f"{minutes}m {seconds}s"
-    else:
-        hours = int(seconds / 3600)
-        minutes = int((seconds % 3600) / 60)
-        return f"{hours}h {minutes}m"
-
-
-def calculate_eta(start_time, current_progress, total_size):
-    """Calculate estimated time remaining"""
-    if current_progress == 0:
-        return "Calculating..."
-
-    elapsed = time.time() - start_time
-    rate = current_progress / elapsed  # bytes per second
-    remaining_bytes = total_size - current_progress
-
-    if rate > 0:
-        eta_seconds = remaining_bytes / rate
-        return format_time(eta_seconds)
-    return "Calculating..."
-
-
-def format_size(size):
-    """Convert bytes to human readable size"""
-    for unit in ['B', 'KB', 'MB', 'GB']:
-        if size < 1024:
-            return f"{size:.1f}{unit}"
-        size /= 1024
-    return f"{size:.1f}TB"
 
 
 def download_assets(progress_window=None):
@@ -455,7 +411,7 @@ def self_update(latest_release, progress_window):
                 if compare_versions(new_version, local_version) == 1:
                     should_update = True
         except Exception as e:
-            print(f"Error checking launcher version: {e}")
+            logger.error(f"Error checking launcher version: {e}")
     
     # Fallback to size check if version check failed or file missing
     current_exe = sys.executable
@@ -484,9 +440,9 @@ def self_update(latest_release, progress_window):
         os.rename(current_exe, old_launcher_path)
         os.rename(new_launcher_path, current_exe)
         
-        # Restart
+        # Restart — give the new process time to start before we exit
         subprocess.Popen([current_exe])
-        os._exit(0)
+        sys.exit(0)
         return True
     return False
 
@@ -588,6 +544,7 @@ def fix_tkinter_env():
                         elif item.startswith('tk8'):
                             os.environ['TK_LIBRARY'] = full_path
         except Exception:
+            # Ignore errors setting TCL/TK libraries
             pass
 
 
