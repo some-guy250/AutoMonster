@@ -117,8 +117,8 @@ DEFAULT_DEVICE_HEIGHT = 1920
 # Image Similarity Threshold
 # =============================================================================
 
-# Images must be >99% similar to be considered identical
-IMAGE_SIMILARITY_THRESHOLD = 0.99
+# Images must be >98% similar to be considered identical
+IMAGE_SIMILARITY_THRESHOLD = 0.98
 
 # =============================================================================
 # Swipe Coordinates (as fractions of screen height)
