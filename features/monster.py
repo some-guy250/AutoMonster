@@ -59,7 +59,8 @@ class MonsterManager:
                     logger.debug("No more monsters to feed")
                     break
 
-            self.controller.follow_sequence(monster_asset, ASSETS.Feed)
+            self.controller.click(monster_asset)
+            self.controller.wait_for(ASSETS.Feed, timeout=10, raise_error=True)
             cords = self.controller._get_cords(ASSETS.Feed, screenshot=self.controller.get_last_screenshot())
             if not cords:
                 logger.warning("Could not find Feed button")
@@ -118,8 +119,9 @@ class MonsterManager:
                     break
                 self.controller.pause(25)
                 self.controller.wait_for(ASSETS.TakeEgg)
-                self.controller.click(ASSETS.TakeEgg, pause=1.5)
-                if self.controller.in_screen(ASSETS.FullHatchery, pause_for=0):
+                self.controller.click(ASSETS.TakeEgg)
+                self.controller.wait_for(ASSETS.FullHatchery, timeout=3, pause_for=0)
+                if self.controller.in_screen(ASSETS.FullHatchery, pause_for=0, screenshot=self.controller.get_last_screenshot()):
                     self.controller.click_back()
                     break
                 count += 1
