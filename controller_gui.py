@@ -42,8 +42,8 @@ class ControllerGUI(ctk.CTk):
 
         self.update_message = update_message
 
-        if os.path.exists("asset_images/favicon.ico"):
-            self.iconbitmap("asset_images/favicon.ico")
+        if os.path.exists("assets/favicon.ico"):
+            self.iconbitmap("assets/favicon.ico")
 
         self.title("AutoMonster")
         self.minsize(400, 450)

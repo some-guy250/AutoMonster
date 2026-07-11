@@ -32,17 +32,17 @@ class VisionManager:
             elif ASSET_REGIONS[png_file] == Region.ALL:
                 logger.debug(f"Asset '{png_file}' (ASSETS.{asset}) is using Region.ALL. Consider optimizing.")
 
-            if pathlib.Path(f'asset_images/{png_file}').exists():
-                img = cv2.imread(f'asset_images/{png_file}')
+            if pathlib.Path(f'assets/{png_file}').exists():
+                img = cv2.imread(f'assets/{png_file}')
                 if img is None:
-                    logger.warning(f"Failed to load image: asset_images/{png_file}")
+                    logger.warning(f"Failed to load image: assets/{png_file}")
                     continue
                 self.template_dict[png_file] = (img, img.shape[0], img.shape[1])
             else:
                 logger.warning(f'Asset {png_file} is missing')
 
         # Load ads
-        ads_path = pathlib.Path('asset_images') / ADS_DIR
+        ads_path = pathlib.Path('assets') / ADS_DIR
         if ads_path.exists():
             for file in ads_path.glob('*.png'):
                 key = f"{ADS_DIR}/{file.name}"
@@ -52,8 +52,8 @@ class VisionManager:
                     self.ad_keys.append(key)
         
         # Load rune variants dynamically
-        asset_images_path = pathlib.Path('asset_images')
-        for file in asset_images_path.glob('rune*.png'):
+        assets_path = pathlib.Path('assets')
+        for file in assets_path.glob('rune*.png'):
             # Only load dynamic rune variants (rune{level}{type}{s/t}.png)
             if file.name.startswith(('rune1', 'rune2', 'rune3', 'rune4', 'rune5')):
                 img = cv2.imread(str(file))

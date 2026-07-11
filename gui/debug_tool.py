@@ -280,20 +280,20 @@ class DebugTool(ctk.CTkFrame):
                     continue
                 value = getattr(_assets_module.ASSETS, attr)
                 if isinstance(value, str) and value.endswith('.png'):
-                    asset_path = Path(f'asset_images/{value}')
+                    asset_path = Path(f'assets/{value}')
                     if asset_path.exists():
                         self.all_assets[attr] = value
             
             # Load ads
             ads_dir = ADS_DIR
-            ads_path = Path('asset_images') / ads_dir
+            ads_path = Path('assets') / ads_dir
             if ads_path.exists():
                 for file in ads_path.glob('*.png'):
                     key = f"{ads_dir}/{file.name}"
                     self.all_assets[key] = key
             
             # Load rune variants dynamically
-            for file in Path('asset_images').glob('rune*.png'):
+            for file in Path('assets').glob('rune*.png'):
                 if file.name.startswith(('rune1', 'rune2', 'rune3', 'rune4', 'rune5')):
                     self.all_assets[file.name] = file.name
 
@@ -333,7 +333,7 @@ class DebugTool(ctk.CTkFrame):
     def open_assets_folder(self):
         """Open the assets folder in file explorer"""
         try:
-            assets_path = Path("asset_images").absolute()
+            assets_path = Path("assets").absolute()
             if not assets_path.exists():
                 self.status_label.configure(text="Assets folder not found!", text_color="orange")
                 return
@@ -651,7 +651,7 @@ class DebugTool(ctk.CTkFrame):
 
             for asset_name in self.selected_assets:
                 filename = self.all_assets[asset_name]
-                template_path = f'asset_images/{filename}'
+                template_path = f'assets/{filename}'
 
                 try:
                     template = cv2.imread(template_path, cv2.IMREAD_COLOR)

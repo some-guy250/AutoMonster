@@ -34,12 +34,12 @@ def crush_png(image_path):
 
 
 def crush_assets():
-    """Crush all PNG assets in asset_images/ and asset_images/ads/."""
+    """Crush all PNG assets in assets/ and assets/ads/."""
     for file in os.listdir("assets"):
         if file.endswith(".png"):
-            crush_png(f"asset_images/{file}")
+            crush_png(f"assets/{file}")
 
-    ads_dir = pathlib.Path("asset_images/ads")
+    ads_dir = pathlib.Path("assets/ads")
     if ads_dir.exists():
         for file in ads_dir.glob("*.png"):
             crush_png(str(file))

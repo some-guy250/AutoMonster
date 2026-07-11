@@ -50,7 +50,7 @@ jobs:
           }
 
           # Build executable with scrcpy module included
-          $command = "pyinstaller --noconfirm --onefile --windowed --icon `"./asset_images/favicon.ico`" --add-data `"$scrcpyDir;scrcpy`" ${{ matrix.script }} -n ${{ matrix.name }}"
+          $command = "pyinstaller --noconfirm --onefile --windowed --icon `"./assets/favicon.ico`" --add-data `"$scrcpyDir;scrcpy`" ${{ matrix.script }} -n ${{ matrix.name }}"
           Write-Host "Running: $command"
           Invoke-Expression $command
 

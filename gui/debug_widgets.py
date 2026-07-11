@@ -192,7 +192,7 @@ class SimpleMultiSelectListbox(ctk.CTkFrame):
                 if self.template_cache is not None:
                     filename = self.asset_dict.get(asset_name)
                     if filename:
-                        cached_data = self.template_cache.get(f'asset_images/{filename}')
+                        cached_data = self.template_cache.get(f'assets/{filename}')
                         if cached_data is not None:
                             img = cached_data[0]
 
@@ -200,7 +200,7 @@ class SimpleMultiSelectListbox(ctk.CTkFrame):
                     filename = self.asset_dict.get(asset_name)
                     if not filename:
                         return
-                    asset_path = Path(f'asset_images/{filename}')
+                    asset_path = Path(f'assets/{filename}')
                     if not asset_path.exists():
                         return
                     img = cv2.imread(str(asset_path))

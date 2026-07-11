@@ -28,8 +28,8 @@ class ModernProgressWindow:
         self.root.configure(bg='#2b2b2b')
 
         # Set window icon
-        if os.path.exists("asset_images/favicon.ico"):
-            self.root.iconbitmap("asset_images/favicon.ico")
+        if os.path.exists("assets/favicon.ico"):
+            self.root.iconbitmap("assets/favicon.ico")
 
         # Center window
         screen_width = self.root.winfo_screenwidth()

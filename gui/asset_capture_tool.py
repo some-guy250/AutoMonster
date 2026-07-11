@@ -376,8 +376,8 @@ class AssetCaptureTool(ctk.CTkToplevel):
             # Simple conversion: SkipButton -> skipbutton.png
             filename = name.lower() + ".png"
             
-            # Save to asset_images (convert BGR to RGB)
-            asset_path = Path("asset_images") / filename
+            # Save to assets (convert BGR to RGB)
+            asset_path = Path("assets") / filename
             rgb_image = cv2.cvtColor(crop['image'], cv2.COLOR_BGR2RGB)
             Image.fromarray(rgb_image).save(asset_path)
             
