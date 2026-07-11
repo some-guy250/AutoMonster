@@ -1,3 +1,12 @@
 {
-    "3.0": "Major UI overhaul: removed side panel, added help popup (? button) for command details. Fixed all command descriptions for accuracy. Removed em-dashes from codebase. Added fail-early validation for rune crafting and breeding. Cleaned up documentation. First update in 6 months — thank you for the patience!"
+    "3.0": {
+        "subtitle": "First update in 5 months, curius if theres anyone still using this tool.",
+        "changes": [
+            "Fixed PVP",
+            "Rune crafting automation added (as a request from a user)",
+            "Major restructuring of the codebase",
+            "Removed side panel, added help button for command details",
+            "Added a what's new popup for the first time after updating"
+        ]
+    }
 }

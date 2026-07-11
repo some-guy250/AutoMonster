@@ -37,7 +37,7 @@ if os.path.isfile("version.txt"):
 
 
 class ControllerGUI(ctk.CTk):
-    def __init__(self, update_message: str = "") -> None:
+    def __init__(self, update_message: dict = {}) -> None:
         super().__init__()
 
         self.update_message = update_message
@@ -242,14 +242,14 @@ class ControllerGUI(ctk.CTk):
         dialog.bind("<Escape>", lambda e: dialog.destroy())
 
         # Header
-        header_frame = ctk.CTkFrame(dialog, fg_color="#1f1f1f", height=60)
+        header_frame = ctk.CTkFrame(dialog, fg_color="#1f1f1f", height=80)
         header_frame.pack(fill="x", padx=20, pady=(20, 0))
         header_frame.pack_propagate(False)
 
         ctk.CTkLabel(
             header_frame,
             text=title,
-            font=("Arial", 18, "bold"),
+            font=("Arial", 20, "bold"),
             text_color="#ffffff",
             anchor="w",
         ).pack(side="left", padx=15, pady=15)
@@ -261,7 +261,7 @@ class ControllerGUI(ctk.CTk):
         text_widget = ctk.CTkTextbox(
             content_frame,
             wrap="word",
-            font=("Arial", 14),
+            font=("Arial", 15),
             text_color="#cccccc",
             fg_color="#2a2a2a",
             border_width=0,
@@ -282,9 +282,9 @@ class ControllerGUI(ctk.CTk):
         close_btn = ctk.CTkButton(
             dialog,
             text="Close",
-            font=("Arial", 13, "bold"),
-            height=35,
-            width=100,
+            font=("Arial", 14, "bold"),
+            height=40,
+            width=120,
             fg_color="#3B8ED0",
             hover_color="#2d6bb0",
             command=dialog.destroy,

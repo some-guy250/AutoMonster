@@ -1,40 +1,23 @@
-import json
 import os
 import sys
 
 from controller_gui import ControllerGUI
-from config.config import CHANGELOG_FILE
+from gui.gui_frames import _get_changelog_entry
 
 from wakepy import keep
 
 
-def load_update_message(is_updated: bool) -> str:
-    """Load the update message for the current version from the changelog.
+def load_update_message(is_updated: bool) -> dict:
+    """Load the changelog entry for the current version.
 
-    Only returns a message when launched with the 'updated' flag,
+    Only returns an entry when launched with the 'updated' flag,
     so the user sees it after installing a new version.
+    Returns a dict with 'subtitle' and 'changes' keys.
     """
     if not is_updated:
-        return ""
+        return {}
 
-    if not os.path.isfile(CHANGELOG_FILE):
-        return ""
-
-    try:
-        with open(CHANGELOG_FILE, "r") as f:
-            changelog = json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return ""
-
-    # Read current version
-    if not os.path.isfile("version.txt"):
-        return ""
-
-    with open("version.txt", "r") as f:
-        version = f.read().strip()
-
-    # Look up message for this version
-    return changelog.get(version, "")
+    return _get_changelog_entry()
 
 
 def main(is_updated: bool = False) -> None:
