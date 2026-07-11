@@ -141,3 +141,11 @@ SWIPE_END_Y_FRACTION = 0.15
 
 # Scroll start position (as fraction of screen height)
 SCROLL_START_Y_FRACTION = 0.55
+
+# =============================================================================
+# Changelog (version-specific update messages)
+# =============================================================================
+# JSON file with version -> message mapping. Shown in popup when the app
+# launches after a new version is installed. ONLY the user may edit this.
+# Add new entries as you release versions. Keep old entries for history.
+CHANGELOG_FILE = "changelog.json"

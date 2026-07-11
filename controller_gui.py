@@ -24,7 +24,7 @@ from gui.command_frame import CommandFrame
 from gui.device_selection_frame import DeviceSelectionFrame
 from gui.macro_dialog import MacroDialog
 from utils.config_manager import ConfigManager
-from gui.gui_frames import build_main_interface
+from gui.gui_frames import build_main_interface, _show_update_message_dialog
 from gui.gui_events import (
     update_image, update_image_safe,
     on_mouse_down, on_mouse_move, on_mouse_up,
@@ -37,8 +37,10 @@ if os.path.isfile("version.txt"):
 
 
 class ControllerGUI(ctk.CTk):
-    def __init__(self) -> None:
+    def __init__(self, update_message: str = "") -> None:
         super().__init__()
+
+        self.update_message = update_message
 
         if os.path.exists("asset_images/favicon.ico"):
             self.iconbitmap("asset_images/favicon.ico")
@@ -77,6 +79,10 @@ class ControllerGUI(ctk.CTk):
         self.geometry("1200x800")
         self.state("zoomed")
         self.resizable(True, True)
+
+        # Show update message dialog after a short delay (only if launched after an update)
+        if self.update_message:
+            self.after(2000, lambda: _show_update_message_dialog(self.update_message))
 
     def center_window(self) -> None:
         self.update_idletasks()

@@ -125,44 +125,113 @@ class CommandFrame(ctk.CTkFrame):
                 checkbox_container = ctk.CTkFrame(param_frame)
                 checkbox_container.grid(row=1, column=0, padx=5, pady=(0, 5), sticky="nsew")
 
-                # Add Select All / Deselect All buttons
+                # Common Select All / Deselect All button frame
                 button_frame = ctk.CTkFrame(checkbox_container)
                 button_frame.pack(fill="x", padx=5, pady=(0, 5))
 
-                checkbox_vars = []
+                tab_groups = param_config.get("tabs")
 
-                def select_all():
-                    for choice, var in checkbox_vars:
-                        var.set(True)
+                if tab_groups:
+                    # ---- Tabbed multiple_choice ----
+                    checkbox_vars = {}  # {tab_name: [(choice, var), ...]}
+                    checkbox_frames = {}  # {tab_name: frame}
+                    active_tab = [list(tab_groups.keys())[0]]  # mutable container
 
-                def deselect_all():
-                    for choice, var in checkbox_vars:
-                        var.set(False)
+                    # Tab button row
+                    tab_button_frame = ctk.CTkFrame(checkbox_container)
+                    tab_button_frame.pack(fill="x", padx=5, pady=(0, 5))
 
-                select_all_btn = ctk.CTkButton(button_frame, text="Select All", width=100, height=25,
-                                               font=("Arial", 11), command=select_all)
-                select_all_btn.pack(side="left", padx=(0, 5))
+                    tab_buttons = {}
 
-                deselect_all_btn = ctk.CTkButton(button_frame, text="Deselect All", width=100, height=25,
-                                                 font=("Arial", 11), command=deselect_all)
-                deselect_all_btn.pack(side="left")
+                    def switch_tab(tab_name):
+                        active_tab[0] = tab_name
+                        for name, btn in tab_buttons.items():
+                            btn.configure(fg_color="#555555" if name != tab_name else "#3B8ED0")
+                        for name, frame in checkbox_frames.items():
+                            if name == tab_name:
+                                frame.pack(fill="both", expand=True, padx=5, pady=(0, 5))
+                            else:
+                                frame.pack_forget()
 
-                # Create a frame for checkboxes with limited height but no internal scrolling
-                checkbox_frame = ctk.CTkFrame(checkbox_container)
-                checkbox_frame.pack(fill="both", expand=True, padx=5, pady=(0, 5))
+                    for tab_name in tab_groups:
+                        btn = ctk.CTkButton(
+                            tab_button_frame, text=tab_name, width=100, height=28,
+                            font=("Arial", 11, "bold"),
+                            fg_color="#3B8ED0" if tab_name == active_tab[0] else "#555555",
+                            hover_color="#2d6bb0",
+                            command=lambda t=tab_name: switch_tab(t)
+                        )
+                        btn.pack(side="left", padx=(0, 5))
+                        tab_buttons[tab_name] = btn
 
-                # Store checkboxes in a list
-                for choice in param_config["choices"]:
-                    if choice.startswith("--"):  # This is a separator/header
-                        label = ctk.CTkLabel(checkbox_frame, text=choice, font=("Arial", 12, "bold"))
-                        label.pack(anchor="w", padx=5, pady=(10, 2))
-                        continue
+                    def select_all():
+                        active = checkbox_vars.get(active_tab[0], [])
+                        for choice, var in active:
+                            var.set(True)
 
-                    var = ctk.BooleanVar(value=choice in param_config.get("default", []))
-                    checkbox = ctk.CTkCheckBox(checkbox_frame, text=choice, variable=var)
-                    checkbox.pack(anchor="w", padx=20, pady=2)  # Extra padding for indentation
-                    checkbox_vars.append((choice, var))
-                widget = checkbox_vars
+                    def deselect_all():
+                        active = checkbox_vars.get(active_tab[0], [])
+                        for choice, var in active:
+                            var.set(False)
+
+                    select_all_btn = ctk.CTkButton(button_frame, text="Select All", width=100, height=25,
+                                                   font=("Arial", 11), command=select_all)
+                    select_all_btn.pack(side="left", padx=(0, 5))
+
+                    deselect_all_btn = ctk.CTkButton(button_frame, text="Deselect All", width=100, height=25,
+                                                     font=("Arial", 11), command=deselect_all)
+                    deselect_all_btn.pack(side="left")
+
+                    # Checkbox frame per tab
+                    for tab_name, choices in tab_groups.items():
+                        frame = ctk.CTkFrame(checkbox_container)
+                        checkbox_vars[tab_name] = []
+                        for choice in choices:
+                            var = ctk.BooleanVar(value=choice in param_config.get("default", []))
+                            checkbox = ctk.CTkCheckBox(frame, text=choice, variable=var)
+                            checkbox.pack(anchor="w", padx=20, pady=2)
+                            checkbox_vars[tab_name].append((choice, var))
+                        if tab_name != active_tab[0]:
+                            frame.pack_forget()
+                        else:
+                            frame.pack(fill="both", expand=True, padx=5, pady=(0, 5))
+                        checkbox_frames[tab_name] = frame
+
+                    widget = checkbox_vars
+                else:
+                    # ---- Flat multiple_choice (original behavior) ----
+                    checkbox_vars = []
+
+                    def select_all():
+                        for choice, var in checkbox_vars:
+                            var.set(True)
+
+                    def deselect_all():
+                        for choice, var in checkbox_vars:
+                            var.set(False)
+
+                    select_all_btn = ctk.CTkButton(button_frame, text="Select All", width=100, height=25,
+                                                   font=("Arial", 11), command=select_all)
+                    select_all_btn.pack(side="left", padx=(0, 5))
+
+                    deselect_all_btn = ctk.CTkButton(button_frame, text="Deselect All", width=100, height=25,
+                                                     font=("Arial", 11), command=deselect_all)
+                    deselect_all_btn.pack(side="left")
+
+                    checkbox_frame = ctk.CTkFrame(checkbox_container)
+                    checkbox_frame.pack(fill="both", expand=True, padx=5, pady=(0, 5))
+
+                    for choice in param_config["choices"]:
+                        if choice.startswith("--"):
+                            label = ctk.CTkLabel(checkbox_frame, text=choice, font=("Arial", 12, "bold"))
+                            label.pack(anchor="w", padx=5, pady=(10, 2))
+                            continue
+
+                        var = ctk.BooleanVar(value=choice in param_config.get("default", []))
+                        checkbox = ctk.CTkCheckBox(checkbox_frame, text=choice, variable=var)
+                        checkbox.pack(anchor="w", padx=20, pady=2)
+                        checkbox_vars.append((choice, var))
+                    widget = checkbox_vars
 
             self.param_widgets[param_name] = widget
 
@@ -287,8 +356,12 @@ class CommandFrame(ctk.CTkFrame):
                 value = bool(widget.get())
             elif isinstance(widget, ctk.CTkOptionMenu):
                 value = widget.get()
-            elif isinstance(widget, list):  # Multiple choice checkboxes
+            elif isinstance(widget, list):  # Flat multiple choice checkboxes
                 value = [choice for choice, var in widget if var.get()]
+            elif isinstance(widget, dict):  # Tabbed multiple choice — merge all tabs
+                value = []
+                for tab_choices in widget.values():
+                    value.extend(choice for choice, var in tab_choices if var.get())
             current_params[param_name] = value
 
         if os.path.isfile(DEFAULTS_FILE):
@@ -312,7 +385,11 @@ class CommandFrame(ctk.CTkFrame):
                 value = bool(widget.get())
             elif isinstance(widget, ctk.CTkOptionMenu):
                 value = widget.get()
-            elif isinstance(widget, list):  # Multiple choice checkboxes
+            elif isinstance(widget, list):  # Flat multiple choice checkboxes
                 value = [choice for choice, var in widget if var.get()]
+            elif isinstance(widget, dict):  # Tabbed multiple choice — merge all tabs
+                value = []
+                for tab_choices in widget.values():
+                    value.extend(choice for choice, var in tab_choices if var.get())
             current_params[param_name] = value
         return current_params

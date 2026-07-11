@@ -3,9 +3,13 @@
 Extracted from controller_gui.py to keep the orchestrator thin.
 """
 
+import json
+import os
+from tkinter import messagebox
+
 import customtkinter as ctk
 import scrcpy
-from config.config import GAME_HEIGHT
+from config.config import GAME_HEIGHT, CHANGELOG_FILE
 
 
 def build_main_interface(gui):
@@ -256,6 +260,7 @@ def _build_preview_frame(gui):
     gui.controller.client.add_listener(scrcpy.EVENT_FRAME, lambda frame: gui.update_image_safe(frame))
     gui.bind("<Configure>", gui.on_window_resize)
     gui.bind("<F3>", gui.toggle_debug_mode)
+    gui.bind("<F5>", lambda e: _show_update_message_dialog(_get_changelog_message()))
     gui.preview_label.bind("<ButtonPress-1>", gui.on_mouse_down)
     gui.preview_label.bind("<B1-Motion>", gui.on_mouse_move)
     gui.preview_label.bind("<ButtonRelease-1>", gui.on_mouse_up)
@@ -293,3 +298,86 @@ def _build_logs_frame(gui):
     gui.log_text.bind("<Button-5>", gui.on_log_scroll)
 
     gui.controller.gui_logger = gui.append_log
+
+
+def _get_changelog_message() -> str:
+    """Read the current version's message from the changelog JSON."""
+    if not os.path.isfile(CHANGELOG_FILE) or not os.path.isfile("version.txt"):
+        return ""
+
+    try:
+        with open(CHANGELOG_FILE, "r") as f:
+            changelog = json.load(f)
+        with open("version.txt", "r") as f:
+            version = f.read().strip()
+        return changelog.get(version, "")
+    except (json.JSONDecodeError, OSError):
+        return ""
+
+
+def _show_update_message_dialog(message: str) -> None:
+    """Show a styled update message dialog."""
+    if not message:
+        return
+
+    dialog = ctk.CTkToplevel()
+    dialog.title("AutoMonster")
+    dialog.geometry("520x380")
+    dialog.resizable(False, False)
+    dialog.configure(bg="#2b2b2b")
+    dialog.grab_set()
+
+    # Center on parent
+    parent = dialog.master
+    parent.update_idletasks()
+    x = parent.winfo_x() + (parent.winfo_width() - 520) // 2
+    y = parent.winfo_y() + (parent.winfo_height() - 380) // 2
+    dialog.geometry(f"520x380+{x}+{y}")
+
+    # Close on Escape
+    dialog.bind("<Escape>", lambda e: dialog.destroy())
+
+    # Header
+    header_frame = ctk.CTkFrame(dialog, fg_color="#1f1f1f", height=80)
+    header_frame.pack(fill="x", padx=20, pady=(20, 0))
+    header_frame.pack_propagate(False)
+
+    ctk.CTkLabel(
+        header_frame,
+        text="What's New",
+        font=("Arial", 20, "bold"),
+        text_color="#ffffff",
+        anchor="center",
+    ).pack(fill="x", padx=20, pady=(18, 0))
+
+    # Message area
+    msg_frame = ctk.CTkFrame(dialog, fg_color="#1f1f1f")
+    msg_frame.pack(fill="both", expand=True, padx=20, pady=15)
+
+    msg_text = ctk.CTkTextbox(
+        msg_frame,
+        height=200,
+        wrap="word",
+        font=("Arial", 14),
+        text_color="#cccccc",
+        fg_color="#2a2a2a",
+        border_width=0,
+    )
+    msg_text.pack(fill="both", expand=True, padx=30, pady=15)
+    msg_text.insert("1.0", message)
+    msg_text.tag_configure("center", justify="center")
+    msg_text.tag_add("center", "1.0", "end")
+    msg_text.configure(state="disabled")
+
+    # Close button
+    close_btn = ctk.CTkButton(
+        dialog,
+        text="OK",
+        font=("Arial", 14, "bold"),
+        height=40,
+        width=120,
+        fg_color="#3B8ED0",
+        hover_color="#2d6bb0",
+        command=dialog.destroy,
+    )
+    close_btn.pack(pady=(0, 20))

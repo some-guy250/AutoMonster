@@ -13,33 +13,35 @@ GUI_COMMANDS = {
     "Cavern": {
         "caverns": {
             "type": "multiple_choice",
-            "choices": [
-                "--Ancestral Caverns--",
-                "evaris",
-                "geneza",
-                "jestin",
-                "baba",
-                "khalorc",
-                "tyr",
-                "robur",
-                "theton",
-                "griffania",
-                "--Era Caverns--",
-                "misery",
-                "conspiracy",
-                "feral",
-                "historia",
-                "multiverse",
-                "alpine",
-                "abyssal",
-                "galactic",
-                "blossom",
-                "doomed",
-                "metro",
-                "corrupted",
-                "cosmic",
-                "original"
-            ],
+            "tabs": {
+                "Ancestral": [
+                    "evaris",
+                    "geneza",
+                    "jestin",
+                    "baba",
+                    "khalorc",
+                    "tyr",
+                    "robur",
+                    "theton",
+                    "griffania"
+                ],
+                "Era": [
+                    "misery",
+                    "conspiracy",
+                    "feral",
+                    "historia",
+                    "multiverse",
+                    "alpine",
+                    "abyssal",
+                    "galactic",
+                    "blossom",
+                    "doomed",
+                    "metro",
+                    "corrupted",
+                    "cosmic",
+                    "original"
+                ]
+            },
             "default": []
         },
         "max_rooms": {"type": "int", "min": 1, "max": 5, "default": 3},
