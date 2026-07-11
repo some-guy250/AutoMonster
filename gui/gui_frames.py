@@ -308,31 +308,6 @@ def _show_update_message_dialog(message: str) -> None:
     dialog.configure(bg="#2b2b2b")
     dialog.grab_set()
 
-    # Remove minimize/maximize buttons (Windows only)
-    try:
-        dialog.config(highlightthickness=0)
-        dialog.overrideredirect(True)
-        # Add custom title bar
-        title_bar = ctk.CTkFrame(dialog, fg_color="#1f1f1f", height=50)
-        title_bar.pack(fill="x")
-        title_bar.pack_propagate(False)
-        ctk.CTkLabel(
-            title_bar,
-            text="What's New",
-            font=("Arial", 18, "bold"),
-            text_color="#ffffff",
-            anchor="center",
-        ).pack(fill="x", pady=10)
-        close_btn_header = ctk.CTkButton(
-            title_bar, text="✕", width=30, height=30,
-            fg_color="transparent", hover_color="#cc0000",
-            command=dialog.destroy,
-            font=("Arial", 12)
-        )
-        close_btn_header.pack(side="right", padx=10, pady=5)
-    except Exception:
-        pass
-
     # Center on parent
     parent = dialog.master
     parent.update_idletasks()
@@ -343,9 +318,22 @@ def _show_update_message_dialog(message: str) -> None:
     # Close on Escape
     dialog.bind("<Escape>", lambda e: dialog.destroy())
 
+    # Header
+    header_frame = ctk.CTkFrame(dialog, fg_color="#1f1f1f", height=80)
+    header_frame.pack(fill="x", padx=20, pady=(20, 0))
+    header_frame.pack_propagate(False)
+
+    ctk.CTkLabel(
+        header_frame,
+        text="What's New",
+        font=("Arial", 20, "bold"),
+        text_color="#ffffff",
+        anchor="center",
+    ).pack(fill="x", padx=20, pady=(18, 0))
+
     # Message area
     msg_frame = ctk.CTkFrame(dialog, fg_color="#1f1f1f")
-    msg_frame.pack(fill="both", expand=True, padx=20, pady=(10, 20))
+    msg_frame.pack(fill="both", expand=True, padx=20, pady=15)
 
     msg_text = ctk.CTkTextbox(
         msg_frame,
@@ -359,3 +347,16 @@ def _show_update_message_dialog(message: str) -> None:
     msg_text.pack(fill="both", expand=True, padx=30, pady=15)
     msg_text.insert("1.0", message)
     msg_text.configure(state="disabled")
+
+    # Close button
+    close_btn = ctk.CTkButton(
+        dialog,
+        text="OK",
+        font=("Arial", 14, "bold"),
+        height=40,
+        width=120,
+        fg_color="#3B8ED0",
+        hover_color="#2d6bb0",
+        command=dialog.destroy,
+    )
+    close_btn.pack(pady=(0, 20))

@@ -231,31 +231,6 @@ class ControllerGUI(ctk.CTk):
         dialog.configure(bg="#2b2b2b")
         dialog.grab_set()
 
-        # Remove minimize/maximize buttons (Windows only)
-        try:
-            dialog.config(highlightthickness=0)
-            dialog.overrideredirect(True)
-            # Add custom title bar
-            title_bar = ctk.CTkFrame(dialog, fg_color="#1f1f1f", height=40)
-            title_bar.pack(fill="x")
-            title_bar.pack_propagate(False)
-            ctk.CTkLabel(
-                title_bar,
-                text=f"Help: {title}",
-                font=("Arial", 14, "bold"),
-                text_color="#ffffff",
-                anchor="w",
-            ).pack(side="left", padx=15, pady=10)
-            close_btn_header = ctk.CTkButton(
-                title_bar, text="✕", width=30, height=30,
-                fg_color="transparent", hover_color="#cc0000",
-                command=dialog.destroy,
-                font=("Arial", 12)
-            )
-            close_btn_header.pack(side="right", padx=10, pady=5)
-        except Exception:
-            pass
-
         # Center on parent
         parent = dialog.master
         parent.update_idletasks()
@@ -266,9 +241,22 @@ class ControllerGUI(ctk.CTk):
         # Close on Escape
         dialog.bind("<Escape>", lambda e: dialog.destroy())
 
+        # Header
+        header_frame = ctk.CTkFrame(dialog, fg_color="#1f1f1f", height=60)
+        header_frame.pack(fill="x", padx=20, pady=(20, 0))
+        header_frame.pack_propagate(False)
+
+        ctk.CTkLabel(
+            header_frame,
+            text=title,
+            font=("Arial", 18, "bold"),
+            text_color="#ffffff",
+            anchor="w",
+        ).pack(side="left", padx=15, pady=15)
+
         # Content area
         content_frame = ctk.CTkFrame(dialog, fg_color="#1f1f1f")
-        content_frame.pack(fill="both", expand=True, padx=20, pady=(10, 20))
+        content_frame.pack(fill="both", expand=True, padx=20, pady=15)
 
         text_widget = ctk.CTkTextbox(
             content_frame,
@@ -289,6 +277,19 @@ class ControllerGUI(ctk.CTk):
 
         text_widget.insert("1.0", text)
         text_widget.configure(state="disabled")
+
+        # Close button
+        close_btn = ctk.CTkButton(
+            dialog,
+            text="Close",
+            font=("Arial", 13, "bold"),
+            height=35,
+            width=100,
+            fg_color="#3B8ED0",
+            hover_color="#2d6bb0",
+            command=dialog.destroy,
+        )
+        close_btn.pack(pady=(0, 15))
 
     # =====================================================================
     # Command execution
