@@ -1,6 +1,6 @@
 import logging
 import scrcpy
-from utils.assets import ASSETS, RUNE_LEVEL_TO_ASSET, RUNE_TYPE_TO_ASSET, get_rune_asset
+from utils.assets import ASSETS, ROMAN_TO_RUNE_LEVEL, RUNE_LEVEL_TO_ASSET, RUNE_TYPE_TO_ASSET, get_rune_asset
 from config.config import SCROLL_START_Y_FRACTION
 from utils.AutoMonsterErrors import *
 
@@ -164,62 +164,64 @@ class MonsterManager:
             team: Whether to craft for team monsters
             progress_callback: Optional callback(progress, message) for progress updates
         """
-        # Roman numeral to int mapping
-        roman_to_int = {"I": 1, "II": 2, "III": 3, "IV": 4, "V": 5}
-        level_int = roman_to_int.get(level, 1)
-        
-        try:
-            level_asset = RUNE_LEVEL_TO_ASSET.get(level_int, ASSETS.RuneLevel1)
-            type_asset = RUNE_TYPE_TO_ASSET.get(rune_type, ASSETS.RuneLife)
-            
-            if not self.controller.in_screen(level_asset, pause_for=0):
-                self.controller.click(ASSETS.RuneLevel, raise_error=True)
-                self.controller.pause(1)
-            self.controller.click(level_asset, raise_error=True)
-            self.controller.click(ASSETS.RuneType, raise_error=True)
+        # Check we are already on the rune crafting screen
+        if not self.controller.in_screen(ASSETS.RuneDrop):
+            logger.warning("Rune crafting screen not detected. Please navigate to the rune crafting screen manually.")
+            self.controller.log_gui("Please navigate to the rune crafting screen first", "warning")
+            return
+
+        if level not in ROMAN_TO_RUNE_LEVEL:
+            raise AutoMonsterError(f"Invalid rune level: '{level}'. Must be one of {list(ROMAN_TO_RUNE_LEVEL.keys())}")
+        level_int = ROMAN_TO_RUNE_LEVEL[level]
+
+        if level_int not in RUNE_LEVEL_TO_ASSET:
+            raise AutoMonsterError(f"Invalid rune level int: {level_int}")
+        level_asset = RUNE_LEVEL_TO_ASSET[level_int]
+
+        if rune_type not in RUNE_TYPE_TO_ASSET:
+            raise AutoMonsterError(f"Invalid rune type: '{rune_type}'. Must be one of {list(RUNE_TYPE_TO_ASSET.keys())}")
+        type_asset = RUNE_TYPE_TO_ASSET[rune_type]
+
+        if not self.controller.in_screen(level_asset, pause_for=0):
+            self.controller.click(ASSETS.RuneLevel, raise_error=True)
             self.controller.pause(1)
-            self.controller.click(type_asset, raise_error=True)
             
-            self.controller.click(ASSETS.RuneType, raise_error=True)
-            
-            rune_asset = get_rune_asset(level_int, rune_type, team)
-            logger.info(f"Crafting {num_runes} runes: {rune_asset}")
-            
-            if progress_callback:
-                progress_callback(0)
-            
-            for rune_num in range(num_runes):
-                logger.debug(f"  Rune {rune_num+1}/{num_runes}")
-                
-                if progress_callback:
-                    progress_callback((rune_num + 1) / num_runes)
-                
-                for drag_num in range(4):
-                    sc = self.controller.take_screenshot()
-                    
-                    if not self.controller.in_screen(rune_asset, screenshot=sc):
-                        logger.debug(f"    Drag {drag_num+1}: Rune not found, stopping")
-                        raise AutoMonsterError(f"Rune {rune_asset} not found on screen, cannot craft rune.")
-                    
-                    self.controller.drag(rune_asset, ASSETS.RuneDrop, screenshot=sc)
-                    self.controller.pause(0.25)
+        self.controller.click(level_asset, raise_error=True)
+        self.controller.click(ASSETS.RuneType, raise_error=True)
+        self.controller.pause(1)
+        self.controller.click(type_asset, raise_error=True)
 
-                # Craft the rune
-                self.controller.wait_for(ASSETS.RuneCraft, timeout=5, raise_error=True)
-                self.controller.click(ASSETS.RuneCraft, screenshot=self.controller.get_last_screenshot())
-                while not self.controller.click(ASSETS.RuneCollect):
-                    self.controller.pause(5)
+        self.controller.click(ASSETS.RuneType, raise_error=True)
 
-                logger.info(f"Crafted rune {rune_num+1}/{num_runes}: {rune_asset}")
-            
+        rune_asset = get_rune_asset(level_int, rune_type, team)
+        logger.info(f"Crafting {num_runes} runes: {rune_asset}")
+
+        if progress_callback:
+            progress_callback(0)
+
+        for rune_num in range(num_runes):
+            logger.debug(f"  Rune {rune_num+1}/{num_runes}")
+
             if progress_callback:
-                progress_callback(1.0)
-            
-        except ExecutionFlag:
-            logger.debug("Rune crafting cancelled")
-            raise
-        except AutoMonsterError:
-            raise
-        except Exception as e:
-            logger.error(f"Error crafting runes: {e}")
-            raise
+                progress_callback((rune_num + 1) / num_runes)
+
+            for drag_num in range(4):
+                sc = self.controller.take_screenshot()
+
+                if not self.controller.in_screen(rune_asset, screenshot=sc):
+                    logger.debug(f"    Drag {drag_num+1}: Rune not found, stopping")
+                    raise AutoMonsterError(f"Rune {rune_asset} not found on screen, cannot craft rune.")
+
+                self.controller.drag(rune_asset, ASSETS.RuneDrop, screenshot=sc)
+                self.controller.pause(0.25)
+
+            # Craft the rune
+            self.controller.wait_for(ASSETS.RuneCraft, timeout=5, raise_error=True)
+            self.controller.click(ASSETS.RuneCraft, screenshot=self.controller.get_last_screenshot())
+            while not self.controller.click(ASSETS.RuneCollect):
+                self.controller.pause(5)
+
+            logger.info(f"Crafted rune {rune_num+1}/{num_runes}: {rune_asset}")
+
+        if progress_callback:
+            progress_callback(1.0)

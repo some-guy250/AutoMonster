@@ -7,7 +7,7 @@
 
 from config.regions import Region
 
-# Screen dimensions — set at startup from device_manager
+# Screen dimensions (set at startup from device_manager)
 SCREEN_W: int = 1280
 SCREEN_H: int = 720
 

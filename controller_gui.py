@@ -216,36 +216,79 @@ class ControllerGUI(ctk.CTk):
         self.panel_visible = not self.panel_visible
         self.log_frame.grid(row=1, column=0, columnspan=4, padx=10, pady=10, sticky="nsew")
 
-    def toggle_info_panel(self) -> None:
-        if self.info_visible:
-            self.info_frame.grid_forget()
-            self.info_toggle_button.configure(text="≪")
-            self.main_frame.grid_columnconfigure(3, weight=0, minsize=0)
-            self.main_frame.grid_columnconfigure(2, weight=1)
-        else:
-            self.info_frame.grid(row=0, column=3, padx=10, pady=10, sticky="nsew")
-            self.info_toggle_button.configure(text="≫")
-            self.main_frame.grid_columnconfigure(3, weight=0, minsize=self.panel_width)
-            self.main_frame.grid_columnconfigure(2, weight=1)
-        self.info_visible = not self.info_visible
-
-    def update_info_panel(self, command_name: str) -> None:
+    def show_help_popup(self) -> None:
+        """Show a help popup with the current command's description and parameters."""
+        command_name = self.command_var.get()
         info = self.command_descriptions.get(command_name, {})
-        self.info_title.configure(text=info.get("title", command_name))
-        self.info_description.configure(state="normal")
-        self.info_description.delete("1.0", "end")
-
+        title = info.get("title", command_name)
         description = info.get("description", "No description available.")
         parameters = info.get("parameters", {})
 
-        text = f"{description}\n\n"
+        dialog = ctk.CTkToplevel()
+        dialog.title(f"Help: {title}")
+        dialog.geometry("480x400")
+        dialog.resizable(False, False)
+        dialog.configure(bg="#2b2b2b")
+        dialog.grab_set()
+
+        # Remove minimize/maximize buttons (Windows only)
+        try:
+            dialog.config(highlightthickness=0)
+            dialog.overrideredirect(True)
+            # Add custom title bar
+            title_bar = ctk.CTkFrame(dialog, fg_color="#1f1f1f", height=40)
+            title_bar.pack(fill="x")
+            title_bar.pack_propagate(False)
+            ctk.CTkLabel(
+                title_bar,
+                text=f"Help: {title}",
+                font=("Arial", 14, "bold"),
+                text_color="#ffffff",
+                anchor="w",
+            ).pack(side="left", padx=15, pady=10)
+            close_btn_header = ctk.CTkButton(
+                title_bar, text="✕", width=30, height=30,
+                fg_color="transparent", hover_color="#cc0000",
+                command=dialog.destroy,
+                font=("Arial", 12)
+            )
+            close_btn_header.pack(side="right", padx=10, pady=5)
+        except Exception:
+            pass
+
+        # Center on parent
+        parent = dialog.master
+        parent.update_idletasks()
+        x = parent.winfo_x() + (parent.winfo_width() - 480) // 2
+        y = parent.winfo_y() + (parent.winfo_height() - 400) // 2
+        dialog.geometry(f"480x400+{x}+{y}")
+
+        # Close on Escape
+        dialog.bind("<Escape>", lambda e: dialog.destroy())
+
+        # Content area
+        content_frame = ctk.CTkFrame(dialog, fg_color="#1f1f1f")
+        content_frame.pack(fill="both", expand=True, padx=20, pady=(10, 20))
+
+        text_widget = ctk.CTkTextbox(
+            content_frame,
+            wrap="word",
+            font=("Arial", 14),
+            text_color="#cccccc",
+            fg_color="#2a2a2a",
+            border_width=0,
+        )
+        text_widget.pack(fill="both", expand=True, padx=15, pady=15)
+
+        # Build text
+        text = description
         if parameters:
-            text += "Parameters:\n"
+            text += "\n\nParameters:\n"
             for param, desc in parameters.items():
                 text += f"• {param}: {desc}\n"
 
-        self.info_description.insert("1.0", text)
-        self.info_description.configure(state="disabled")
+        text_widget.insert("1.0", text)
+        text_widget.configure(state="disabled")
 
     # =====================================================================
     # Command execution
@@ -261,7 +304,6 @@ class ControllerGUI(ctk.CTk):
             self.get_command_callback(command_name)
         )
         self.param_frame.pack(expand=True, fill="both")
-        self.update_info_panel(command_name)
 
     def get_command_callback(self, command_name: str) -> Callable[..., Optional[str]]:
         if command_name == "PVP":

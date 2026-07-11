@@ -55,19 +55,19 @@ def run_dungeon_checker(controller: Controller) -> dict:
             if len(cords) > 0:
                 found[cavern_name] = True
                 logger.info(f"  FOUND: {cavern_name}")
-                break  # Each page shows one new cavern — stop checking
+                break  # Each page shows one new cavern, stop checking
             # else: skip, will be added back to unknown below
 
         unknown = {n: a for n, a in unknown.items() if n not in found}
 
         # If all caverns found, no need to keep scrolling
         if not unknown:
-            logger.info("All caverns found — stopping")
+            logger.info("All caverns found, stopping")
             break
 
         # ── Click RightArrow to go to next page ────────────────────────────
         if not controller.click(ASSETS.RightArrow, pause=4):
-            logger.info("No more RightArrow — reached the end")
+            logger.info("No more RightArrow, reached the end")
             break
 
     # ── Print summary ────────────────────────────────────────────────────

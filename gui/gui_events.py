@@ -25,7 +25,7 @@ def update_image(gui, frame):
         if gui.debug_mode and gui.debug_tool is not None:
             frame = gui.debug_tool.draw_detections_on_frame(frame.copy())
     except Exception:
-        # Ignore debug drawing errors — continue with normal frame
+        # Ignore debug drawing errors, continue with normal frame
         pass
 
     gui.is_portrait_frame = frame.shape[0] > frame.shape[1]

@@ -166,6 +166,11 @@ RUNE_LEVEL_TO_ASSET = {
     5: ASSETS.RuneLevel5,
 }
 
+# Roman numeral to level int mapping
+ROMAN_TO_RUNE_LEVEL = {
+    "I": 1, "II": 2, "III": 3, "IV": 4, "V": 5,
+}
+
 # Rune type to asset mapping
 RUNE_TYPE_TO_ASSET = {
     "Life": ASSETS.RuneLife,

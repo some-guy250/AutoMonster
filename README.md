@@ -8,19 +8,9 @@ Automation tool for [Monster Legends](https://www.igg.com/en/game/monster-legend
 
 ## Features
 
-- **Ads:** Watch all available Monster Wood ads for rewards
-- **Reduce Time:** Watch ads to reduce in-game timers
-- **Resource Dungeons:** Auto-complete Gem, Rune, and Maze Coin dungeons with optional stamina wait
-- **Cavern Dungeons:** Run Ancestral (9) and Era (14) caverns with automatic team management
-- **Era Saga:** Auto-progress through the currently selected Era Saga
-- **PVP:** Auto-battle with box management and timer reduction
-- **Breed Monsters:** Breed with Mountain/Tree selection, optional feed and sell
-- **Feed & Sell Monsters:** Level up and sell unwanted monsters
-- **Craft Runes:** Craft runes (levels I–V, all types) for single or team monsters
-- **Close Game:** Exit the game, the app, or shut down the PC
-- **Macro System:** Chain commands into automated sequences
-- **Brightness Controls:** Lower screen brightness for overnight runs
-- **Automatic Updates:** Checks for and installs updates on startup
+- Ads · Reduce Time · Resource Dungeons · Cavern Dungeons · Era Saga · PVP
+- Breed Monsters · Feed & Sell Monsters · Craft Runes
+- Macro System · Brightness Controls · Automatic Updates · Close Game
 
 ## Installation
 
@@ -62,7 +52,7 @@ Recommended emulators: [BlueStacks](https://www.bluestacks.com) (best performanc
 
 ### Commands
 
-Select a command from the dropdown, configure its parameters, and click **Save Settings** to store defaults.
+Select a command from the dropdown, configure its parameters, and click **Set Values as Defaults** to store them for next time.
 
 ### Macro System
 
@@ -77,6 +67,7 @@ Chain commands into automated sequences via **Macro Manager**:
 
 - Check the log window for status updates and errors
 - Use **Stop** to halt any running operation
+- Some commands are semi-automatic — click the **?** help button for navigation requirements
 
 ## Requirements
 

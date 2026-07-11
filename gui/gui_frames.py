@@ -29,7 +29,6 @@ def build_main_interface(gui):
 
     gui.panel_width = 300
     gui.panel_visible = True
-    gui.info_visible = True
 
     gui.commands = gui.commands  # already set on __init__ via self.commands = GUI_COMMANDS
     gui.command_descriptions = gui.command_descriptions
@@ -41,9 +40,8 @@ def build_main_interface(gui):
     mf.grid_columnconfigure(0, weight=0, minsize=30)   # Left toggle
     mf.grid_columnconfigure(1, weight=0, minsize=gui.panel_width)  # Command frame
     mf.grid_columnconfigure(2, weight=1)  # Preview
-    mf.grid_columnconfigure(3, weight=0, minsize=gui.panel_width)  # Info frame
-    mf.grid_columnconfigure(4, weight=0, minsize=30)  # Right toggle
-    mf.grid_columnconfigure(5, weight=0, minsize=0)  # Debug panel (hidden)
+    mf.grid_columnconfigure(3, weight=0, minsize=30)  # Right toggle
+    mf.grid_columnconfigure(4, weight=0, minsize=0)  # Debug panel (hidden)
     mf.grid_rowconfigure(0, weight=3)
     mf.grid_rowconfigure(1, weight=1)
 
@@ -52,14 +50,6 @@ def build_main_interface(gui):
         mf, text="≪", width=30, height=24, command=gui.toggle_panel
     )
     gui.toggle_button.grid(row=0, column=0, sticky="ns", padx=(2, 0), pady=10)
-
-    gui.info_toggle_button = ctk.CTkButton(
-        mf, text="≫", width=30, height=24, command=gui.toggle_info_panel
-    )
-    gui.info_toggle_button.grid(row=0, column=4, sticky="ns", padx=(0, 2), pady=10)
-
-    # ---- Info panel ----
-    _build_info_panel(gui)
 
     # ---- Command panel ----
     _build_command_panel(gui)
@@ -78,22 +68,6 @@ def build_main_interface(gui):
 # =============================================================================
 # Sub-builders
 # =============================================================================
-
-def _build_info_panel(gui):
-    mf = gui.main_frame
-    info = gui.info_frame = ctk.CTkFrame(mf, width=gui.panel_width)
-    info.grid(row=0, column=3, padx=10, pady=10, sticky="nsew")
-    info.grid_propagate(False)
-
-    gui.info_title = ctk.CTkLabel(info, text="", font=gui.fonts["header"])
-    gui.info_title.pack(padx=10, pady=(10, 5), anchor="w")
-
-    ctk.CTkFrame(info, height=2).pack(fill="x", padx=10, pady=(0, 10))
-
-    gui.info_description = ctk.CTkTextbox(info, wrap="word", height=200, font=("Arial", 14))
-    gui.info_description.pack(fill="both", expand=True, padx=10, pady=5)
-    gui.info_description.configure(state="disabled")
-
 
 def _build_command_panel(gui):
     mf = gui.main_frame
@@ -167,12 +141,22 @@ def _build_command_selector(gui, parent):
 
     from .gui_config import GUI_COMMANDS
     gui.command_var = ctk.StringVar(value=next(iter(GUI_COMMANDS)))
+    dropdown_row = ctk.CTkFrame(select_frame)
+    dropdown_row.pack(fill="x", padx=5, pady=5)
+
     gui.command_dropdown = ctk.CTkOptionMenu(
-        select_frame, values=list(gui.commands.keys()), variable=gui.command_var,
+        dropdown_row, values=list(gui.commands.keys()), variable=gui.command_var,
         command=gui.on_command_change, width=200, height=32,
         font=gui.fonts["normal"], anchor="center"
     )
-    gui.command_dropdown.pack(fill="x", padx=5)
+    gui.command_dropdown.pack(side="left", fill="x", expand=True)
+
+    gui.help_btn = ctk.CTkButton(
+        dropdown_row, text="?", width=32, height=32, font=("Arial", 16, "bold"),
+        fg_color="#3B8ED0", hover_color="#2d6bb0",
+        command=gui.show_help_popup
+    )
+    gui.help_btn.pack(side="left", padx=(5, 0))
 
     # Parameter container
     gui.param_container = ctk.CTkFrame(parent)
@@ -181,9 +165,6 @@ def _build_command_selector(gui, parent):
 
     gui.param_frame = None
     gui.on_command_change(gui.command_var.get())
-
-    # Update info panel
-    gui.update_info_panel(gui.command_var.get())
 
 
 def _build_preview_frame(gui):
@@ -327,6 +308,31 @@ def _show_update_message_dialog(message: str) -> None:
     dialog.configure(bg="#2b2b2b")
     dialog.grab_set()
 
+    # Remove minimize/maximize buttons (Windows only)
+    try:
+        dialog.config(highlightthickness=0)
+        dialog.overrideredirect(True)
+        # Add custom title bar
+        title_bar = ctk.CTkFrame(dialog, fg_color="#1f1f1f", height=50)
+        title_bar.pack(fill="x")
+        title_bar.pack_propagate(False)
+        ctk.CTkLabel(
+            title_bar,
+            text="What's New",
+            font=("Arial", 18, "bold"),
+            text_color="#ffffff",
+            anchor="center",
+        ).pack(fill="x", pady=10)
+        close_btn_header = ctk.CTkButton(
+            title_bar, text="✕", width=30, height=30,
+            fg_color="transparent", hover_color="#cc0000",
+            command=dialog.destroy,
+            font=("Arial", 12)
+        )
+        close_btn_header.pack(side="right", padx=10, pady=5)
+    except Exception:
+        pass
+
     # Center on parent
     parent = dialog.master
     parent.update_idletasks()
@@ -337,47 +343,19 @@ def _show_update_message_dialog(message: str) -> None:
     # Close on Escape
     dialog.bind("<Escape>", lambda e: dialog.destroy())
 
-    # Header
-    header_frame = ctk.CTkFrame(dialog, fg_color="#1f1f1f", height=80)
-    header_frame.pack(fill="x", padx=20, pady=(20, 0))
-    header_frame.pack_propagate(False)
-
-    ctk.CTkLabel(
-        header_frame,
-        text="What's New",
-        font=("Arial", 20, "bold"),
-        text_color="#ffffff",
-        anchor="center",
-    ).pack(fill="x", padx=20, pady=(18, 0))
-
     # Message area
     msg_frame = ctk.CTkFrame(dialog, fg_color="#1f1f1f")
-    msg_frame.pack(fill="both", expand=True, padx=20, pady=15)
+    msg_frame.pack(fill="both", expand=True, padx=20, pady=(10, 20))
 
     msg_text = ctk.CTkTextbox(
         msg_frame,
         height=200,
         wrap="word",
-        font=("Arial", 14),
+        font=("Arial", 15),
         text_color="#cccccc",
         fg_color="#2a2a2a",
         border_width=0,
     )
     msg_text.pack(fill="both", expand=True, padx=30, pady=15)
     msg_text.insert("1.0", message)
-    msg_text.tag_configure("center", justify="center")
-    msg_text.tag_add("center", "1.0", "end")
     msg_text.configure(state="disabled")
-
-    # Close button
-    close_btn = ctk.CTkButton(
-        dialog,
-        text="OK",
-        font=("Arial", 14, "bold"),
-        height=40,
-        width=120,
-        fg_color="#3B8ED0",
-        hover_color="#2d6bb0",
-        command=dialog.destroy,
-    )
-    close_btn.pack(pady=(0, 20))

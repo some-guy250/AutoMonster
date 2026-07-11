@@ -438,7 +438,7 @@ def self_update(latest_release, progress_window):
         os.rename(current_exe, old_launcher_path)
         os.rename(new_launcher_path, current_exe)
         
-        # Restart — give the new process time to start before we exit
+        # Restart, give the new process time to start before we exit
         subprocess.Popen([current_exe])
         sys.exit(0)
         return True

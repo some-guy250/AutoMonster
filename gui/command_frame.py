@@ -358,7 +358,7 @@ class CommandFrame(ctk.CTkFrame):
                 value = widget.get()
             elif isinstance(widget, list):  # Flat multiple choice checkboxes
                 value = [choice for choice, var in widget if var.get()]
-            elif isinstance(widget, dict):  # Tabbed multiple choice — merge all tabs
+            elif isinstance(widget, dict):  # Tabbed multiple choice (merge all tabs)
                 value = []
                 for tab_choices in widget.values():
                     value.extend(choice for choice, var in tab_choices if var.get())
@@ -387,7 +387,7 @@ class CommandFrame(ctk.CTkFrame):
                 value = widget.get()
             elif isinstance(widget, list):  # Flat multiple choice checkboxes
                 value = [choice for choice, var in widget if var.get()]
-            elif isinstance(widget, dict):  # Tabbed multiple choice — merge all tabs
+            elif isinstance(widget, dict):  # Tabbed multiple choice (merge all tabs)
                 value = []
                 for tab_choices in widget.values():
                     value.extend(choice for choice, var in tab_choices if var.get())

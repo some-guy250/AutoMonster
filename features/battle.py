@@ -183,7 +183,7 @@ class BattleManager:
         if change_team:
             ct = self.controller.change_team()
             if not ct:
-                # Team change failed (all monsters dead) — go back to dungeon select
+                # Team change failed (all monsters dead), go back to dungeon select
                 logger.warning("Could not change team, returning to dungeon")
                 self.controller.log_gui("Could not change team, returning to dungeon", "warning")
                 for _ in range(3):
