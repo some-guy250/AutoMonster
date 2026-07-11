@@ -245,9 +245,9 @@ def download_assets(progress_window=None):
     if progress_window:
         progress_window.update_progress(0, "Preparing to download assets...", "Fetching file information...")
 
-    if os.path.exists("assets"):
-        shutil.rmtree("assets", ignore_errors=True)
-    os.makedirs("assets", exist_ok=True)
+    if os.path.exists("asset_images"):
+        shutil.rmtree("asset_images", ignore_errors=True)
+    os.makedirs("asset_images", exist_ok=True)
 
     all_files = []
     
@@ -282,7 +282,7 @@ def download_assets(progress_window=None):
     shared_state = {'total_downloaded': 0, 'files_completed': 0}
     
     def download_single_asset(item):
-        file_path = os.path.join("assets", item["relative_path"])
+        file_path = os.path.join("asset_images", item["relative_path"])
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         
         # Use a session for potentially better performance (though new session per thread here)
