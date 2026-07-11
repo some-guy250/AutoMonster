@@ -1,3 +1,4 @@
 {
-    "2.0": "v2.0 is here! Check out the new features and improvements inside."
+    "2.0": "v2.0 is here! Check out the new features and improvements inside.",
+    "3.0": "Major UI overhaul: removed side panel, added help popup (? button) for command details. Fixed all command descriptions for accuracy. Removed em-dashes from codebase. Added fail-early validation for rune crafting and breeding. Cleaned up documentation. First update in 6 months — thank you for the patience!"
 }
