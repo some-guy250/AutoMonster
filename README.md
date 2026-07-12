@@ -1,6 +1,6 @@
 # AutoMonster
 
-Automation tool for [Monster Legends](https://www.igg.com/en/game/monster-legends) using ADB and OpenCV template matching.
+Automation tool for Monster Legends using ADB and OpenCV template matching.
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg?style=flat-square)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
