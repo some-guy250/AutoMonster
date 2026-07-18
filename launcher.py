@@ -587,7 +587,16 @@ def main():
         update_thread.start()
         progress_window.root.mainloop()
     else:
-        launch_main(app_was_updated)
+        # Fallback: old launcher didn't write the flag, but app may still be outdated
+        if latest_version and compare_versions(latest_version, local_version) == 1:
+            progress_window = ModernProgressWindow()
+            progress_window.update_version(local_version, latest_version)
+            update_thread = threading.Thread(target=update_process, args=(progress_window, latest_version))
+            update_thread.daemon = True
+            update_thread.start()
+            progress_window.root.mainloop()
+        else:
+            launch_main(app_was_updated)
 
 
 if __name__ == "__main__":
