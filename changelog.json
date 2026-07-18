@@ -8,5 +8,18 @@
             "Removed side panel, added help button for command details",
             "Added a what's new popup for the first time after updating"
         ]
+    },
+    "3.0.1": {
+        "subtitle": "First update in 5 months, curius if theres anyone still using this tool.",
+        "changes": [
+            "Fixed PVP",
+            "Rune crafting automation added (as a request from a user)",
+            "Major restructuring of the codebase",
+            "Removed side panel, added help button for command details",
+            "Added a what's new popup for the first time after updating",
+            "Fixed Cavern command not passing selected dungeons",
+            "Replaced custom tab buttons with native CTkTabview for cleaner UI",
+            "Fixed launcher not showing What's New dialog after launcher self-update"
+        ]
     }
 }
