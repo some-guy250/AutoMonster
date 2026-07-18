@@ -189,13 +189,9 @@ class ModernProgressWindow:
         self.needs_update = True
 
     def close(self):
-        def do_close():
-            if not self.is_closing:
-                self.is_closing = True
-                self.root.quit()
-                self.root.destroy()
-
-        self.safe_update(do_close)
+        self.is_closing = True
+        self.root.quit()
+        self.root.destroy()
 
 
 def get_version():
@@ -509,15 +505,30 @@ def update_process(progress_window, latest_version):
             save_version(latest_version)
         progress_window.update_progress(100, "Update completed!", "Starting AutoMonster...")
         time.sleep(1)
-        # Set up the launch before closing
+        # Launch the app before closing
         launch_main(True)
-        # Signal the main thread to close the window
+        # Close the window
         progress_window.close()
+
+        # Fallback: force exit if window didn't close
+        def force_exit():
+            time.sleep(3)
+            if progress_window.is_closing:
+                sys.exit(0)
+
+        threading.Thread(target=force_exit, daemon=True).start()
     except Exception as e:
         if not progress_window.is_closing:
             progress_window.update_progress(0, "Error during update!", str(e))
             time.sleep(3)
             progress_window.close()
+
+            # Fallback: force exit on error
+            def force_exit_error():
+                time.sleep(3)
+                sys.exit(1)
+
+            threading.Thread(target=force_exit_error, daemon=True).start()
 
 
 def cleanup_old_launcher():
