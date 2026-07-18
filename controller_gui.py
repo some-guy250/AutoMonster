@@ -439,6 +439,13 @@ class ControllerGUI(ctk.CTk):
             elif isinstance(widget, list):
                 selected = [choice for choice, var in widget if var.get()]
                 params[param_name] = selected
+            elif isinstance(widget, dict):
+                selected = []
+                for tab_choices in widget.values():
+                    for choice, var in tab_choices:
+                        if var.get():
+                            selected.append(choice)
+                params[param_name] = selected
 
         command_name = self.command_var.get()
         self.append_log(f"Running {command_name} with parameters: {params}", "debug")

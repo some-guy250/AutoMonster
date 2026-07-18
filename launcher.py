@@ -387,13 +387,13 @@ def get_launcher_version():
             return file.read().strip()
     return "0.0.0"
 
-def self_update(latest_release, progress_window):
+def self_update(latest_release, progress_window, app_update=False):
     assets = latest_release.get('assets', [])
-    
+
     # Check for version file in assets
     version_asset = next((a for a in assets if a['name'] == 'launcher_version.txt'), None)
     launcher_asset = next((a for a in assets if a['name'] in ['LauncherAutoMonster.exe', 'Launcher.bin']), None)
-    
+
     if not launcher_asset:
         return False
 
@@ -410,7 +410,7 @@ def self_update(latest_release, progress_window):
                     should_update = True
         except Exception as e:
             logger.error(f"Error checking launcher version: {e}")
-    
+
     # Fallback to size check if version check failed or file missing
     current_exe = sys.executable
     if not should_update and getattr(sys, 'frozen', False) and not new_version:
@@ -421,23 +421,28 @@ def self_update(latest_release, progress_window):
 
     if should_update and getattr(sys, 'frozen', False):
         progress_window.update_progress(0, "Updating Launcher...", "Downloading new version...")
-        
+
         new_launcher_path = current_exe + ".new"
         download_file(launcher_asset['browser_download_url'], new_launcher_path, progress_window, 0, 100, "Downloading Launcher update...")
-        
+
         # Update the version file locally
         if new_version:
             with open("launcher_version.txt", "w") as f:
                 f.write(new_version)
 
+        # Signal the new launcher to pass 'updated' to the app
+        if app_update:
+            with open("app_updated.flag", "w") as f:
+                f.write("1")
+
         # Rename dance
         old_launcher_path = current_exe + ".old"
         if os.path.exists(old_launcher_path):
             os.remove(old_launcher_path)
-            
+
         os.rename(current_exe, old_launcher_path)
         os.rename(new_launcher_path, current_exe)
-        
+
         # Restart, give the new process time to start before we exit
         subprocess.Popen([current_exe])
         sys.exit(0)
@@ -490,9 +495,12 @@ def update_process(progress_window, latest_version):
         # Check for self-update first
         response = requests.get(f"{repo_url_api}/releases/latest")
         latest_release = response.json()
-        
-        if self_update(latest_release, progress_window):
-            return # self_update will restart the process
+
+        # Determine if the app itself needs updating (not just launcher)
+        app_update = compare_versions(latest_version, get_version()) == 1
+
+        if self_update(latest_release, progress_window, app_update=app_update):
+            return  # self_update will restart the process
 
         progress_window.update_progress(0, "Initializing update...", "Starting download process...")
         download_assets(progress_window)
@@ -552,6 +560,11 @@ def main():
     cleanup_thread = threading.Thread(target=cleanup_old_launcher, daemon=True)
     cleanup_thread.start()
 
+    # Check if the app was just updated (flag set before launcher restart)
+    app_was_updated = os.path.isfile("app_updated.flag")
+    if app_was_updated:
+        os.remove("app_updated.flag")
+
     update_needed, latest_version = check_for_updates()
     local_version = get_version()
 
@@ -563,7 +576,7 @@ def main():
         update_thread.start()
         progress_window.root.mainloop()
     else:
-        launch_main(False)
+        launch_main(app_was_updated)
 
 
 if __name__ == "__main__":

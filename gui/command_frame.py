@@ -132,45 +132,28 @@ class CommandFrame(ctk.CTkFrame):
                 tab_groups = param_config.get("tabs")
 
                 if tab_groups:
-                    # ---- Tabbed multiple_choice ----
+                    # ---- Tabbed multiple_choice using CTkTabview ----
                     checkbox_vars = {}  # {tab_name: [(choice, var), ...]}
-                    checkbox_frames = {}  # {tab_name: frame}
-                    active_tab = [list(tab_groups.keys())[0]]  # mutable container
 
-                    # Tab button row
-                    tab_button_frame = ctk.CTkFrame(checkbox_container)
-                    tab_button_frame.pack(fill="x", padx=5, pady=(0, 5))
+                    tabview = ctk.CTkTabview(checkbox_container)
+                    tabview.pack(fill="both", expand=True, padx=5, pady=(0, 5))
 
-                    tab_buttons = {}
-
-                    def switch_tab(tab_name):
-                        active_tab[0] = tab_name
-                        for name, btn in tab_buttons.items():
-                            btn.configure(fg_color="#555555" if name != tab_name else "#3B8ED0")
-                        for name, frame in checkbox_frames.items():
-                            if name == tab_name:
-                                frame.pack(fill="both", expand=True, padx=5, pady=(0, 5))
-                            else:
-                                frame.pack_forget()
-
-                    for tab_name in tab_groups:
-                        btn = ctk.CTkButton(
-                            tab_button_frame, text=tab_name, width=100, height=28,
-                            font=("Arial", 11, "bold"),
-                            fg_color="#3B8ED0" if tab_name == active_tab[0] else "#555555",
-                            hover_color="#2d6bb0",
-                            command=lambda t=tab_name: switch_tab(t)
-                        )
-                        btn.pack(side="left", padx=(0, 5))
-                        tab_buttons[tab_name] = btn
+                    for tab_name, choices in tab_groups.items():
+                        tab_frame = tabview.add(tab_name)
+                        checkbox_vars[tab_name] = []
+                        for choice in choices:
+                            var = ctk.BooleanVar(value=choice in param_config.get("default", []))
+                            checkbox = ctk.CTkCheckBox(tab_frame, text=choice, variable=var)
+                            checkbox.pack(anchor="w", padx=20, pady=2)
+                            checkbox_vars[tab_name].append((choice, var))
 
                     def select_all():
-                        active = checkbox_vars.get(active_tab[0], [])
+                        active = checkbox_vars.get(tabview.get(), [])
                         for choice, var in active:
                             var.set(True)
 
                     def deselect_all():
-                        active = checkbox_vars.get(active_tab[0], [])
+                        active = checkbox_vars.get(tabview.get(), [])
                         for choice, var in active:
                             var.set(False)
 
@@ -181,21 +164,6 @@ class CommandFrame(ctk.CTkFrame):
                     deselect_all_btn = ctk.CTkButton(button_frame, text="Deselect All", width=100, height=25,
                                                      font=("Arial", 11), command=deselect_all)
                     deselect_all_btn.pack(side="left")
-
-                    # Checkbox frame per tab
-                    for tab_name, choices in tab_groups.items():
-                        frame = ctk.CTkFrame(checkbox_container)
-                        checkbox_vars[tab_name] = []
-                        for choice in choices:
-                            var = ctk.BooleanVar(value=choice in param_config.get("default", []))
-                            checkbox = ctk.CTkCheckBox(frame, text=choice, variable=var)
-                            checkbox.pack(anchor="w", padx=20, pady=2)
-                            checkbox_vars[tab_name].append((choice, var))
-                        if tab_name != active_tab[0]:
-                            frame.pack_forget()
-                        else:
-                            frame.pack(fill="both", expand=True, padx=5, pady=(0, 5))
-                        checkbox_frames[tab_name] = frame
 
                     widget = checkbox_vars
                 else:
