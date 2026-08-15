@@ -81,5 +81,5 @@ class GameManager:
             self.controller.client.control.swipe(self.controller.scale_x(600), self.controller.scale_y(400), self.controller.scale_x(100), self.controller.scale_y(400), 20)
             self.controller.pause(2)
             count += 1
-            if count > 10:
+            if count > 5:
                 raise  GoToError(f"Failed to find {asset} in Activity Hub")

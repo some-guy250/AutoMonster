@@ -93,7 +93,7 @@ ASSET_REGIONS = {
     ASSETS.Selected1: Region.TOP,
     ASSETS.Selected2: Region.TOP,
     ASSETS.Selected3: Region.TOP,
-    ASSETS.Cavern: Region.RIGHT,
+    ASSETS.Cavern: Region.TOP,
     ASSETS.ChangeTeam: Region.BOTTOM_LEFT,
     ASSETS.BackPVP: Region.TOP_LEFT,
     ASSETS.Back: Region.TOP_LEFT,

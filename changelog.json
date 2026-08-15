@@ -21,5 +21,12 @@
             "Replaced custom tab buttons with native CTkTabview for cleaner UI",
             "Fixed launcher not showing What's New dialog after launcher self-update"
         ]
+    },
+    "3.0.2": {
+        "subtitle": "Small quality-of-life fixes.",
+        "changes": [
+            "Updated cavern image and fixed its screen region",
+            "Activity Hub now fails faster if a screen isn't found"
+        ]
     }
 }
