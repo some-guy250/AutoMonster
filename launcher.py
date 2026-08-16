@@ -488,6 +488,9 @@ def save_version(version):
 
 def update_process(progress_window, latest_version):
     try:
+        if not latest_version:
+            raise Exception("Could not check for updates (no internet or GitHub unreachable). Relaunch the updater once you are online.")
+
         # Check for self-update first
         response = requests.get(f"{repo_url_api}/releases/latest")
         latest_release = response.json()
@@ -579,7 +582,11 @@ def main():
     update_needed, latest_version = check_for_updates()
     local_version = get_version()
 
-    if local_version == "0.0.0" or update_needed:
+    # Only attempt an update when a latest version was actually found.
+    # check_for_updates returns (False, None) when offline or when the
+    # GitHub API fails; in that case skip the update and launch the
+    # installed version instead of crashing in compare_versions.
+    if latest_version and (local_version == "0.0.0" or update_needed):
         progress_window = ModernProgressWindow()
         progress_window.update_version(local_version, latest_version)
         update_thread = threading.Thread(target=update_process, args=(progress_window, latest_version))
