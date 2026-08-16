@@ -122,11 +122,43 @@ jobs:
           Move-Item -Path "final_dist/AutoMonster.exe" -Destination "final_dist/AutoMonster.bin" -Force
           Move-Item -Path "final_dist/LauncherAutoMonster.exe" -Destination "final_dist/Launcher.bin" -Force
 
-      - name: Get version
+      - name: Get version and build release notes
         id: get_version
         run: |
-          $version = Get-Content version.txt
-          echo "version=$(Get-Content version.txt)" >> $env:GITHUB_OUTPUT
+          $version = (Get-Content version.txt).Trim()
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+
+          # Build the release body from changelog.json so the release page
+          # shows the same "What's New" notes as the in-app popup.
+          # Fail the build if the version has no changelog entry.
+          $changelog = Get-Content changelog.json -Raw | ConvertFrom-Json
+          $entry = $null
+          foreach ($prop in $changelog.PSObject.Properties) {
+              if ($prop.Name -eq $version) { $entry = $prop.Value; break }
+          }
+          if (-not $entry) {
+              throw "No changelog entry for version $version in changelog.json. Add one before releasing."
+          }
+
+          $lines = @()
+          $lines += "## What's New"
+          $lines += ""
+          $lines += "> $($entry.subtitle)"
+          $lines += ""
+          foreach ($change in $entry.changes) {
+              $lines += "- $change"
+          }
+          $lines += ""
+          $lines += "## Installation Instructions"
+          $lines += "1. Download **AutoMonster_Setup.exe**"
+          $lines += "2. Run the installer"
+          $lines += "3. Launch AutoMonster"
+          $lines += ""
+          $lines += "> **Note:** Only download the Setup file. Other assets are used by the auto-updater."
+
+          # Write without BOM so the release body starts cleanly
+          [System.IO.File]::WriteAllText("release_body.md", ($lines -join "`n"), [System.Text.UTF8Encoding]::new($false))
+          Get-Content release_body.md
 
       - name: Create Release and Upload Assets
         uses: softprops/action-gh-release@v1
@@ -135,13 +167,7 @@ jobs:
         with:
           tag_name: v-${{ steps.get_version.outputs.version }}
           name: Version ${{ steps.get_version.outputs.version }}
-          body: |
-            ## Installation Instructions
-            1. Download **AutoMonster_Setup.exe**
-            2. Run the installer
-            3. Launch AutoMonster from your Start Menu
-
-            > **Note:** Only download the Setup file. Other assets are used by the auto-updater.
+          body-file: release_body.md
           files: |
             ./installer/AutoMonster_Setup.exe
             ./final_dist/AutoMonster.bin

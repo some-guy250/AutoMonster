@@ -36,7 +36,7 @@ python main.py
 
 ### Emulator (Recommended)
 
-- **Resolution:** 1280x720 (required)
+- **Resolution:** 1280x720 (recommended)
 - **DPI:** 240
 - **ADB:** Enabled and accessible
 
@@ -74,7 +74,7 @@ Chain commands into automated sequences via **Macro Manager**:
 - Windows (installer), macOS or Linux (manual)
 - Python 3.10+
 - ADB-capable device or emulator
-- Monster Legends at 1280x720 resolution
+- Monster Legends at 1280x720 resolution (recommended)
 
 ## Bug Reports
 
