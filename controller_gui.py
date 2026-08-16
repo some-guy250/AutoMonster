@@ -26,7 +26,7 @@ from gui.macro_dialog import MacroDialog
 from utils.config_manager import ConfigManager
 from gui.gui_frames import build_main_interface, _show_update_message_dialog
 from gui.gui_events import (
-    update_image, update_image_safe,
+    on_scrcpy_frame, blit_pending_frame,
     on_mouse_down, on_mouse_move, on_mouse_up,
     on_window_resize, on_log_scroll, on_auto_scroll_toggle,
 )
@@ -134,7 +134,6 @@ class ControllerGUI(ctk.CTk):
     # =====================================================================
 
     def init_main_interface(self) -> None:
-        self.last_check_battery = datetime.now()
         self.debug_mode = False
 
         build_main_interface(self)
@@ -161,11 +160,25 @@ class ControllerGUI(ctk.CTk):
     # =====================================================================
 
     def append_log(self, message: str, level: str = "info") -> None:
+        """Append a log entry, safe to call from any thread.
+
+        tkinter is not thread-safe, so the widget update is scheduled on
+        the Tk main thread. Calling insert/see from a worker thread can
+        intermittently freeze the main loop.
+        """
         if level == "debug" and not self.debug_mode:
             return
 
         timestamp = datetime.now().strftime("%H:%M:%S")
         log_entry = f"[{timestamp}] {message}\n"
+        try:
+            self.after(0, self._append_log_now, log_entry, level)
+        except Exception:
+            # Tk interpreter is shutting down: dropping the line is fine.
+            pass
+
+    def _append_log_now(self, log_entry: str, level: str) -> None:
+        """Main thread part of append_log."""
         self.log_text.insert("end", log_entry, level)
         if self.auto_scroll.get():
             self.log_text.see("end")
@@ -174,11 +187,13 @@ class ControllerGUI(ctk.CTk):
     # Event handler wrappers (delegate to gui_events module)
     # =====================================================================
 
-    def update_image(self, frame: np.ndarray) -> None:
-        update_image(self, frame)
+    def on_scrcpy_frame(self, frame: np.ndarray) -> None:
+        """Scrcpy stream thread entry point: render the newest frame off the main thread (see gui_events)."""
+        on_scrcpy_frame(self, frame)
 
-    def update_image_safe(self, frame: np.ndarray) -> None:
-        update_image_safe(self, frame)
+    def blit_pending_frame(self) -> None:
+        """Main thread entry point: display the newest rendered image (see gui_events)."""
+        blit_pending_frame(self)
 
     def on_mouse_down(self, event: object) -> None:
         on_mouse_down(self, event)
@@ -367,10 +382,7 @@ class ControllerGUI(ctk.CTk):
             if progress == 0:
                 self.progress_label.configure(text=f"{command} Progress:")
                 self.progress_frame.pack(fill="x", padx=5, pady=(5, 0))
-                self.progress_frame.update()
-                self.command_progress.update()
             self.command_progress.set(progress)
-            self.command_progress.update()
             if progress >= 1:
                 self.progress_frame.pack_forget()
 
@@ -597,9 +609,7 @@ class ControllerGUI(ctk.CTk):
                             self.after(0, self.progress_frame.pack_forget)
 
                         progress = (i + 1) / total_steps
-                        self.after(0, lambda p=progress: [
-                            self.macro_progress.set(p), self.macro_progress.update()
-                        ])
+                        self.after(0, lambda p=progress: self.macro_progress.set(p))
                     except  ExecutionFlag:
                         self.append_log(f"Macro step {command} stopped", "warning")
                         break

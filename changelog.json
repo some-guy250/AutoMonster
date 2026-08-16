@@ -28,5 +28,16 @@
             "Updated cavern image and fixed its screen region",
             "Activity Hub now fails faster if a screen isn't found"
         ]
+    },
+    "3.0.3": {
+        "subtitle": "Live view performance and update fixes.",
+        "changes": [
+            "Live view no longer lags: frame rendering moved off the interface thread and stale frames are dropped",
+            "Removed the periodic battery check that briefly blocked the interface",
+            "Command logging no longer stutters the interface",
+            "What's New popup now appears after auto-updates (changelog is embedded in the exe)",
+            "Dungeon handling adjusted when no usable monsters remain",
+            "Slider retry attempts increased from 35 to 55"
+        ]
     }
 }

@@ -78,9 +78,6 @@ class Controller:
         self.device_manager.check_resolution()
         init_region_utils(self.device_manager.new_width, GAME_HEIGHT)
 
-    def get_battery_level(self) -> str:
-        return self.device_manager.get_battery_level()
-
     def freeze(self) -> None:
         self.device_manager.freeze()
 

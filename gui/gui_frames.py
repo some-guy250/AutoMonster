@@ -9,7 +9,7 @@ from tkinter import messagebox
 
 import customtkinter as ctk
 import scrcpy
-from config.config import GAME_HEIGHT, CHANGELOG_FILE
+from config.config import GAME_HEIGHT, changelog_path
 
 
 def build_main_interface(gui):
@@ -24,7 +24,6 @@ def build_main_interface(gui):
         "normal": ("Arial", 12),
         "button": ("Arial", 13, "bold"),
     }
-    gui.battery = gui.controller.get_battery_level()
     gui.debug_tool = None
 
     gui.panel_width = 300
@@ -236,9 +235,14 @@ def _build_preview_frame(gui):
     gui.actual_display_size = gui.img_size
     gui._last_preview_size = (0, 0)
     gui._size_recalc_needed = False
+    # Frame pipeline state (see gui_events): the scrcpy thread renders each
+    # frame into gui._pending_image at gui._render_size; the main thread blits.
+    gui._render_size = gui.img_size
+    gui._pending_image = None
+    gui._frame_cb_scheduled = False
 
     # Bind events
-    gui.controller.client.add_listener(scrcpy.EVENT_FRAME, lambda frame: gui.update_image_safe(frame))
+    gui.controller.client.add_listener(scrcpy.EVENT_FRAME, lambda frame: gui.on_scrcpy_frame(frame))
     gui.bind("<Configure>", gui.on_window_resize)
     gui.bind("<F3>", gui.toggle_debug_mode)
     gui.bind("<F5>", lambda e: _show_update_message_dialog(_get_changelog_entry()))
@@ -287,11 +291,12 @@ def _get_changelog_entry() -> dict:
     Returns a dict with 'subtitle' and 'changes' keys.
     Falls back to empty dict on any error or missing entry.
     """
-    if not os.path.isfile(CHANGELOG_FILE) or not os.path.isfile("version.txt"):
+    changelog_file = changelog_path()
+    if not changelog_file.is_file() or not os.path.isfile("version.txt"):
         return {}
 
     try:
-        with open(CHANGELOG_FILE, "r") as f:
+        with open(changelog_file, "r") as f:
             changelog = json.load(f)
         with open("version.txt", "r") as f:
             version = f.read().strip()

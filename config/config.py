@@ -2,6 +2,9 @@
 # Configurable thresholds, timeouts, and runtime configuration
 # =============================================================================
 
+import sys
+from pathlib import Path
+
 from utils.assets import ASSETS
 
 # Default template matching threshold (0.0 to 1.0)
@@ -106,7 +109,7 @@ ASSET_THRESHOLDS = {
 BATTLE_TIMEOUT_SECONDS = 600    # 10 minutes default
 
 # Slider retry limit before asking user for help
-SLIDER_MAX_RETRIES = 35
+SLIDER_MAX_RETRIES = 55
 
 # =============================================================================
 # Game Resolution Constants
@@ -149,3 +152,15 @@ SCROLL_START_Y_FRACTION = 0.55
 # launches after a new version is installed. ONLY the user may edit this.
 # Add new entries as you release versions. Keep old entries for history.
 CHANGELOG_FILE = "changelog.json"
+
+
+def changelog_path() -> Path:
+    """Where to read changelog.json from.
+
+    Frozen exe: the file is embedded in the PyInstaller build (add-data)
+    and extracted to the temp bundle, so each released exe always carries
+    its own version's entry. Dev: the repo file at the project root.
+    """
+    if getattr(sys, 'frozen', False):
+        return Path(sys._MEIPASS) / CHANGELOG_FILE
+    return Path(CHANGELOG_FILE)

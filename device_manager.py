@@ -109,9 +109,6 @@ class DeviceManager:
     def scale_y(self, y: int) -> int:
         return int(y * self.ratio[1]) if self.resized else y
 
-    def get_battery_level(self) -> str:
-        return self.client.device.shell("dumpsys battery | grep level").strip().replace("level: ", "")
-
     def lock_device(self):
         self.client.device.shell("input keyevent 26")
 

@@ -176,8 +176,6 @@ class BattleManager:
 
         if self.controller.in_screen(ASSETS.RefillStamina, ASSETS.NoMonsterLeft, ASSETS.NotFullTeam, ASSETS.NoUndefeated,
                           screenshot=self.controller.get_last_screenshot()):
-            for _ in range(2):
-                self.controller.click_back()
             return None
         ct = True
         if change_team:
@@ -227,6 +225,8 @@ class BattleManager:
                             continue
                         else:
                             return False
+                else:
+                    return False
             elif not result:
                 # False = actual battle loss
                 losses += 1
