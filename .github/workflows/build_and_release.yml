@@ -75,17 +75,18 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Delete all releases
-          $releases = gh release list --limit 100
+          # Delete all releases (published and drafts) by release ID.
+          # NOTE: 'gh release delete' takes a TAG, not a release name. An
+          # earlier version passed the release name and silently failed on
+          # every build, which is how ~76 draft releases accumulated.
+          $releases = gh api "repos/${{ github.repository }}/releases?per_page=100" | ConvertFrom-Json
           if ($releases) {
-            Write-Host "Deleting all releases..."
-            gh release list --limit 100 | ForEach-Object {
-              $release = $_.Split("`t")[0]
-              Write-Host "Deleting release: $release"
-              # Added -if-present flag and error handling
-              gh release delete $release --yes --cleanup-tag -if-present
+            foreach ($release in $releases) {
+              Write-Host "Deleting release $($release.tag_name) (id $($release.id), draft $($release.draft))"
+              gh api -X DELETE "repos/${{ github.repository }}/releases/$($release.id)"
               if ($LASTEXITCODE -ne 0) {
-                Write-Host "Release $release not found or already deleted"
+                Write-Error "Failed to delete release id $($release.id)"
+                exit 1
               }
             }
           } else {
