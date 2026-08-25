@@ -120,6 +120,11 @@ GAME_WIDTH = 1280
 GAME_HEIGHT = 720
 
 # Recommended device resolution
+# Android API level bounds supported by the scrcpy server we ship (scrcpy-client pins the
+# scrcpy 1.20 server, which works up to Android 14 and fails on Android 15+)
+MIN_ANDROID_SDK = 21  # Android 5.0, official scrcpy minimum
+MAX_ANDROID_SDK = 34  # Android 14, scrcpy 1.20 server does not start on Android 15+
+
 RECOMMENDED_WIDTH = 1280
 RECOMMENDED_HEIGHT = 720
 

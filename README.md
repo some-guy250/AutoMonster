@@ -36,6 +36,7 @@ python main.py
 
 ### Emulator (Recommended)
 
+- **Android:** 5.0 to 14 (Android 15+ is not supported yet)
 - **Resolution:** 1280x720 (recommended)
 - **DPI:** 240
 - **ADB:** Enabled and accessible
@@ -73,7 +74,7 @@ Chain commands into automated sequences via **Macro Manager**:
 
 - Windows (installer), macOS or Linux (manual)
 - Python 3.10+
-- ADB-capable device or emulator
+- ADB-capable device or emulator (Android 5.0 to 14; Android 15+ not supported yet)
 - Monster Legends at 1280x720 resolution (recommended)
 
 ## Bug Reports

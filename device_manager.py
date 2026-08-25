@@ -5,10 +5,12 @@ import numpy as np
 import cv2
 import scrcpy
 from adbutils import adb
+from adbutils import AdbDevice
 
 from utils.AutoMonsterErrors import *
 from utils.logger import setup_logger
 from config.config import (
+    MIN_ANDROID_SDK, MAX_ANDROID_SDK,
     RECOMMENDED_WIDTH, RECOMMENDED_HEIGHT,
     DEFAULT_DEVICE_WIDTH, DEFAULT_DEVICE_HEIGHT,
     GAME_HEIGHT,
@@ -55,18 +57,75 @@ class DeviceManager:
             if not target_device:
                 target_device = devices[0]
 
+            self.check_device_state(target_device)
+            self.check_android_version(target_device)
             self.device = target_device
             self.ensure_screen_on_and_unlocked()
 
-            self.client = scrcpy.Client(max_fps=10, stay_awake=True, block_frame=True,
-                                        device=target_device)
-            self.client.start(True, True)
+            try:
+                self.client = scrcpy.Client(max_fps=10, stay_awake=True, block_frame=True,
+                                            device=target_device)
+                self.client.start(True, True)
+            except Exception as e:
+                if "disconnected" in str(e):
+                    # The scrcpy 1.20 server dies when the video stream starts, which
+                    # is what we expect on unsupported Android versions (e.g. 15+).
+                    raise Exception(
+                        "The screen stream disconnected while starting. This usually means the "
+                        "device's Android version is not compatible, or the device rebooted "
+                        f"during connection. Use an Android 5.0 to 14 device. Original error: {e}"
+                    ) from e
+                # scrcpy's first step is pushing its server JAR to the device. A failed
+                # adb sync push (adbutils raises AdbError with the literal text "FAIL")
+                # usually means a broken connection or an emulator in a bad state.
+                raise Exception(
+                    "Could not start the screen stream (failed to deploy scrcpy server). "
+                    "Try: 1) restart the device/emulator, 2) check the emulator settings "
+                    "(resolution 1280x720, DPI 240, ADB enabled), 3) run 'adb kill-server' "
+                    f"and try again. Original error: {e}"
+                ) from e
             logger.info(f'Device connected: {target_device.serial}')
             
             self.check_resolution()
         except Exception as e:
             logger.error(f"Failed to connect to device: {e}")
             raise e
+
+    def check_device_state(self, device: AdbDevice) -> None:
+        """Fail early with a clear message if the device is not ready for ADB."""
+        try:
+            state = device.get_state()
+        except Exception as e:
+            raise Exception(f"Could not query ADB state of device {device.serial}: {e}") from e
+        if state != "device":
+            raise Exception(
+                f"Device {device.serial} is in state '{state}' and not ready for connection. "
+                "Wait for the device/emulator to fully boot (and authorize ADB if prompted), then try again."
+            )
+
+    def check_android_version(self, device: AdbDevice) -> None:
+        """Fail early with a clear message if the Android version is outside our supported range."""
+        try:
+            release = device.shell("getprop ro.build.version.release").strip()
+            sdk_raw = device.shell("getprop ro.build.version.sdk").strip()
+        except Exception as e:
+            raise Exception(f"Could not read the Android version of device {device.serial}: {e}") from e
+        try:
+            sdk = int(sdk_raw)
+        except ValueError:
+            raise Exception(
+                f"Could not parse the Android SDK version of device {device.serial} ('{sdk_raw}'). "
+                "Make sure ADB is fully working, then try again."
+            )
+        if sdk < MIN_ANDROID_SDK:
+            raise Exception(
+                f"Android {release} (API {sdk}) is too old. AutoMonster needs Android 5.0 (API 21) or newer."
+            )
+        if sdk > MAX_ANDROID_SDK:
+            raise Exception(
+                f"Android {release} (API {sdk}) is not supported yet. The screen-streaming server used by "
+                "AutoMonster does not run on Android 15+. Use an emulator image with Android 14 or lower."
+            )
 
     def check_resolution(self):
         size = self.client.resolution
