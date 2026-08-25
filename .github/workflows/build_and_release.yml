@@ -168,7 +168,7 @@ jobs:
         with:
           tag_name: v-${{ steps.get_version.outputs.version }}
           name: Version ${{ steps.get_version.outputs.version }}
-          body-file: release_body.md
+          body_path: release_body.md
           files: |
             ./installer/AutoMonster_Setup.exe
             ./final_dist/AutoMonster.bin
