@@ -39,5 +39,12 @@
             "Dungeon handling adjusted when no usable monsters remain",
             "Slider retry attempts increased from 35 to 55"
         ]
+    },
+    "3.0.4": {
+        "subtitle": "Connection fixes.",
+        "changes": [
+            "Connection errors now say what's actually wrong instead of just 'FAIL'",
+            "Detects unsupported Android versions (15+ doesn't work yet)"
+        ]
     }
 }
