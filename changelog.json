@@ -47,6 +47,12 @@
             "Detects unsupported Android versions (15+ doesn't work yet)"
         ]
     },
+    "3.1.2": {
+        "subtitle": "Breed command fix.",
+        "changes": [
+            "Breed command now waits for the Tree/Mountain to appear before tapping, so it no longer misses"
+        ]
+    },
     "3.1.1": {
         "subtitle": "Small monster command fix.",
         "changes": [
