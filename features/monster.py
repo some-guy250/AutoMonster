@@ -117,7 +117,8 @@ class MonsterManager:
                 self.controller.click(ASSETS.Repeat, raise_error=True)
                 if count == max_count:
                     break
-                self.controller.pause(25)
+                while not self.controller.in_screen(ASSETS.TakeEgg, pause_for=0):
+                    self.controller.pause(1)
                 self.controller.wait_for(ASSETS.TakeEgg)
                 self.controller.click(ASSETS.TakeEgg)
                 self.controller.wait_for(ASSETS.FullHatchery, timeout=3, pause_for=0)
