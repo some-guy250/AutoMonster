@@ -47,6 +47,12 @@
             "Detects unsupported Android versions (15+ doesn't work yet)"
         ]
     },
+    "3.1.1": {
+        "subtitle": "Small monster command fix.",
+        "changes": [
+            "Repeat monster command now waits for the egg to appear before taking it, so it no longer misses eggs"
+        ]
+    },
     "3.1.0": {
         "subtitle": "Android 15 and 16 now work.",
         "changes": [
