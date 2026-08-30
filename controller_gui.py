@@ -15,7 +15,7 @@ import subprocess
 import numpy as np
 
 import customtkinter as ctk
-import scrcpy
+import amscrcpy
 
 from utils.AutoMonsterErrors import *
 from AutoMonster import Controller
@@ -411,6 +411,8 @@ class ControllerGUI(ctk.CTk):
                 return
 
             self.append_log(f"Completed {command_name}", "success")
+        except ExecutionFlag:
+            self.append_log(f"Execution of {command_name} stopped", "warning")
         except AutoMonsterError as e:
             error_msg = f"Error running {command_name}: {e}"
             self.append_log(error_msg, "error")
@@ -419,8 +421,6 @@ class ControllerGUI(ctk.CTk):
             error_msg = f"Error running {command_name}: {e}"
             self.append_log(error_msg, "error")
             logging.error(error_msg)
-        except  ExecutionFlag:
-            self.append_log(f"Execution of {command_name} stopped", "warning")
         finally:
             self.command_running = False
             self.param_frame.is_running = False
@@ -652,7 +652,7 @@ class ControllerGUI(ctk.CTk):
         controller = getattr(self, "controller", None)
         if controller is not None:
             try:
-                controller.client.remove_listener(scrcpy.EVENT_FRAME)
+                controller.client.remove_listener(amscrcpy.EVENT_FRAME)
                 controller.client.stop()
             except Exception:
                 # Ignore errors during cleanup

@@ -1,4 +1,4 @@
-import scrcpy
+import amscrcpy
 from utils.assets import ASSETS, AdLocationsHorizontal, AdLocationsVertical
 from utils.AutoMonsterErrors import *
 from utils.HelperFunctions import compare_imgs
@@ -78,9 +78,9 @@ class AdManager:
             x = self.controller.scale_x(x)
             # y = self.controller.scale_y(y)
 
-            self.controller.client.control.touch(x, y, scrcpy.ACTION_DOWN)
+            self.controller.client.control.touch(x, y, amscrcpy.ACTION_DOWN)
             self.controller.pause(.1)
-            self.controller.client.control.touch(x, y, scrcpy.ACTION_UP)
+            self.controller.client.control.touch(x, y, amscrcpy.ACTION_UP)
 
             index += 1
             counter += 1

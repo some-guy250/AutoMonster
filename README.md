@@ -26,8 +26,6 @@ For developers or advanced users:
 
 ```bash
 python -m pip install --upgrade pip
-pip install av==16.0.1 --only-binary=:all:
-pip install --no-deps -r requirements-scrcpy.txt
 pip install -r requirements.txt
 python main.py
 ```
@@ -36,7 +34,7 @@ python main.py
 
 ### Emulator (Recommended)
 
-- **Android:** 5.0 to 14 (Android 15+ is not supported yet)
+- **Android:** 5.0 to 16 (Android 17+ is not supported yet)
 - **Resolution:** 1280x720 (recommended)
 - **DPI:** 240
 - **ADB:** Enabled and accessible
@@ -74,7 +72,7 @@ Chain commands into automated sequences via **Macro Manager**:
 
 - Windows (installer), macOS or Linux (manual)
 - Python 3.10+
-- ADB-capable device or emulator (Android 5.0 to 14; Android 15+ not supported yet)
+- ADB-capable device or emulator (Android 5.0 to 16; Android 17+ not supported yet)
 - Monster Legends at 1280x720 resolution (recommended)
 
 ## Bug Reports

@@ -3,7 +3,7 @@ import threading
 from typing import Optional, Tuple
 import numpy as np
 import cv2
-import scrcpy
+import amscrcpy
 from adbutils import adb
 from adbutils import AdbDevice
 
@@ -21,7 +21,7 @@ logger = setup_logger()
 
 class DeviceManager:
     def __init__(self, serial: Optional[str] = None):
-        self.client: Optional[scrcpy.Client] = None
+        self.client: Optional[amscrcpy.Client] = None
         self.device = None
         self.ratio: Optional[Tuple[float, float]] = None
         self.new_width: int = 0
@@ -63,23 +63,23 @@ class DeviceManager:
             self.ensure_screen_on_and_unlocked()
 
             try:
-                self.client = scrcpy.Client(max_fps=10, stay_awake=True, block_frame=True,
+                self.client = amscrcpy.Client(max_fps=10, stay_awake=True, block_frame=True,
                                             device=target_device)
                 self.client.start(True, True)
             except Exception as e:
                 if "disconnected" in str(e):
-                    # The scrcpy 1.20 server dies when the video stream starts, which
-                    # is what we expect on unsupported Android versions (e.g. 15+).
+                    # A disconnect while starting usually means the device's Android version
+                    # is incompatible, or the device rebooted during connection.
                     raise Exception(
                         "The screen stream disconnected while starting. This usually means the "
                         "device's Android version is not compatible, or the device rebooted "
-                        f"during connection. Use an Android 5.0 to 14 device. Original error: {e}"
+                        f"during connection. Use an Android 5.0 to 16 device. Original error: {e}"
                     ) from e
-                # scrcpy's first step is pushing its server JAR to the device. A failed
+                # amscrcpy's first step is pushing its server JAR to the device. A failed
                 # adb sync push (adbutils raises AdbError with the literal text "FAIL")
                 # usually means a broken connection or an emulator in a bad state.
                 raise Exception(
-                    "Could not start the screen stream (failed to deploy scrcpy server). "
+                    "Could not start the screen stream (failed to deploy the amscrcpy server). "
                     "Try: 1) restart the device/emulator, 2) check the emulator settings "
                     "(resolution 1280x720, DPI 240, ADB enabled), 3) run 'adb kill-server' "
                     f"and try again. Original error: {e}"
@@ -124,7 +124,7 @@ class DeviceManager:
         if sdk > MAX_ANDROID_SDK:
             raise Exception(
                 f"Android {release} (API {sdk}) is not supported yet. The screen-streaming server used by "
-                "AutoMonster does not run on Android 15+. Use an emulator image with Android 14 or lower."
+                "AutoMonster does not run on Android 17+ yet. Use an emulator image with Android 16 or lower."
             )
 
     def check_resolution(self):

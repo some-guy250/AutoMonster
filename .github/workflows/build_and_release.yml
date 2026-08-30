@@ -37,20 +37,20 @@ jobs:
 
       - name: Build Executable
         run: |
-          # Get the scrcpy package location using Python
-          $scrcpyDir = python -c "import scrcpy, os; print(os.path.dirname(scrcpy.__file__))"
+          # Get the amscrcpy package location (it is vendored at the repo root) using Python
+          $amscrcpyDir = python -c "import amscrcpy, os; print(os.path.dirname(amscrcpy.__file__))"
 
-          Write-Host "scrcpy directory: $scrcpyDir"
-          if (Test-Path $scrcpyDir) {
-            Write-Host "scrcpy module found. Contents:"
-            Get-ChildItem $scrcpyDir | ForEach-Object { Write-Host $_.Name }
+          Write-Host "amscrcpy directory: $amscrcpyDir"
+          if (Test-Path "$amscrcpyDir\scrcpy-server-v4.1") {
+            Write-Host "amscrcpy module and server jar found. Contents:"
+            Get-ChildItem $amscrcpyDir | ForEach-Object { Write-Host $_.Name }
           } else {
-            Write-Host "ERROR: scrcpy directory not found at $scrcpyDir"
+            Write-Host "ERROR: amscrcpy directory or server jar not found at $amscrcpyDir"
             exit 1
           }
 
-          # Build executable with scrcpy module and changelog embedded
-          $command = "pyinstaller --noconfirm --onefile --windowed --icon `"./assets/favicon.ico`" --add-data `"$scrcpyDir;scrcpy`" --add-data `"changelog.json;.`" ${{ matrix.script }} -n ${{ matrix.name }}"
+          # Build executable with the amscrcpy module (and its server jar) and changelog embedded
+          $command = "pyinstaller --noconfirm --onefile --windowed --icon `"./assets/favicon.ico`" --add-data `"$amscrcpyDir;amscrcpy`" --add-data `"changelog.json;.`" ${{ matrix.script }} -n ${{ matrix.name }}"
           Write-Host "Running: $command"
           Invoke-Expression $command
 

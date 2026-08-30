@@ -6,7 +6,7 @@ from typing import List, Callable, Optional, Tuple
 
 import cv2
 import numpy as np
-import scrcpy
+import amscrcpy
 
 from utils.AutoMonsterErrors import *
 from utils.assets import (
@@ -164,18 +164,18 @@ class Controller:
         touch_id = 1
         
         # Finger down on source
-        self.client.control.touch(x1, y1, scrcpy.ACTION_DOWN, touch_id=touch_id)
+        self.client.control.touch(x1, y1, amscrcpy.ACTION_DOWN, touch_id=touch_id)
         time.sleep(0.15)
         
         # Move finger to destination
         for i in range(1, steps + 1):
             x = int(x1 + (x2 - x1) * i / steps)
             y = int(y1 + (y2 - y1) * i / steps)
-            self.client.control.touch(x, y, scrcpy.ACTION_MOVE, touch_id=touch_id)
+            self.client.control.touch(x, y, amscrcpy.ACTION_MOVE, touch_id=touch_id)
             time.sleep(0.03)
         
         # Lift finger
-        self.client.control.touch(x2, y2, scrcpy.ACTION_UP, touch_id=touch_id)
+        self.client.control.touch(x2, y2, amscrcpy.ACTION_UP, touch_id=touch_id)
         return True
 
     def zoom_in(self) -> None:
@@ -193,40 +193,40 @@ class Controller:
         start_offset = self.scale_x(100)
         end_offset = self.scale_x(300)
 
-        self.client.control.touch(center_x - start_offset, center_y, scrcpy.ACTION_DOWN, touch_id=1)
-        self.client.control.touch(center_x + start_offset, center_y, scrcpy.ACTION_DOWN, touch_id=2)
+        self.client.control.touch(center_x - start_offset, center_y, amscrcpy.ACTION_DOWN, touch_id=1)
+        self.client.control.touch(center_x + start_offset, center_y, amscrcpy.ACTION_DOWN, touch_id=2)
         time.sleep(0.02)
 
         steps = 15
         for step in range(steps):
             progress = (step + 1) / steps
             offset = int(start_offset + (end_offset - start_offset) * progress)
-            self.client.control.touch(center_x - offset, center_y, scrcpy.ACTION_MOVE, touch_id=1)
-            self.client.control.touch(center_x + offset, center_y, scrcpy.ACTION_MOVE, touch_id=2)
+            self.client.control.touch(center_x - offset, center_y, amscrcpy.ACTION_MOVE, touch_id=1)
+            self.client.control.touch(center_x + offset, center_y, amscrcpy.ACTION_MOVE, touch_id=2)
             time.sleep(0.01)
 
-        self.client.control.touch(center_x - end_offset, center_y, scrcpy.ACTION_UP, touch_id=1)
-        self.client.control.touch(center_x + end_offset, center_y, scrcpy.ACTION_UP, touch_id=2)
+        self.client.control.touch(center_x - end_offset, center_y, amscrcpy.ACTION_UP, touch_id=1)
+        self.client.control.touch(center_x + end_offset, center_y, amscrcpy.ACTION_UP, touch_id=2)
         time.sleep(0.05)
 
         # Second gesture: Half pinch (100px -> 200px for gentler zoom)
         start_offset = self.scale_x(100)
         end_offset = self.scale_x(200)
 
-        self.client.control.touch(center_x - start_offset, center_y, scrcpy.ACTION_DOWN, touch_id=1)
-        self.client.control.touch(center_x + start_offset, center_y, scrcpy.ACTION_DOWN, touch_id=2)
+        self.client.control.touch(center_x - start_offset, center_y, amscrcpy.ACTION_DOWN, touch_id=1)
+        self.client.control.touch(center_x + start_offset, center_y, amscrcpy.ACTION_DOWN, touch_id=2)
         time.sleep(0.02)
 
         half_steps = 8  # Half the steps for quicker gesture
         for step in range(half_steps):
             progress = (step + 1) / half_steps
             offset = int(start_offset + (end_offset - start_offset) * progress)
-            self.client.control.touch(center_x - offset, center_y, scrcpy.ACTION_MOVE, touch_id=1)
-            self.client.control.touch(center_x + offset, center_y, scrcpy.ACTION_MOVE, touch_id=2)
+            self.client.control.touch(center_x - offset, center_y, amscrcpy.ACTION_MOVE, touch_id=1)
+            self.client.control.touch(center_x + offset, center_y, amscrcpy.ACTION_MOVE, touch_id=2)
             time.sleep(0.01)
 
-        self.client.control.touch(center_x - end_offset, center_y, scrcpy.ACTION_UP, touch_id=1)
-        self.client.control.touch(center_x + end_offset, center_y, scrcpy.ACTION_UP, touch_id=2)
+        self.client.control.touch(center_x - end_offset, center_y, amscrcpy.ACTION_UP, touch_id=1)
+        self.client.control.touch(center_x + end_offset, center_y, amscrcpy.ACTION_UP, touch_id=2)
 
         self.log_gui("Zoomed in", "info")
 
@@ -245,40 +245,40 @@ class Controller:
         start_offset = self.scale_x(300)
         end_offset = self.scale_x(100)
 
-        self.client.control.touch(center_x - start_offset, center_y, scrcpy.ACTION_DOWN, touch_id=1)
-        self.client.control.touch(center_x + start_offset, center_y, scrcpy.ACTION_DOWN, touch_id=2)
+        self.client.control.touch(center_x - start_offset, center_y, amscrcpy.ACTION_DOWN, touch_id=1)
+        self.client.control.touch(center_x + start_offset, center_y, amscrcpy.ACTION_DOWN, touch_id=2)
         time.sleep(0.02)
 
         steps = 15
         for step in range(steps):
             progress = (step + 1) / steps
             offset = int(start_offset - (start_offset - end_offset) * progress)
-            self.client.control.touch(center_x - offset, center_y, scrcpy.ACTION_MOVE, touch_id=1)
-            self.client.control.touch(center_x + offset, center_y, scrcpy.ACTION_MOVE, touch_id=2)
+            self.client.control.touch(center_x - offset, center_y, amscrcpy.ACTION_MOVE, touch_id=1)
+            self.client.control.touch(center_x + offset, center_y, amscrcpy.ACTION_MOVE, touch_id=2)
             time.sleep(0.01)
 
-        self.client.control.touch(center_x - end_offset, center_y, scrcpy.ACTION_UP, touch_id=1)
-        self.client.control.touch(center_x + end_offset, center_y, scrcpy.ACTION_UP, touch_id=2)
+        self.client.control.touch(center_x - end_offset, center_y, amscrcpy.ACTION_UP, touch_id=1)
+        self.client.control.touch(center_x + end_offset, center_y, amscrcpy.ACTION_UP, touch_id=2)
         time.sleep(0.05)
 
         # Second gesture: Half pinch (200px -> 100px for gentler zoom)
         start_offset = self.scale_x(200)
         end_offset = self.scale_x(100)
 
-        self.client.control.touch(center_x - start_offset, center_y, scrcpy.ACTION_DOWN, touch_id=1)
-        self.client.control.touch(center_x + start_offset, center_y, scrcpy.ACTION_DOWN, touch_id=2)
+        self.client.control.touch(center_x - start_offset, center_y, amscrcpy.ACTION_DOWN, touch_id=1)
+        self.client.control.touch(center_x + start_offset, center_y, amscrcpy.ACTION_DOWN, touch_id=2)
         time.sleep(0.02)
 
         half_steps = 8  # Half the steps for quicker gesture
         for step in range(half_steps):
             progress = (step + 1) / half_steps
             offset = int(start_offset - (start_offset - end_offset) * progress)
-            self.client.control.touch(center_x - offset, center_y, scrcpy.ACTION_MOVE, touch_id=1)
-            self.client.control.touch(center_x + offset, center_y, scrcpy.ACTION_MOVE, touch_id=2)
+            self.client.control.touch(center_x - offset, center_y, amscrcpy.ACTION_MOVE, touch_id=1)
+            self.client.control.touch(center_x + offset, center_y, amscrcpy.ACTION_MOVE, touch_id=2)
             time.sleep(0.01)
 
-        self.client.control.touch(center_x - end_offset, center_y, scrcpy.ACTION_UP, touch_id=1)
-        self.client.control.touch(center_x + end_offset, center_y, scrcpy.ACTION_UP, touch_id=2)
+        self.client.control.touch(center_x - end_offset, center_y, amscrcpy.ACTION_UP, touch_id=1)
+        self.client.control.touch(center_x + end_offset, center_y, amscrcpy.ACTION_UP, touch_id=2)
 
         self.log_gui("Zoomed out", "info")
 
@@ -379,9 +379,9 @@ class Controller:
                 raise  ClickError(f"Index {index} is out of range for asset {asset}")
             if len(cords) > 0:
                 x, y = cords[index]
-                self.client.control.touch(x, y, scrcpy.ACTION_DOWN)
+                self.client.control.touch(x, y, amscrcpy.ACTION_DOWN)
                 self.pause(.1)
-                self.client.control.touch(x, y, scrcpy.ACTION_UP)
+                self.client.control.touch(x, y, amscrcpy.ACTION_UP)
                 self.pause(pause)
                 return True
         if raise_error:
@@ -411,9 +411,9 @@ class Controller:
                 self.pause(0.5)
                 if len(con_coord := self._get_cords(ASSETS.Continue)) > 0:
                     x, y = con_coord[0]
-                    self.client.control.touch(x, y, scrcpy.ACTION_DOWN)
+                    self.client.control.touch(x, y, amscrcpy.ACTION_DOWN)
                     self.pause(.1)
-                    self.client.control.touch(x, y, scrcpy.ACTION_UP)
+                    self.client.control.touch(x, y, amscrcpy.ACTION_UP)
                     count = 0
                     while True:
                         sc = self.take_screenshot()
@@ -437,9 +437,9 @@ class Controller:
 
             if len(con_coord := self._get_cords(ASSETS.Continue)) > 0:
                 x, y = con_coord[0]
-                self.client.control.touch(x, y, scrcpy.ACTION_DOWN)
+                self.client.control.touch(x, y, amscrcpy.ACTION_DOWN)
                 self.pause(.1)
-                self.client.control.touch(x, y, scrcpy.ACTION_UP)
+                self.client.control.touch(x, y, amscrcpy.ACTION_UP)
                 count = 0
                 while True:
                     sc = self.take_screenshot()

@@ -46,5 +46,15 @@
             "Connection errors now say what's actually wrong instead of just 'FAIL'",
             "Detects unsupported Android versions (15+ doesn't work yet)"
         ]
+    },
+    "3.1.0": {
+        "subtitle": "Android 15 and 16 now work.",
+        "changes": [
+            "Screen streaming now works on Android 15 and 16 (and 5.0 through 14)",
+            "Rebuilt the streaming library and bundled it into the app",
+            "If the stream drops, it reconnects on its own instead of stopping",
+            "Closing the game no longer gives a false 'Failed to close game' error",
+            "Pausing or cancelling a command logs a clear 'stopped' message instead of a blank error"
+        ]
     }
 }

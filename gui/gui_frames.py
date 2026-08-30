@@ -8,7 +8,7 @@ import os
 from tkinter import messagebox
 
 import customtkinter as ctk
-import scrcpy
+import amscrcpy
 from config.config import GAME_HEIGHT, changelog_path
 
 
@@ -242,7 +242,7 @@ def _build_preview_frame(gui):
     gui._frame_cb_scheduled = False
 
     # Bind events
-    gui.controller.client.add_listener(scrcpy.EVENT_FRAME, lambda frame: gui.on_scrcpy_frame(frame))
+    gui.controller.client.add_listener(amscrcpy.EVENT_FRAME, lambda frame: gui.on_scrcpy_frame(frame))
     gui.bind("<Configure>", gui.on_window_resize)
     gui.bind("<F3>", gui.toggle_debug_mode)
     gui.bind("<F5>", lambda e: _show_update_message_dialog(_get_changelog_entry()))

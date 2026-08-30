@@ -1,2 +1,0 @@
-# scrcpy-client installed separately to avoid av version conflict
-scrcpy-client>=0.4.7

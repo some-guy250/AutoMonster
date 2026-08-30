@@ -19,8 +19,19 @@ class GameManager:
             self.controller.click_back()
             self.controller.click(ASSETS.Yes)
             self.controller.pause(2)
-            if self.controller.in_game():
-                raise  CloseGameError("Failed to close game")
+            # The quit transition (or a slightly stale frame) can still look like the
+            # game on the first check, so re-check a few times before failing.
+            for _ in range(5):
+                if not self.controller.in_game():
+                    break
+                self.controller.pause(1)
+            else:
+                # Graceful quit did not confirm in time; force-stop to guarantee the
+                # close, then verify the game actually left.
+                self.force_close()
+                self.controller.pause(2)
+                if self.controller.in_game():
+                    raise  CloseGameError("Failed to close game")
         logger.info("Game closed")
 
     def launch_game(self):

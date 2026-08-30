@@ -6,7 +6,7 @@ Extracted from controller_gui.py to separate UI construction from runtime events
 import logging
 
 import cv2
-import scrcpy
+import amscrcpy
 import customtkinter as ctk
 from PIL import Image
 from config.config import GAME_HEIGHT
@@ -145,17 +145,17 @@ def on_mouse_down(gui, event):
     if gui.debug_mode and gui.debug_tool is not None:
         gui.debug_tool.clean_detections()
     x, y = _get_device_coords(gui, event)
-    gui.controller.client.control.touch(x, y, scrcpy.ACTION_DOWN)
+    gui.controller.client.control.touch(x, y, amscrcpy.ACTION_DOWN)
 
 
 def on_mouse_move(gui, event):
     x, y = _get_device_coords(gui, event)
-    gui.controller.client.control.touch(x, y, scrcpy.ACTION_MOVE)
+    gui.controller.client.control.touch(x, y, amscrcpy.ACTION_MOVE)
 
 
 def on_mouse_up(gui, event):
     x, y = _get_device_coords(gui, event)
-    gui.controller.client.control.touch(x, y, scrcpy.ACTION_UP)
+    gui.controller.client.control.touch(x, y, amscrcpy.ACTION_UP)
 
 
 # =============================================================================

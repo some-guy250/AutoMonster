@@ -1,5 +1,5 @@
 import logging
-import scrcpy
+import amscrcpy
 from utils.assets import ASSETS, ROMAN_TO_RUNE_LEVEL, RUNE_LEVEL_TO_ASSET, RUNE_TYPE_TO_ASSET, get_rune_asset
 from config.config import SCROLL_START_Y_FRACTION
 from utils.AutoMonsterErrors import *
@@ -68,9 +68,9 @@ class MonsterManager:
             x, y = cords[0]
 
             for hold_time, pause_time in feeding_list:
-                self.controller.client.control.touch(x, y, scrcpy.ACTION_DOWN)
+                self.controller.client.control.touch(x, y, amscrcpy.ACTION_DOWN)
                 self.controller.pause(hold_time)
-                self.controller.client.control.touch(x, y, scrcpy.ACTION_UP)
+                self.controller.client.control.touch(x, y, amscrcpy.ACTION_UP)
                 self.controller.pause(pause_time)
 
             self.controller.follow_sequence(ASSETS.MonsterInfo, ASSETS.SellOwned, ASSETS.Yes, ASSETS.Cancel)
