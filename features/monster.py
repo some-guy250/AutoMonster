@@ -111,7 +111,8 @@ class MonsterManager:
             count = 0
             while True:
                 while not self.controller.in_screen(ASSETS.Repeat, ASSETS.SpeedUp, pause_for=0):
-                    self.controller.click(breader, raise_error=True)
+                    self.controller.wait_for(breader, timeout=5, raise_error=True)
+                    self.controller.click(breader, raise_error=True, screenshot=self.controller.get_last_screenshot())
                 while not self.controller.in_screen(ASSETS.Repeat, pause_for=0):
                     self.controller.pause(1)
                 self.controller.click(ASSETS.Repeat, raise_error=True)
