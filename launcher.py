@@ -283,9 +283,9 @@ def download_assets(progress_window=None):
         
         # Use a session for potentially better performance (though new session per thread here)
         # Ideally we pass a session, but requests.get is simple.
-        # Let's just use requests.get with a larger chunk size.
         response = requests.get(item["download_url"], stream=True)
-        
+        response.raise_for_status()  # surface download failures instead of skipping them
+
         with open(file_path, "wb") as f:
             for chunk in response.iter_content(chunk_size=1048576): # 1MB chunks
                 f.write(chunk)
@@ -338,10 +338,14 @@ def download_assets(progress_window=None):
     monitor = threading.Thread(target=monitor_progress)
     monitor.start()
 
-    # Run downloads in parallel
+    # Run downloads in parallel. Iterating the map is what forces the futures to
+    # run and surfaces any download exception (previously the results were never
+    # consumed, so a failed file was silently skipped and the update continued
+    # with missing assets).
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        executor.map(download_single_asset, files_to_download)
-        
+        for _ in executor.map(download_single_asset, files_to_download):
+            pass
+
     # Ensure monitor finishes
     monitor.join()
 def download_file(url, target_path, progress_window=None, progress_start=0, progress_end=100, label="Downloading..."):

@@ -2,7 +2,7 @@ import logging
 import amscrcpy
 from utils.assets import ASSETS, ROMAN_TO_RUNE_LEVEL, RUNE_LEVEL_TO_ASSET, RUNE_TYPE_TO_ASSET, get_rune_asset
 from config.config import SCROLL_START_Y_FRACTION
-from utils.AutoMonsterErrors import *
+from utils.AutoMonsterErrors import AutoMonsterError
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +77,7 @@ class MonsterManager:
             num_fed += 1
             logger.debug(f"Fed and Sold {num_fed} monsters")
 
-    def click_left_moster(self, sell: bool = False):
+    def click_left_monster(self, sell: bool = False):
         screenshot = self.controller.take_screenshot()
         dino = self.controller._get_cords(ASSETS.HatchDino, screenshot=screenshot) 
         panda = self.controller._get_cords(ASSETS.HatchPanda, screenshot=screenshot)
@@ -110,19 +110,31 @@ class MonsterManager:
         while num_breeds_done < num_breeds:
             count = 0
             while True:
-                while not self.controller.in_screen(ASSETS.Repeat, ASSETS.SpeedUp, pause_for=0):
-                    self.controller.wait_for(breader, timeout=5, raise_error=True)
+                # Stop BEFORE starting another breeding. Checking after the Repeat
+                # click (as before) started one extra breeding and abandoned it, which
+                # left a SpeedUp on screen and made the Repeat wait spin forever.
+                if count == max_count:
+                    break
+                hatchery_full = False
+                while not self.controller.in_screen(ASSETS.Repeat, ASSETS.SpeedUp, pause_for=0.5):
+                    # The hatchery can already be full, in which case Repeat is not offered
+                    # and this loop would re-click the breader forever. Detect FullHatchery
+                    # here and take the full-hatchery path (back -> hatch) instead.
+                    if self.controller.in_screen(ASSETS.FullHatchery, pause_for=0, screenshot=self.controller.get_last_screenshot()):
+                        self.controller.click_back()
+                        hatchery_full = True
+                        break
+                    self.controller.wait_for(breader, timeout=7, raise_error=True, pause_for=0)
                     self.controller.click(breader, raise_error=True, screenshot=self.controller.get_last_screenshot())
+                if hatchery_full:
+                    break
                 while not self.controller.in_screen(ASSETS.Repeat, pause_for=0):
                     self.controller.pause(1)
                 self.controller.click(ASSETS.Repeat, raise_error=True)
-                if count == max_count:
-                    break
                 while not self.controller.in_screen(ASSETS.TakeEgg, pause_for=0):
                     self.controller.pause(1)
-                self.controller.wait_for(ASSETS.TakeEgg)
-                self.controller.click(ASSETS.TakeEgg)
-                self.controller.wait_for(ASSETS.FullHatchery, timeout=3, pause_for=0)
+                self.controller.click(ASSETS.TakeEgg, screenshot=self.controller.get_last_screenshot())
+                self.controller.wait_for(ASSETS.FullHatchery, timeout=5, pause_for=0)
                 if self.controller.in_screen(ASSETS.FullHatchery, pause_for=0, screenshot=self.controller.get_last_screenshot()):
                     self.controller.click_back()
                     break
@@ -132,7 +144,7 @@ class MonsterManager:
             max_count = -1
             number_of_monsters = self.controller.count(ASSETS.HatchDino, ASSETS.HatchPanda)
             while self.controller.in_screen(ASSETS.HatchDino, ASSETS.HatchPanda, pause_for=0):
-                self.click_left_moster(sell=sell)
+                self.click_left_monster(sell=sell)
                 timeout = 0
                 if not self.controller.in_screen(ASSETS.Place, pause_for=0):
                     while self.controller.in_screen(ASSETS.HatchNotYet, pause_for=0):
@@ -140,8 +152,8 @@ class MonsterManager:
                         timeout += 2
                         if timeout >= 30:
                             raise AutoMonsterError("Hatching timed out")
-                    self.click_left_moster(sell=sell)
-                
+                    self.click_left_monster(sell=sell)
+
                 num_breeds_done += 1
                 max_count += 1
                 if progress_callback:

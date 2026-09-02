@@ -1,6 +1,4 @@
 import logging
-import os
-import sys
 
 class CustomFormatter(logging.Formatter):
     blue = "\x1b[38;5;4m"
@@ -37,9 +35,5 @@ def setup_logger(name="AutoMonster", level=logging.DEBUG):
 
     # Prevent propagation to root logger to avoid duplicate messages
     logger.propagate = False
-
-    # Enable colors in Windows terminal
-    if sys.platform == 'win32':
-        os.system('color')
 
     return logger

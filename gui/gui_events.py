@@ -158,6 +158,28 @@ def on_mouse_up(gui, event):
     gui.controller.client.control.touch(x, y, amscrcpy.ACTION_UP)
 
 
+def on_preview_scroll(gui, event):
+    """Mouse wheel over the preview becomes a pinch zoom on the device.
+
+    Scroll up = zoom in, scroll down = zoom out. Windows reports the direction
+    in ``event.delta``; Linux reports it as ``event.num`` (4 = up, 5 = down).
+    """
+    num = getattr(event, "num", None)
+    if num == 4:
+        direction = "in"
+    elif num == 5:
+        direction = "out"
+    else:
+        delta = getattr(event, "delta", 0)
+        if delta > 0:
+            direction = "in"
+        elif delta < 0:
+            direction = "out"
+        else:
+            return
+    gui.queue_zoom(direction)
+
+
 # =============================================================================
 # Window / log events
 # =============================================================================

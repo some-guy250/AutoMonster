@@ -1,6 +1,6 @@
 import time
 from utils.assets import ASSETS
-from utils.AutoMonsterErrors import *
+from utils.AutoMonsterErrors import CloseGameError, GoToError, OpenGameError
 from utils.logger import setup_logger
 
 logger = setup_logger()

@@ -101,8 +101,10 @@ class DeviceSelectionFrame(ctk.CTkFrame):
         )
         self.refresh_btn.grid(row=3, column=0, padx=20, pady=10, sticky="ew")
 
-        # Status label at the bottom
-        self.status = ctk.CTkLabel(self, text="", text_color="orange")
+        # Status label at the bottom. It wraps to the window width (set via
+        # set_status_wraplength) so long connection errors don't run off the
+        # fixed-size screen.
+        self.status = ctk.CTkLabel(self, text="", text_color="orange", justify="center")
         self.status.grid(row=4, column=0, pady=10)
 
         # Store device serials
@@ -124,6 +126,13 @@ class DeviceSelectionFrame(ctk.CTkFrame):
         self.device_dropdown.configure(state="normal")
         self.refresh_btn.configure(state="normal")
         self.ip_entry.configure(state="normal")
+
+    def set_status_wraplength(self, width: int) -> None:
+        """Constrain the status label so long errors wrap instead of running
+        off the fixed-size window. No-op for implausibly small widths (the
+        window may not be mapped yet)."""
+        if width >= 100:
+            self.status.configure(wraplength=width)
 
     def connect_wireless(self):
         address = self.ip_entry.get().strip()

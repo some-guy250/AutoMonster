@@ -17,17 +17,18 @@ import numpy as np
 import customtkinter as ctk
 import amscrcpy
 
-from utils.AutoMonsterErrors import *
+from utils.AutoMonsterErrors import AutoMonsterError, ExecutionFlag
 from AutoMonster import Controller
-from gui.gui_config import GUI_COMMANDS, GUI_COMMAND_DESCRIPTIONS
-from gui.command_frame import CommandFrame
+from gui import theme
+from gui.command_registry import COMMANDS, PROGRESS_COMMANDS, get_spec
+from gui.command_frame import CommandFrame, collect_param_values
 from gui.device_selection_frame import DeviceSelectionFrame
 from gui.macro_dialog import MacroDialog
 from utils.config_manager import ConfigManager
 from gui.gui_frames import build_main_interface, _show_update_message_dialog
 from gui.gui_events import (
     on_scrcpy_frame, blit_pending_frame,
-    on_mouse_down, on_mouse_move, on_mouse_up,
+    on_mouse_down, on_mouse_move, on_mouse_up, on_preview_scroll,
     on_window_resize, on_log_scroll, on_auto_scroll_toggle,
 )
 
@@ -47,20 +48,24 @@ class ControllerGUI(ctk.CTk):
 
         self.title("AutoMonster")
         self.minsize(400, 450)
-        self.resizable(False, False)
+        # Resizable so a long connection error (which wraps, see the status
+        # label) can be read by growing the window instead of clipping.
+        self.resizable(True, True)
 
         self.config_manager = ConfigManager()
         self.macros = self.config_manager.get_macros()
         self.macro_options = self.config_manager.get_macro_options()
-        self.commands = GUI_COMMANDS
-        self.command_descriptions = GUI_COMMAND_DESCRIPTIONS
+        self.command_specs = COMMANDS
 
         self.macro_running = False
         self.stop_macro = False
         self.command_running = False
+        self._zoom_busy = False
 
         self.device_frame = DeviceSelectionFrame(self, self.on_device_selected)
         self.main_frame = ctk.CTkFrame(self)
+
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
 
         self.show_device_selection()
 
@@ -72,6 +77,9 @@ class ControllerGUI(ctk.CTk):
         self.main_frame.pack_forget()
         self.device_frame.pack(expand=True, fill="both", padx=20, pady=20)
         self.center_window()
+        # Wrap long connection errors to the window width so they stay on the
+        # fixed-size screen instead of running off the right edge.
+        self.device_frame.set_status_wraplength(self.winfo_width() - 50)
 
     def show_main_interface(self) -> None:
         self.device_frame.pack_forget()
@@ -149,9 +157,9 @@ class ControllerGUI(ctk.CTk):
     def override_parameter_defaults(self) -> None:
         loaded_defaults = self.config_manager.defaults
         logging.debug("Loaded defaults")
-        for cmd_name, params in self.commands.items():
+        for cmd_name, spec in self.command_specs.items():
             saved = loaded_defaults.get(cmd_name, {})
-            for param_name, config in params.items():
+            for param_name, config in spec.params.items():
                 if param_name in saved:
                     config["default"] = saved[param_name]
 
@@ -204,6 +212,35 @@ class ControllerGUI(ctk.CTk):
     def on_mouse_up(self, event: object) -> None:
         on_mouse_up(self, event)
 
+    def on_preview_scroll(self, event: object) -> None:
+        on_preview_scroll(self, event)
+
+    def queue_zoom(self, direction: str) -> None:
+        """Run one pinch zoom off the main thread.
+
+        zoom_in/zoom_out are slow multi-stage pinches, so they run on a daemon
+        thread to keep the UI responsive. A scroll notch while a zoom is already
+        in flight is dropped, so a burst of wheel events never stacks zooms.
+        """
+        if self._zoom_busy:
+            return
+        self._zoom_busy = True
+
+        def _run() -> None:
+            try:
+                if direction == "in":
+                    self.controller.zoom_in()
+                else:
+                    self.controller.zoom_out()
+            except ExecutionFlag:
+                pass
+            except Exception as e:
+                self.append_log(f"Zoom failed: {e}", "error")
+            finally:
+                self._zoom_busy = False
+
+        threading.Thread(target=_run, daemon=True).start()
+
     def on_window_resize(self, event: object) -> None:
         on_window_resize(self, event)
 
@@ -234,10 +271,10 @@ class ControllerGUI(ctk.CTk):
     def show_help_popup(self) -> None:
         """Show a help popup with the current command's description and parameters."""
         command_name = self.command_var.get()
-        info = self.command_descriptions.get(command_name, {})
-        title = info.get("title", command_name)
-        description = info.get("description", "No description available.")
-        parameters = info.get("parameters", {})
+        spec = get_spec(command_name)
+        title = spec.title or command_name
+        description = spec.description or "No description available."
+        parameters = spec.param_help
 
         dialog = ctk.CTkToplevel()
         dialog.title(f"Help: {title}")
@@ -314,79 +351,60 @@ class ControllerGUI(ctk.CTk):
         if self.param_frame:
             self.param_frame.destroy()
 
+        spec = get_spec(command_name)
+        # The callback argument is only used by CommandFrame in macro mode
+        # ("Add Step"); it is a no-op here in the main interface.
         self.param_frame = CommandFrame(
             self.param_container, command_name,
-            self.commands[command_name],
-            self.get_command_callback(command_name)
+            spec.params,
+            lambda: None,
         )
         self.param_frame.pack(expand=True, fill="both")
 
-    def get_command_callback(self, command_name: str) -> Callable[..., Optional[str]]:
-        if command_name == "PVP":
-            return lambda **kwargs: self.controller.do_pvp(
-                kwargs.pop("num_battles", 2), kwargs.pop("handle_boxes", True),
-                kwargs.pop("reduce_box_time", True),
-                progress_callback=self.update_command_progress
-            )
-        elif command_name == "Era Saga":
-            return self.controller.do_era_saga
-        elif command_name == "Resource Dungeons":
-            return lambda **kwargs: self.controller.do_resource_dungeons(
-                wait_for_stamina_to_refill=kwargs.pop("wait_for_stamina", False)
-            )
-        elif command_name == "Ads":
-            return self.controller.play_ads
-        elif command_name == "Reduce Time":
-            return lambda **kwargs: self.controller.reduce_time(
-                kwargs.pop("number_of_ads", 3)
-            )
-        elif command_name == "Cavern":
-            return lambda **kwargs: self.controller.do_cavern(
-                *kwargs.pop("caverns", []), max_rooms=kwargs.pop("max_rooms", 3),
-                change_team=kwargs.pop("change_team", True),
-                progress_callback=self.update_command_progress
-            )
-        elif command_name == "Breed Monsters":
-            return lambda **kwargs: self.controller.breed_monsters(
-                kwargs.pop("num_breeds", 1), kwargs.pop("use_tree", False),
-                kwargs.pop("feed_and_sell_monsters", False), kwargs.pop("sell", False),
-                batch_size=kwargs.pop("batch_size", 15),
-                progress_callback=self.update_command_progress
-            )
-        elif command_name == "Feed and Sell Monsters":
-            return lambda **kwargs: self.controller.feed_and_sell_monsters()
-        elif command_name == "Craft Runes":
-            return lambda **kwargs: self.controller.craft_runes(
-                kwargs.pop("num_runes", 10),
-                kwargs.pop("level", "I"),
-                kwargs.pop("rune_type", "Life"),
-                kwargs.pop("team", False),
-                progress_callback=self.update_command_progress
-            )
-        elif command_name == "Close Game":
-            return lambda **kwargs: self.controller.close_game(
-                action=kwargs.pop("action", "Close Game Only")
-            )
-        else:
-            raise ValueError(f"Unknown command: {command_name}")
+    def show_command_progress(self, command: str) -> None:
+        """Show the label + bar inside the fixed-height progress slot.
+
+        The slot itself is always present, so showing content here never
+        resizes the preview.
+        """
+        self.progress_label.configure(text=f"{command} Progress:")
+        self.progress_label.pack(anchor="w", padx=5, pady=(4, 0))
+        self.command_progress.pack(fill="x", padx=5, pady=(2, 4))
+
+    def hide_command_progress(self) -> None:
+        self.progress_label.pack_forget()
+        self.command_progress.pack_forget()
 
     def update_command_progress(self, progress: float) -> None:
         command = self.command_var.get()
         if self.macro_running and hasattr(self, 'current_macro_command'):
             command = self.current_macro_command
 
-        if command not in ["PVP", "Cavern", "Breed Monsters"]:
+        if command not in PROGRESS_COMMANDS:
             return
 
         def show_progress():
             if progress == 0:
-                self.progress_label.configure(text=f"{command} Progress:")
-                self.progress_frame.pack(fill="x", padx=5, pady=(5, 0))
+                self.show_command_progress(command)
             self.command_progress.set(progress)
             if progress >= 1:
-                self.progress_frame.pack_forget()
+                self.hide_command_progress()
 
         self.after(0, show_progress)
+
+    def _make_macro_step_progress(self, step_index: int, total_steps: int):
+        """Return a progress callback for one macro step.
+
+        It advances the fine-grained command bar AND the macro bar within this
+        step's slice, so the macro bar moves smoothly instead of jumping only
+        when a step completes (which made it lag the "step n/total" log).
+        """
+        def callback(progress: float) -> None:
+            self.update_command_progress(progress)
+            clamped = max(0.0, min(1.0, float(progress)))
+            macro_p = (step_index + clamped) / total_steps
+            self.after(0, lambda p=macro_p: self.macro_progress.set(p))
+        return callback
 
     def _run_thread(self, params: dict) -> None:
         self.command_running = True
@@ -396,14 +414,14 @@ class ControllerGUI(ctk.CTk):
         self.edit_macro_btn.configure(state="disabled")
 
         command_name = self.command_var.get()
+        # A previous stop must not bleed into this run.
+        self.controller.clear_cancel()
         try:
-            if command_name in ["PVP", "Cavern", "Breed Monsters"]:
+            if command_name in PROGRESS_COMMANDS:
                 self.update_command_progress(0)
-            if self.param_frame and hasattr(self.param_frame, 'progress'):
-                self.param_frame.progress.set(0)
-            callback = self.get_command_callback(command_name)
+            spec = get_spec(command_name)
             self.append_log(f"Starting {command_name}...", "info")
-            result = callback(**params)
+            result = spec.run(self.controller, self.update_command_progress, **params)
 
             if result == "EXIT":
                 self.append_log("Closing application...", "warning")
@@ -424,7 +442,7 @@ class ControllerGUI(ctk.CTk):
         finally:
             self.command_running = False
             self.param_frame.is_running = False
-            self.param_frame.run_button.configure(text="▶ Run", fg_color=["#3B8ED0", "#1F6AA5"])
+            self.param_frame.run_button.configure(text="▶ Run", fg_color=[theme.PRIMARY, theme.PRIMARY_DARK])
             self.param_frame.pause_button.configure(state="disabled")
             self.param_frame.is_paused = False
             self.param_frame.pause_button.configure(text="Pause")
@@ -433,31 +451,14 @@ class ControllerGUI(ctk.CTk):
                 self.update_macro_buttons()
                 self.macro_dropdown.configure(state="normal")
                 self.edit_macro_btn.configure(state="normal")
-            if command_name in ["PVP", "Cavern", "Breed Monsters"]:
-                self.progress_frame.pack_forget()
+            if command_name in PROGRESS_COMMANDS:
+                self.hide_command_progress()
 
     def run_command(self) -> None:
         if not self.param_frame:
             return
 
-        params = {}
-        for param_name, widget in self.param_frame.param_widgets.items():
-            if isinstance(widget, ctk.CTkSlider):
-                params[param_name] = int(widget.get())
-            elif isinstance(widget, ctk.CTkCheckBox):
-                params[param_name] = bool(widget.get())
-            elif isinstance(widget, ctk.CTkOptionMenu):
-                params[param_name] = widget.get()
-            elif isinstance(widget, list):
-                selected = [choice for choice, var in widget if var.get()]
-                params[param_name] = selected
-            elif isinstance(widget, dict):
-                selected = []
-                for tab_choices in widget.values():
-                    for choice, var in tab_choices:
-                        if var.get():
-                            selected.append(choice)
-                params[param_name] = selected
+        params = collect_param_values(self.param_frame.param_widgets)
 
         command_name = self.command_var.get()
         self.append_log(f"Running {command_name} with parameters: {params}", "debug")
@@ -516,7 +517,7 @@ class ControllerGUI(ctk.CTk):
         self.start_macro()
 
     def open_macro_dialog(self) -> None:
-        dialog = MacroDialog(self, self.commands)
+        dialog = MacroDialog(self, COMMANDS)
         self.wait_window(dialog)
         self.macros = self.load_macros()
         self.update_macro_list()
@@ -542,7 +543,7 @@ class ControllerGUI(ctk.CTk):
     def start_temporary_macro(self, steps: list, options: dict) -> None:
         self.macro_running = True
         self.stop_macro = False
-        self.run_macro_btn.configure(text="⬛ Stop Macro", fg_color="red")
+        self.run_macro_btn.configure(text="⬛ Stop Macro", fg_color=theme.DANGER)
         self.macro_dropdown.configure(state="disabled")
         self.edit_macro_btn.configure(state="disabled")
         self.command_dropdown.configure(state="disabled")
@@ -556,7 +557,7 @@ class ControllerGUI(ctk.CTk):
         if macro_name and macro_name != "No macros":
             self.macro_running = True
             self.stop_macro = False
-            self.run_macro_btn.configure(text="⬛ Stop Macro", fg_color="red")
+            self.run_macro_btn.configure(text="⬛ Stop Macro", fg_color=theme.DANGER)
             self.macro_dropdown.configure(state="disabled")
             self.edit_macro_btn.configure(state="disabled")
             self.command_dropdown.configure(state="disabled")
@@ -571,10 +572,13 @@ class ControllerGUI(ctk.CTk):
             current_options = options if options is not None else self.macro_options
 
             self.after(0, lambda: [
-                self.macro_progress.pack(fill="x", padx=5, pady=(5, 0)),
+                self.macro_progress.grid(),
                 self.macro_progress.set(0)
             ])
             total_steps = len(macro_steps)
+
+            # A previous stop must not bleed into this run.
+            self.controller.clear_cancel()
 
             lowered_brightness = False
             if current_options.get("lower_brightness", False):
@@ -590,32 +594,34 @@ class ControllerGUI(ctk.CTk):
                 command = step["command"]
                 self.current_macro_command = command
                 params = step["params"]
-                callback = self.get_command_callback(command)
-                if callback:
-                    try:
-                        self.append_log(f"Running macro step: {command} ({i+1}/{total_steps})", "info")
+                spec = get_spec(command)
+                try:
+                    self.append_log(f"Running macro step: {command} ({i+1}/{total_steps})", "info")
 
-                        if command in ["PVP", "Cavern", "Breed Monsters"]:
-                            self.update_command_progress(0)
+                    if command in PROGRESS_COMMANDS:
+                        self.update_command_progress(0)
+                        progress_cb = self._make_macro_step_progress(i, total_steps)
+                    else:
+                        progress_cb = self.update_command_progress
 
-                        result = callback(**params)
+                    result = spec.run(self.controller, progress_cb, **params)
 
-                        if result == "EXIT":
-                            self.append_log("Closing application...", "warning")
-                            self.after(1000, self.destroy)
-                            return
+                    if result == "EXIT":
+                        self.append_log("Closing application...", "warning")
+                        self.after(1000, self.destroy)
+                        return
 
-                        if command in ["PVP", "Cavern", "Breed Monsters"]:
-                            self.after(0, self.progress_frame.pack_forget)
+                    if command in PROGRESS_COMMANDS:
+                        self.after(0, self.hide_command_progress)
 
-                        progress = (i + 1) / total_steps
-                        self.after(0, lambda p=progress: self.macro_progress.set(p))
-                    except  ExecutionFlag:
-                        self.append_log(f"Macro step {command} stopped", "warning")
-                        break
-                    except Exception as e:
-                        self.append_log(f"Error in macro step {command}: {str(e)}", "error")
-                        break
+                    progress = (i + 1) / total_steps
+                    self.after(0, lambda p=progress: self.macro_progress.set(p))
+                except ExecutionFlag:
+                    self.append_log(f"Macro step {command} stopped", "warning")
+                    break
+                except Exception as e:
+                    self.append_log(f"Error in macro step {command}: {str(e)}", "error")
+                    break
 
             if not self.stop_macro and current_options.get("lock_device", False):
                 self.append_log("Locking device after macro completion", "info")
@@ -630,10 +636,10 @@ class ControllerGUI(ctk.CTk):
 
             self.macro_running = False
             self.stop_macro = False
-            self.run_macro_btn.configure(text="▶ Run Macro", fg_color=["#3B8ED0", "#1F6AA5"])
+            self.run_macro_btn.configure(text="▶ Run Macro", fg_color=[theme.PRIMARY, theme.PRIMARY_DARK])
             self.macro_dropdown.configure(state="normal")
             self.edit_macro_btn.configure(state="normal")
-            self.macro_progress.pack_forget()
+            self.macro_progress.grid_remove()
             if not self.command_running:
                 self.command_dropdown.configure(state="normal")
                 if self.param_frame:
@@ -648,7 +654,8 @@ class ControllerGUI(ctk.CTk):
     # Cleanup
     # =====================================================================
 
-    def __del__(self):
+    def _on_close(self) -> None:
+        """Explicit window close: stop the device stream, then destroy."""
         controller = getattr(self, "controller", None)
         if controller is not None:
             try:
@@ -657,6 +664,7 @@ class ControllerGUI(ctk.CTk):
             except Exception:
                 # Ignore errors during cleanup
                 pass
+        self.destroy()
 
     def open_screenshots_folder(self) -> None:
         try:

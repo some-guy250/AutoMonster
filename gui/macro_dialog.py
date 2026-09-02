@@ -1,9 +1,6 @@
 import customtkinter as ctk
-import json
-import os
 from .command_frame import CommandFrame
 
-DEFAULT_MACROS_FILE = "macros.json"
 TEMP_MACRO_NAME = "(Quick Run)"
 
 class MacroDialog(ctk.CTkToplevel):
@@ -11,14 +8,14 @@ class MacroDialog(ctk.CTkToplevel):
         super().__init__(parent)
         self.title("Macro Manager")
         self.parent = parent
-        self.commands = commands
+        self.command_specs = commands  # name -> CommandSpec (registry)
         
         # Initialize variables for options before loading macros
         self.lower_brightness = ctk.BooleanVar(value=False)
         self.lock_device = ctk.BooleanVar(value=False)
 
         # Load macros and options from file
-        self.macros = self.load_macros()
+        self.macros = dict(self.parent.config_manager.get_macros())
         self.load_options()
         
         # Add temporary macro for quick execution
@@ -125,10 +122,10 @@ class MacroDialog(ctk.CTkToplevel):
         cmd_label = ctk.CTkLabel(left_pane, text="Command:", anchor="w")
         cmd_label.pack(fill="x", pady=(5,0), padx=10)
         
-        self.command_var = ctk.StringVar(value=next(iter(self.commands)))
+        self.command_var = ctk.StringVar(value=next(iter(self.command_specs)))
         self.command_dropdown = ctk.CTkOptionMenu(
             left_pane,
-            values=list(self.commands.keys()),
+            values=list(self.command_specs.keys()),
             variable=self.command_var,
             command=self.on_command_changed,
             width=300  # Fixed width for consistency
@@ -230,7 +227,7 @@ class MacroDialog(ctk.CTkToplevel):
         lock_toggle.pack(side="left", padx=(20, 5))
 
         # Create the initial command frame
-        self.update_command_frame(next(iter(self.commands)))
+        self.update_command_frame(next(iter(self.command_specs)))
         self.update_button_states()
         
         # Initialize step selection tracking
@@ -493,10 +490,11 @@ class MacroDialog(ctk.CTkToplevel):
             widget.destroy()
 
         # Create new command frame
+        spec = self.command_specs[command_name]
         self.current_command_frame = CommandFrame(
             self.command_container,
             command_name,
-            self.commands[command_name],
+            spec.params,
             self.add_step,
             mode="macro"
         )
@@ -532,31 +530,18 @@ class MacroDialog(ctk.CTkToplevel):
         if TEMP_MACRO_NAME in macros_to_save:
             del macros_to_save[TEMP_MACRO_NAME]
 
-        macro_data = {
-            "macros": macros_to_save,
-            "options": {
+        self.parent.config_manager.save_macros(
+            macros_to_save,
+            {
                 "lower_brightness": self.lower_brightness.get(),
-                "lock_device": self.lock_device.get()
-            }
-        }
-        with open(DEFAULT_MACROS_FILE, "w") as f:
-            json.dump(macro_data, f, indent=4)
+                "lock_device": self.lock_device.get(),
+            },
+        )
         self.destroy()
 
-    def load_macros(self):
-        """Load macros from file. Options are loaded separately in __init__."""
-        if os.path.isfile(DEFAULT_MACROS_FILE):
-            with open(DEFAULT_MACROS_FILE, "r") as f:
-                data = json.load(f)
-                return data.get("macros", {})
-        return {}
-
     def load_options(self):
-        """Load macro options (brightness, lock device) from file."""
-        if os.path.isfile(DEFAULT_MACROS_FILE):
-            with open(DEFAULT_MACROS_FILE, "r") as f:
-                data = json.load(f)
-                options = data.get("options", {})
-                self.lower_brightness.set(options.get("lower_brightness", False))
-                self.lock_device.set(options.get("lock_device", False))
+        """Load macro options (brightness, lock device) via the shared config manager."""
+        options = self.parent.config_manager.get_macro_options()
+        self.lower_brightness.set(options.get("lower_brightness", False))
+        self.lock_device.set(options.get("lock_device", False))
 

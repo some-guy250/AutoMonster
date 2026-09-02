@@ -11,6 +11,9 @@ import customtkinter as ctk
 import amscrcpy
 from config.config import GAME_HEIGHT, changelog_path
 
+from gui import theme
+from gui.command_registry import COMMANDS
+
 
 def build_main_interface(gui):
     """Build and wire all UI elements for the main interface.
@@ -19,18 +22,18 @@ def build_main_interface(gui):
         gui: The ControllerGUI instance that owns all state.
     """
     gui.fonts = {
-        "header": ("Arial", 16, "bold"),
-        "subheader": ("Arial", 14, "bold"),
-        "normal": ("Arial", 12),
-        "button": ("Arial", 13, "bold"),
+        "header": theme.FONT_HEADER,
+        "subheader": theme.FONT_SUBHEADER,
+        "normal": theme.FONT_NORMAL,
+        "button": theme.FONT_BUTTON,
     }
     gui.debug_tool = None
 
     gui.panel_width = 300
     gui.panel_visible = True
 
-    gui.commands = gui.commands  # already set on __init__ via self.commands = GUI_COMMANDS
-    gui.command_descriptions = gui.command_descriptions
+    # Command specs (params + run adapter + help text) come from the registry.
+    gui.command_specs = COMMANDS
 
     gui.override_parameter_defaults()
 
@@ -124,9 +127,14 @@ def _build_macro_controls(gui, parent):
     )
     gui.run_macro_btn.pack(fill="x", padx=5)
 
-    gui.macro_progress = ctk.CTkProgressBar(controls, height=10, mode="determinate")
+    # Fixed-height slot so showing/hiding the bar never shifts the panel below.
+    macro_progress_row = ctk.CTkFrame(controls, height=14)
+    macro_progress_row.pack(fill="x", padx=5, pady=(5, 0))
+    macro_progress_row.pack_propagate(False)
+    gui.macro_progress = ctk.CTkProgressBar(macro_progress_row, height=10, mode="determinate")
     gui.macro_progress.set(0)
-    gui.macro_progress.pack_forget()
+    gui.macro_progress.grid(row=0, column=0, sticky="ew")
+    gui.macro_progress.grid_remove()
 
     gui.update_macro_buttons()
 
@@ -138,21 +146,20 @@ def _build_command_selector(gui, parent):
     ctk.CTkLabel(select_frame, text="Select Command:", font=gui.fonts["normal"]) \
         .pack(side="top", anchor="w", padx=5, pady=(0, 5))
 
-    from .gui_config import GUI_COMMANDS
-    gui.command_var = ctk.StringVar(value=next(iter(GUI_COMMANDS)))
+    gui.command_var = ctk.StringVar(value=next(iter(COMMANDS)))
     dropdown_row = ctk.CTkFrame(select_frame)
     dropdown_row.pack(fill="x", padx=5, pady=5)
 
     gui.command_dropdown = ctk.CTkOptionMenu(
-        dropdown_row, values=list(gui.commands.keys()), variable=gui.command_var,
+        dropdown_row, values=list(COMMANDS.keys()), variable=gui.command_var,
         command=gui.on_command_change, width=200, height=32,
         font=gui.fonts["normal"], anchor="center"
     )
     gui.command_dropdown.pack(side="left", fill="x", expand=True)
 
     gui.help_btn = ctk.CTkButton(
-        dropdown_row, text="?", width=32, height=32, font=("Arial", 16, "bold"),
-        fg_color="#3B8ED0", hover_color="#2d6bb0",
+        dropdown_row, text="?", width=32, height=32, font=theme.font(16, True),
+        fg_color=theme.PRIMARY, hover_color=theme.PRIMARY_HOVER,
         command=gui.show_help_popup
     )
     gui.help_btn.pack(side="left", padx=(5, 0))
@@ -176,7 +183,7 @@ def _build_preview_frame(gui):
 
     ctk.CTkLabel(
         container, text="Click on screen to interact with game",
-        font=("Arial", 11), text_color="gray"
+        font=theme.FONT_SMALL, text_color="gray"
     ).pack(pady=(5, 0))
 
     gui.preview_label = ctk.CTkLabel(container, text="")
@@ -215,18 +222,22 @@ def _build_preview_frame(gui):
     )
     gui.reset_brightness_btn.pack(side="left", fill="x", expand=True, padx=2)
 
-    # Progress frame
-    gui.progress_frame = ctk.CTkFrame(container)
+    # Progress slot: a fixed-height row that is always present so toggling the
+    # bar never resizes the preview above it. The label + bar are shown/hidden
+    # inside the row.
+    gui.progress_frame = ctk.CTkFrame(container, height=44)
+    gui.progress_frame.pack(fill="x", padx=5, pady=(6, 0))
+    gui.progress_frame.pack_propagate(False)
     gui.progress_label = ctk.CTkLabel(
         gui.progress_frame, text="Progress:", font=gui.fonts["normal"]
     )
-    gui.progress_label.pack(anchor="w", padx=5)
     gui.command_progress = ctk.CTkProgressBar(
         gui.progress_frame, height=15, mode="determinate"
     )
-    gui.command_progress.pack(fill="x", padx=5, pady=(5, 5))
     gui.command_progress.set(0)
-    gui.progress_frame.pack_forget()
+    # Hidden initially; the row keeps its height either way.
+    gui.progress_label.pack_forget()
+    gui.command_progress.pack_forget()
 
     # Preview state
     gui.preview_ratio = .55
@@ -249,6 +260,11 @@ def _build_preview_frame(gui):
     gui.preview_label.bind("<ButtonPress-1>", gui.on_mouse_down)
     gui.preview_label.bind("<B1-Motion>", gui.on_mouse_move)
     gui.preview_label.bind("<ButtonRelease-1>", gui.on_mouse_up)
+    # Mouse wheel over the preview = pinch zoom on the device (Windows: MouseWheel,
+    # Linux: Button-4 up / Button-5 down).
+    gui.preview_label.bind("<MouseWheel>", gui.on_preview_scroll)
+    gui.preview_label.bind("<Button-4>", gui.on_preview_scroll)
+    gui.preview_label.bind("<Button-5>", gui.on_preview_scroll)
 
 
 def _build_logs_frame(gui):
@@ -269,7 +285,7 @@ def _build_logs_frame(gui):
 
     ctk.CTkFrame(log_frame, height=2).pack(fill="x", padx=10, pady=5)
 
-    gui.log_text = ctk.CTkTextbox(log_frame, height=150, wrap="word", font=("Arial", 13))
+    gui.log_text = ctk.CTkTextbox(log_frame, height=150, wrap="word", font=theme.font(13))
     gui.log_text.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
     gui.log_text.tag_config("info", foreground="white")
@@ -328,7 +344,7 @@ def _show_update_message_dialog(entry: dict) -> None:
     dialog.title("AutoMonster")
     dialog.geometry("500x350")
     dialog.resizable(True, True)
-    dialog.configure(bg="#2b2b2b")
+    dialog.configure(bg=theme.BG)
     dialog.grab_set()
 
     # Center on parent
@@ -343,14 +359,14 @@ def _show_update_message_dialog(entry: dict) -> None:
     dialog.bind("<Escape>", lambda e: dialog.destroy())
 
     # Header (title + subtitle in same block)
-    header_frame = ctk.CTkFrame(dialog, fg_color="#1f1f1f", height=80)
+    header_frame = ctk.CTkFrame(dialog, fg_color=theme.SURFACE, height=80)
     header_frame.pack(fill="x", padx=20, pady=(20, 0))
     header_frame.pack_propagate(False)
 
     title_label = ctk.CTkLabel(
         header_frame,
         text="What's New",
-        font=("Arial", 20, "bold"),
+        font=theme.FONT_TITLE,
         text_color="#ffffff",
         anchor="center",
     )
@@ -360,21 +376,21 @@ def _show_update_message_dialog(entry: dict) -> None:
         ctk.CTkLabel(
             header_frame,
             text=subtitle,
-            font=("Arial", 13),
-            text_color="#ffffff",
+            font=theme.font(13),
+            text_color=theme.TEXT,
             anchor="center",
         ).pack(pady=(2, 12))
 
     # Message area
-    msg_frame = ctk.CTkFrame(dialog, fg_color="#1f1f1f")
+    msg_frame = ctk.CTkFrame(dialog, fg_color=theme.SURFACE)
     msg_frame.pack(fill="both", expand=True, padx=20, pady=15)
 
     msg_text = ctk.CTkTextbox(
         msg_frame,
         wrap="word",
-        font=("Arial", 15),
-        text_color="#cccccc",
-        fg_color="#2a2a2a",
+        font=theme.font(15),
+        text_color=theme.TEXT_MUTED,
+        fg_color=theme.SURFACE_ALT,
         border_width=0,
     )
     msg_text.pack(fill="both", expand=True, padx=30, pady=(15, 20))

@@ -4,7 +4,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from utils.assets import ASSETS
-from utils.AutoMonsterErrors import *
+from utils.AutoMonsterErrors import GoToError
 
 if TYPE_CHECKING:
     from AutoMonster import Controller

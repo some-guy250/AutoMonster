@@ -1,50 +1,15 @@
 {
-    "3.0.0": {
-        "subtitle": "First update in 5 months, curius if theres anyone still using this tool.",
+    "4.0.0": {
+        "subtitle": "The big one: a new dungeon command, scroll-to-zoom, and a pile of fixes.",
         "changes": [
-            "Fixed PVP",
-            "Rune crafting automation added (as a request from a user)",
-            "Major restructuring of the codebase",
-            "Removed side panel, added help button for command details",
-            "Added a what's new popup for the first time after updating"
-        ]
-    },
-    "3.0.1": {
-        "subtitle": "First update in 5 months, curius if theres anyone still using this tool.",
-        "changes": [
-            "Fixed PVP",
-            "Rune crafting automation added (as a request from a user)",
-            "Major restructuring of the codebase",
-            "Removed side panel, added help button for command details",
-            "Added a what's new popup for the first time after updating",
-            "Fixed Cavern command not passing selected dungeons",
-            "Replaced custom tab buttons with native CTkTabview for cleaner UI",
-            "Fixed launcher not showing What's New dialog after launcher self-update"
-        ]
-    },
-    "3.0.2": {
-        "subtitle": "Small quality-of-life fixes.",
-        "changes": [
-            "Updated cavern image and fixed its screen region",
-            "Activity Hub now fails faster if a screen isn't found"
-        ]
-    },
-    "3.0.3": {
-        "subtitle": "Live view performance and update fixes.",
-        "changes": [
-            "Live view no longer lags: frame rendering moved off the interface thread and stale frames are dropped",
-            "Removed the periodic battery check that briefly blocked the interface",
-            "Command logging no longer stutters the interface",
-            "What's New popup now appears after auto-updates (changelog is embedded in the exe)",
-            "Dungeon handling adjusted when no usable monsters remain",
-            "Slider retry attempts increased from 35 to 55"
-        ]
-    },
-    "3.0.4": {
-        "subtitle": "Connection fixes.",
-        "changes": [
-            "Connection errors now say what's actually wrong instead of just 'FAIL'",
-            "Detects unsupported Android versions (15+ doesn't work yet)"
+            "Added a generic 'Do Dungeon' command for one-time dungeons",
+            "Scroll the mouse wheel over the live view to zoom in and out on the device",
+            "Fixed the interface shifting around when progress bars show and hide",
+            "Breed Monsters no longer gets stuck when the hatchery is full",
+            "Closing the app is now instant instead of taking ~5 seconds",
+            "Macro progress bar now moves smoothly instead of jumping between steps",
+            "Launcher now reports failed asset downloads instead of silently skipping them",
+            "Major internal restructure of the codebase"
         ]
     },
     "3.1.2": {
@@ -67,6 +32,54 @@
             "If the stream drops, it reconnects on its own instead of stopping",
             "Closing the game no longer gives a false 'Failed to close game' error",
             "Pausing or cancelling a command logs a clear 'stopped' message instead of a blank error"
+        ]
+    },
+    "3.0.4": {
+        "subtitle": "Connection fixes.",
+        "changes": [
+            "Connection errors now say what's actually wrong instead of just 'FAIL'",
+            "Detects unsupported Android versions (15+ doesn't work yet)"
+        ]
+    },
+    "3.0.3": {
+        "subtitle": "Live view performance and update fixes.",
+        "changes": [
+            "Live view no longer lags: frame rendering moved off the interface thread and stale frames are dropped",
+            "Removed the periodic battery check that briefly blocked the interface",
+            "Command logging no longer stutters the interface",
+            "What's New popup now appears after auto-updates (changelog is embedded in the exe)",
+            "Dungeon handling adjusted when no usable monsters remain",
+            "Slider retry attempts increased from 35 to 55"
+        ]
+    },
+    "3.0.2": {
+        "subtitle": "Small quality-of-life fixes.",
+        "changes": [
+            "Updated cavern image and fixed its screen region",
+            "Activity Hub now fails faster if a screen isn't found"
+        ]
+    },
+    "3.0.1": {
+        "subtitle": "First update in 5 months, curius if theres anyone still using this tool.",
+        "changes": [
+            "Fixed PVP",
+            "Rune crafting automation added (as a request from a user)",
+            "Major restructuring of the codebase",
+            "Removed side panel, added help button for command details",
+            "Added a what's new popup for the first time after updating",
+            "Fixed Cavern command not passing selected dungeons",
+            "Replaced custom tab buttons with native CTkTabview for cleaner UI",
+            "Fixed launcher not showing What's New dialog after launcher self-update"
+        ]
+    },
+    "3.0.0": {
+        "subtitle": "First update in 5 months, curius if theres anyone still using this tool.",
+        "changes": [
+            "Fixed PVP",
+            "Rune crafting automation added (as a request from a user)",
+            "Major restructuring of the codebase",
+            "Removed side panel, added help button for command details",
+            "Added a what's new popup for the first time after updating"
         ]
     }
 }

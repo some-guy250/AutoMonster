@@ -1,7 +1,7 @@
 from typing import Optional
 from utils.assets import ASSETS
 from config.config import BATTLE_TIMEOUT_SECONDS
-from utils.AutoMonsterErrors import *
+from utils.AutoMonsterErrors import BattleError
 from utils.HelperFunctions import compare_imgs
 from utils.logger import setup_logger
 

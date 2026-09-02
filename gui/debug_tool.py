@@ -11,6 +11,7 @@ from pathlib import Path
 
 
 from utils.region_utils import recommend_region, format_region_display
+from config.config import DEFAULT_TEMPLATE_THRESHOLD
 
 logger = logging.getLogger(__name__)
 from utils.assets import ASSETS, ADS_DIR
@@ -202,7 +203,8 @@ class DebugTool(ctk.CTkFrame):
         )
         self.status_label.grid(row=8, column=0, sticky="w", padx=5, pady=(10, 0))
 
-        # Threshold Slider
+        # Threshold Slider (default matches the app-wide DEFAULT_TEMPLATE_THRESHOLD)
+        default_pct = int(round(DEFAULT_TEMPLATE_THRESHOLD * 100))
         threshold_frame = ctk.CTkFrame(left_panel, fg_color="transparent")
         threshold_frame.grid(row=8, column=0, sticky="ew", padx=5, pady=(10, 0))
         threshold_frame.grid_columnconfigure(0, weight=1)
@@ -210,7 +212,7 @@ class DebugTool(ctk.CTkFrame):
 
         self.threshold_label = ctk.CTkLabel(
             threshold_frame,
-            text="Threshold: 90%",
+            text=f"Threshold: {default_pct}%",
             font=("Arial", 12)
         )
         self.threshold_label.grid(row=0, column=0, sticky="w")
@@ -222,7 +224,7 @@ class DebugTool(ctk.CTkFrame):
             number_of_steps=99,
             command=self.update_threshold_label
         )
-        self.threshold_slider.set(90)  # Default threshold is 0.9 (90%)
+        self.threshold_slider.set(default_pct)
         self.threshold_slider.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(5, 0))
 
         # Grayscale option

@@ -275,12 +275,18 @@ class Client:
                 self._server_stream.close()
             except Exception:
                 pass
+        # Give the stream thread a brief chance to run its teardown, but do NOT wait
+        # long. On Windows, closing the video socket from this thread does not
+        # reliably unblock the blocking recv() the stream thread is parked in, so a
+        # long join (it used to be 3s) just stalls the UI on close for nothing: the
+        # thread is a daemon (killed on process exit) and the on-device server is
+        # already stopped by the adb-stream close above.
         if (
             self._stream_thread is not None
             and self._stream_thread is not current
             and self._stream_thread.is_alive()
         ):
-            self._stream_thread.join(timeout=3.0)
+            self._stream_thread.join(timeout=0.5)
         self.control_socket = None
         self._video_socket = None
         self._server_stream = None
@@ -418,12 +424,25 @@ class Client:
 
     def _drain_server_stdout(self) -> None:
         stream = self._server_stream
+        pending = b""
         try:
             while stream is not None and not stream.closed:
-                chunk = stream.read(1024)
+                # recv() returns as soon as any bytes are available. read() would
+                # instead block until a full chunk OR the stream closes, which held
+                # the server's short startup lines until it exited (so they printed
+                # at the end of the session instead of at start).
+                chunk = stream.recv(1024)
                 if not chunk:
                     break
-                text = chunk.decode("utf-8", errors="replace").strip()
+                pending += chunk
+                while b"\n" in pending:
+                    line, pending = pending.split(b"\n", 1)
+                    text = line.decode("utf-8", errors="replace").strip()
+                    if text:
+                        print(f"[amscrcpy server] {text}", flush=True)
+            # Flush any trailing data that had no final newline.
+            if pending:
+                text = pending.decode("utf-8", errors="replace").strip()
                 if text:
                     print(f"[amscrcpy server] {text}", flush=True)
         except Exception:

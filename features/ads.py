@@ -1,6 +1,6 @@
 import amscrcpy
 from utils.assets import ASSETS, AdLocationsHorizontal, AdLocationsVertical
-from utils.AutoMonsterErrors import *
+from utils.AutoMonsterErrors import SkipAdError
 from utils.HelperFunctions import compare_imgs
 from utils.logger import setup_logger
 

@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 import amscrcpy
 
-from utils.AutoMonsterErrors import *
+from utils.AutoMonsterErrors import ClickError, FollowSequenceError, InputError, PlayAdsError, PVPError, SliderError, WaitError
 from utils.assets import (
     ASSETS, IN_GAME_ASSETS, Ancestral_Cavers, AdLocationsHorizontal, AdLocationsVertical,
     CAVERN_TO_ASSETS
@@ -16,15 +16,14 @@ from utils.assets import (
 from config.config import (
     SLIDER_MAX_RETRIES,
     DEFAULT_TEMPLATE_THRESHOLD,
-    RUNE_THRESHOLD,
-    ASSET_THRESHOLDS,
-    ASSET_GRAY_IMG
 )
 from utils.HelperFunctions import compare_imgs
-from config.config import GAME_WIDTH, GAME_HEIGHT
+from config.config import GAME_WIDTH, GAME_HEIGHT, CloseAction
 from utils.logger import setup_logger
 from utils.region_utils import init as init_region_utils
 from utils.vision_manager import VisionManager
+from utils.input_service import InputService
+from utils import paths
 from device_manager import DeviceManager
 from features.ads import AdManager
 from features.game import GameManager
@@ -46,6 +45,7 @@ class Controller:
         init_region_utils(sw, GAME_HEIGHT)
 
         self.vision_manager = VisionManager(self.device_manager)
+        self.input = InputService(self.device_manager)
 
         self.ad_manager = AdManager(self)
         self.game_manager = GameManager(self)
@@ -126,9 +126,7 @@ class Controller:
 
     def _sc_dir(self) -> pathlib.Path:
         """Get the path to the screenshots directory (next to exe or script)."""
-        if getattr(sys, 'frozen', False):
-            return pathlib.Path(sys.executable).parent / "sc"
-        return pathlib.Path(__file__).parent / "sc"
+        return paths.sc_dir()
 
     def save_screen(self, name: str = "sc", take_new: bool = False) -> None:
         if take_new:
@@ -160,146 +158,23 @@ class Controller:
         
         x1, y1 = from_cords[0]
         x2, y2 = to_cords[0]
-        
-        touch_id = 1
-        
-        # Finger down on source
-        self.client.control.touch(x1, y1, amscrcpy.ACTION_DOWN, touch_id=touch_id)
-        time.sleep(0.15)
-        
-        # Move finger to destination
-        for i in range(1, steps + 1):
-            x = int(x1 + (x2 - x1) * i / steps)
-            y = int(y1 + (y2 - y1) * i / steps)
-            self.client.control.touch(x, y, amscrcpy.ACTION_MOVE, touch_id=touch_id)
-            time.sleep(0.03)
-        
-        # Lift finger
-        self.client.control.touch(x2, y2, amscrcpy.ACTION_UP, touch_id=touch_id)
+        self.input.drag(x1, y1, x2, y2, steps=steps)
         return True
 
     def zoom_in(self) -> None:
-        """
-        Zoom in at screen center using pinch-out gesture.
-        Performs 1.5x pinch gestures (1 full + 1 half) for optimal zoom.
-        """
-        center_x = self.scale_x(GAME_WIDTH // 2)
-        center_y = self.scale_y(GAME_HEIGHT // 2)
-
-        logger.debug(f"Zoom IN - Center: ({center_x}, {center_y})")
-        self.log_gui(f"Zooming in...", "debug")
-
-        # First gesture: Full pinch (100px -> 300px)
-        start_offset = self.scale_x(100)
-        end_offset = self.scale_x(300)
-
-        self.client.control.touch(center_x - start_offset, center_y, amscrcpy.ACTION_DOWN, touch_id=1)
-        self.client.control.touch(center_x + start_offset, center_y, amscrcpy.ACTION_DOWN, touch_id=2)
-        time.sleep(0.02)
-
-        steps = 15
-        for step in range(steps):
-            progress = (step + 1) / steps
-            offset = int(start_offset + (end_offset - start_offset) * progress)
-            self.client.control.touch(center_x - offset, center_y, amscrcpy.ACTION_MOVE, touch_id=1)
-            self.client.control.touch(center_x + offset, center_y, amscrcpy.ACTION_MOVE, touch_id=2)
-            time.sleep(0.01)
-
-        self.client.control.touch(center_x - end_offset, center_y, amscrcpy.ACTION_UP, touch_id=1)
-        self.client.control.touch(center_x + end_offset, center_y, amscrcpy.ACTION_UP, touch_id=2)
-        time.sleep(0.05)
-
-        # Second gesture: Half pinch (100px -> 200px for gentler zoom)
-        start_offset = self.scale_x(100)
-        end_offset = self.scale_x(200)
-
-        self.client.control.touch(center_x - start_offset, center_y, amscrcpy.ACTION_DOWN, touch_id=1)
-        self.client.control.touch(center_x + start_offset, center_y, amscrcpy.ACTION_DOWN, touch_id=2)
-        time.sleep(0.02)
-
-        half_steps = 8  # Half the steps for quicker gesture
-        for step in range(half_steps):
-            progress = (step + 1) / half_steps
-            offset = int(start_offset + (end_offset - start_offset) * progress)
-            self.client.control.touch(center_x - offset, center_y, amscrcpy.ACTION_MOVE, touch_id=1)
-            self.client.control.touch(center_x + offset, center_y, amscrcpy.ACTION_MOVE, touch_id=2)
-            time.sleep(0.01)
-
-        self.client.control.touch(center_x - end_offset, center_y, amscrcpy.ACTION_UP, touch_id=1)
-        self.client.control.touch(center_x + end_offset, center_y, amscrcpy.ACTION_UP, touch_id=2)
-
-        self.log_gui("Zoomed in", "info")
+        """Zoom in at screen center using a two-stage pinch-out gesture."""
+        self.input.zoom_in()
 
     def zoom_out(self) -> None:
-        """
-        Zoom out at screen center using pinch-in gesture.
-        Performs 1.5x pinch gestures (1 full + 1 half) for optimal zoom.
-        """
-        center_x = self.scale_x(GAME_WIDTH // 2)
-        center_y = self.scale_y(GAME_HEIGHT // 2)
+        """Zoom out at screen center using a two-stage pinch-in gesture."""
+        self.input.zoom_out()
 
-        logger.debug(f"Zoom OUT - Center: ({center_x}, {center_y})")
-        self.log_gui(f"Zooming out...", "debug")
-
-        # First gesture: Full pinch (300px -> 100px)
-        start_offset = self.scale_x(300)
-        end_offset = self.scale_x(100)
-
-        self.client.control.touch(center_x - start_offset, center_y, amscrcpy.ACTION_DOWN, touch_id=1)
-        self.client.control.touch(center_x + start_offset, center_y, amscrcpy.ACTION_DOWN, touch_id=2)
-        time.sleep(0.02)
-
-        steps = 15
-        for step in range(steps):
-            progress = (step + 1) / steps
-            offset = int(start_offset - (start_offset - end_offset) * progress)
-            self.client.control.touch(center_x - offset, center_y, amscrcpy.ACTION_MOVE, touch_id=1)
-            self.client.control.touch(center_x + offset, center_y, amscrcpy.ACTION_MOVE, touch_id=2)
-            time.sleep(0.01)
-
-        self.client.control.touch(center_x - end_offset, center_y, amscrcpy.ACTION_UP, touch_id=1)
-        self.client.control.touch(center_x + end_offset, center_y, amscrcpy.ACTION_UP, touch_id=2)
-        time.sleep(0.05)
-
-        # Second gesture: Half pinch (200px -> 100px for gentler zoom)
-        start_offset = self.scale_x(200)
-        end_offset = self.scale_x(100)
-
-        self.client.control.touch(center_x - start_offset, center_y, amscrcpy.ACTION_DOWN, touch_id=1)
-        self.client.control.touch(center_x + start_offset, center_y, amscrcpy.ACTION_DOWN, touch_id=2)
-        time.sleep(0.02)
-
-        half_steps = 8  # Half the steps for quicker gesture
-        for step in range(half_steps):
-            progress = (step + 1) / half_steps
-            offset = int(start_offset - (start_offset - end_offset) * progress)
-            self.client.control.touch(center_x - offset, center_y, amscrcpy.ACTION_MOVE, touch_id=1)
-            self.client.control.touch(center_x + offset, center_y, amscrcpy.ACTION_MOVE, touch_id=2)
-            time.sleep(0.01)
-
-        self.client.control.touch(center_x - end_offset, center_y, amscrcpy.ACTION_UP, touch_id=1)
-        self.client.control.touch(center_x + end_offset, center_y, amscrcpy.ACTION_UP, touch_id=2)
-
-        self.log_gui("Zoomed out", "info")
 
     def _get_cords(self, asset_code: str, screenshot: Optional[np.ndarray] = None, threshold: float = DEFAULT_TEMPLATE_THRESHOLD, gray_img: bool = False) -> List[List[int]]:
         if screenshot is None:
             screenshot = self.take_screenshot()
-        # Check for per-asset threshold override (ASSETS enum or string key)
-        for key, value in ASSET_THRESHOLDS.items():
-            key_str = key.value if hasattr(key, 'value') else key
-            if asset_code == key_str:
-                threshold = value
-                break
-        # Dynamic rune variants (rune{level}{type}{s/t}.png) need higher threshold
-        if threshold == DEFAULT_TEMPLATE_THRESHOLD and asset_code.startswith(('rune1', 'rune2', 'rune3', 'rune4', 'rune5')):
-            threshold = RUNE_THRESHOLD
-        # Check for per-asset gray image override
-        for key in ASSET_GRAY_IMG:
-            key_str = key.value if hasattr(key, 'value') else key
-            if asset_code == key_str:
-                gray_img = True
-                break
+        # Per-asset threshold/gray resolution (overrides + dynamic runes) is
+        # handled by the VisionManager through the AssetSpec registry.
         return self.vision_manager.get_cords(asset_code, screenshot, threshold, gray_img)
 
     def count(self, *assets: Optional[str | tuple[str, ...]], gray_img: bool = False, threshold: float = DEFAULT_TEMPLATE_THRESHOLD, screenshot: Optional[np.ndarray] = None) -> int:
@@ -554,39 +429,38 @@ class Controller:
     def force_close(self) -> None:
         self.game_manager.force_close()
 
-    def close_game(self, action: str = "Close Game Only") -> None:
-        """Close the game and optionally exit program or shutdown computer
-        
+    def close_game(self, action: CloseAction = CloseAction.GAME_ONLY):
+        """Close the game and optionally exit the program or shut down the PC.
+
         Args:
-            action: One of:
-                - "Close Game Only": Just close the game
-                - "Close Game & Exit Program": Close game and exit AutoMonster
-                - "Close Game & Shutdown Computer": Close game, exit, and shutdown PC
+            action: A CloseAction describing what to do after closing.
         """
         self.log_gui("Closing game...", "info")
         self.game_manager.close_game()
         time.sleep(2)  # Give time for the game to close
-        
+
         # Reset brightness before locking device (if it was lowered)
         self._reset_brightness_if_lowered()
-        
+
         # Lock device after closing game
         self.log_gui("Locking device...", "info")
         self.lock_device()
-        
-        if action == "Close Game Only":
+
+        if action is CloseAction.GAME_ONLY:
             self.log_gui("Game closed and device locked", "success")
             return None
-        elif action == "Close Game & Exit Program":
+        if action is CloseAction.EXIT_PROGRAM:
             self.log_gui("Exiting program...", "info")
             return "EXIT"
-        elif action == "Close Game & Shutdown Computer":
+        if action is CloseAction.SHUTDOWN:
             self.log_gui("Shutting down computer in 10 seconds...", "warning")
-            # Windows shutdown command
-            os.system("shutdown /s /t 10")
+            if sys.platform == "win32":
+                os.system("shutdown /s /t 10")
+            else:
+                self.log_gui("Automatic shutdown is only supported on Windows.", "warning")
             self.log_gui("Exiting program...", "info")
             return "EXIT"
-        
+
         return None
 
     def launch_game(self) -> None:
@@ -965,7 +839,12 @@ class Controller:
         if value:
             self.device_manager._cancel_event.set()
         else:
-            self.device_manager._cancel_event.clear()
+            self.clear_cancel()
+
+    def clear_cancel(self) -> None:
+        """Clear the stop signal. Call when a new run begins so a previous
+        stop cannot bleed into the next run."""
+        self.device_manager.clear_cancel()
 
     def pause(self, seconds: float) -> None:
         self.device_manager.pause(seconds)
@@ -978,11 +857,3 @@ class Controller:
     def ratio(self):
         return self.device_manager.ratio
 
-
-def main() -> None:
-    controller = Controller()
-    controller.change_team()
-
-
-if __name__ == '__main__':
-    main()

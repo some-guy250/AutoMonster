@@ -7,14 +7,12 @@ from config.config import IMAGE_SIMILARITY_THRESHOLD
 
 logger = logging.getLogger(__name__)
 
-repo_url_api = "https://api.github.com/repos/some-guy250/AutoMonster"
-repo_url = "https://github.com/some-guy250/AutoMonster"
-
-
 def compare_imgs(img1, img2, transform_to_black=False):
     """Compare two images for similarity.
 
-    Returns True if the images are >99% similar.
+    Returns True when the images are more similar than
+    IMAGE_SIMILARITY_THRESHOLD, i.e. effectively unchanged (used to detect a
+    frozen / still-moving screen).
     """
     if img1.shape == img2.shape:
         height, width, _ = img2.shape

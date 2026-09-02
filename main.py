@@ -27,10 +27,8 @@ def main(is_updated: bool = False) -> None:
             app = ControllerGUI(update_message=update_msg)
             app.mainloop()
     except Exception as e:
-        if e is KeyboardInterrupt:
-            return
         if os.path.exists("debug.ban"):
-            raise e
+            raise
         import tkinter.messagebox as msg
         msg.showerror("Error", str(e))
 

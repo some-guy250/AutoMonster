@@ -7,7 +7,7 @@ import amscrcpy
 from adbutils import adb
 from adbutils import AdbDevice
 
-from utils.AutoMonsterErrors import *
+from utils.AutoMonsterErrors import ExecutionFlag
 from utils.logger import setup_logger
 from config.config import (
     MIN_ANDROID_SDK, MAX_ANDROID_SDK,
@@ -27,19 +27,28 @@ class DeviceManager:
         self.new_width: int = 0
         self.resized: bool = False
         self.__last_screenshot: Optional[np.ndarray] = None
-        self._paused: bool = False
-        self._cancel_event = threading.Event()  # Thread-safe cancellation signal
+        self._pause_event = threading.Event()  # set while the run is frozen (paused by the user)
+        self._cancel_event = threading.Event()  # thread-safe cancellation signal
 
         self.connect(serial)
 
     def pause(self, seconds: float):
+        """Sleep for ``seconds``, waking on 0.1s ticks so a stop stays responsive.
+
+        Raises ExecutionFlag (without clearing the flag) if a stop was
+        requested. The cancel flag is only cleared when a new run begins, never
+        as a side effect of being consumed.
+        """
         start = time.time()
         while time.time() - start < seconds:
             if self._cancel_event.is_set():
-                self._cancel_event.clear()
                 logger.debug("Cancelled current operation in pause")
                 raise  ExecutionFlag
             time.sleep(min(0.1, seconds - (time.time() - start)))
+
+    def clear_cancel(self) -> None:
+        """Clear the stop signal. Called when a new run begins."""
+        self._cancel_event.clear()
 
     def connect(self, serial: Optional[str] = None):
         try:
@@ -197,23 +206,19 @@ class DeviceManager:
 
     def take_screenshot(self) -> np.ndarray:
         if self._cancel_event.is_set():
-            self._cancel_event.clear()
             logger.debug("Cancelled current operation in take_screenshot")
             raise  ExecutionFlag
 
-        while self._paused:
+        # While frozen, wait (pause() re-checks cancellation and raises).
+        while self._pause_event.is_set():
             self.pause(5)
-            if self._cancel_event.is_set():
-                self._cancel_event.clear()
-                logger.debug("Cancelled current operation")
-                raise  ExecutionFlag
 
         self.__last_screenshot = self.client.last_frame
         if self.resized:
             image = self.__last_screenshot
-            new_size = (self.new_width, 720)
+            new_size = (self.new_width, GAME_HEIGHT)
             if image.shape[0] > image.shape[1]:
-                new_size = (720, self.new_width)
+                new_size = (GAME_HEIGHT, self.new_width)
             resized_image = cv2.resize(image, new_size)
             self.__last_screenshot = resized_image
         return self.__last_screenshot
@@ -222,10 +227,10 @@ class DeviceManager:
         return self.__last_screenshot
 
     def freeze(self):
-        self._paused = True
+        self._pause_event.set()
 
     def unfreeze(self):
-        self._paused = False
+        self._pause_event.clear()
 
     def ensure_screen_on_and_unlocked(self):
         if not self.device:

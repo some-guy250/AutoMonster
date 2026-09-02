@@ -3,7 +3,34 @@ import json
 from typing import Dict, Any
 import customtkinter as ctk
 
+from gui import theme
+
 DEFAULTS_FILE = "defaults.json"
+
+
+def collect_param_values(param_widgets: dict) -> dict:
+    """Read the current value of each parameter widget based on its type.
+
+    This is the single place that knows how to extract a value from each kind
+    of parameter widget (slider, checkbox, option menu, checkbox group). It is
+    shared by run, save-as-defaults and the macro editor.
+    """
+    values = {}
+    for param_name, widget in param_widgets.items():
+        if isinstance(widget, ctk.CTkSlider):
+            values[param_name] = int(widget.get())
+        elif isinstance(widget, ctk.CTkCheckBox):
+            values[param_name] = bool(widget.get())
+        elif isinstance(widget, ctk.CTkOptionMenu):
+            values[param_name] = widget.get()
+        elif isinstance(widget, list):  # flat multiple-choice checkboxes
+            values[param_name] = [choice for choice, var in widget if var.get()]
+        elif isinstance(widget, dict):  # tabbed multiple choice (merge all tabs)
+            values[param_name] = [
+                choice for tab_choices in widget.values()
+                for choice, var in tab_choices if var.get()
+            ]
+    return values
 
 
 class CommandFrame(ctk.CTkFrame):
@@ -26,7 +53,7 @@ class CommandFrame(ctk.CTkFrame):
         self.scroll_frame.pack(expand=True, fill="both", padx=5, pady=(5, 0))
 
         # Add a header for parameters
-        header = ctk.CTkLabel(self.scroll_frame, text="Parameters", font=("Arial", 14, "bold"))
+        header = ctk.CTkLabel(self.scroll_frame, text="Parameters", font=theme.FONT_SUBHEADER)
         header.pack(pady=(5, 10), anchor="w")
 
         self.param_frames = {}
@@ -158,11 +185,11 @@ class CommandFrame(ctk.CTkFrame):
                             var.set(False)
 
                     select_all_btn = ctk.CTkButton(button_frame, text="Select All", width=100, height=25,
-                                                   font=("Arial", 11), command=select_all)
+                                                   font=theme.FONT_SMALL, command=select_all)
                     select_all_btn.pack(side="left", padx=(0, 5))
 
                     deselect_all_btn = ctk.CTkButton(button_frame, text="Deselect All", width=100, height=25,
-                                                     font=("Arial", 11), command=deselect_all)
+                                                     font=theme.FONT_SMALL, command=deselect_all)
                     deselect_all_btn.pack(side="left")
 
                     widget = checkbox_vars
@@ -179,11 +206,11 @@ class CommandFrame(ctk.CTkFrame):
                             var.set(False)
 
                     select_all_btn = ctk.CTkButton(button_frame, text="Select All", width=100, height=25,
-                                                   font=("Arial", 11), command=select_all)
+                                                   font=theme.FONT_SMALL, command=select_all)
                     select_all_btn.pack(side="left", padx=(0, 5))
 
                     deselect_all_btn = ctk.CTkButton(button_frame, text="Deselect All", width=100, height=25,
-                                                     font=("Arial", 11), command=deselect_all)
+                                                     font=theme.FONT_SMALL, command=deselect_all)
                     deselect_all_btn.pack(side="left")
 
                     checkbox_frame = ctk.CTkFrame(checkbox_container)
@@ -191,7 +218,7 @@ class CommandFrame(ctk.CTkFrame):
 
                     for choice in param_config["choices"]:
                         if choice.startswith("--"):
-                            label = ctk.CTkLabel(checkbox_frame, text=choice, font=("Arial", 12, "bold"))
+                            label = ctk.CTkLabel(checkbox_frame, text=choice, font=theme.font(12, True))
                             label.pack(anchor="w", padx=5, pady=(10, 2))
                             continue
 
@@ -234,9 +261,9 @@ class CommandFrame(ctk.CTkFrame):
                 self.scroll_frame,
                 text="Set Values as Defaults",
                 height=35,
-                font=("Arial", 13, "bold"),
-                fg_color="#1f538d",  # A nice blue color
-                hover_color="#2766b3",
+                font=theme.FONT_BUTTON,
+                fg_color=theme.PRIMARY_DARK,
+                hover_color=theme.PRIMARY,
                 command=lambda: self.save_params_as_defaults(command_name)
             )
             save_button.pack(fill="x", padx=5, pady=(10, 5))
@@ -261,7 +288,7 @@ class CommandFrame(ctk.CTkFrame):
                 text="▶ Run",
                 height=35,
                 width=100,  # Fixed width to prevent size changes
-                font=("Arial", 13, "bold"),
+                font=theme.FONT_BUTTON,
                 command=self.toggle_execution
             )
             self.run_button.grid(row=0, column=0, padx=(0, 5), sticky="ew")
@@ -272,7 +299,7 @@ class CommandFrame(ctk.CTkFrame):
                 text="Pause",
                 height=35,
                 width=100,  # Fixed width to prevent size changes between Pause/Resume
-                font=("Arial", 13, "bold"),
+                font=theme.FONT_BUTTON,
                 command=self.on_pause,
                 state="disabled"
             )
@@ -283,7 +310,7 @@ class CommandFrame(ctk.CTkFrame):
                 action_buttons,
                 text="Add Step",
                 height=35,
-                font=("Arial", 13, "bold"),
+                font=theme.FONT_BUTTON,
                 command=callback
             )
             self.add_button.grid(row=0, column=0, columnspan=3, sticky="ew")
@@ -293,13 +320,13 @@ class CommandFrame(ctk.CTkFrame):
         if not self.is_running:
             # Start execution
             self.is_running = True
-            self.run_button.configure(text="⬛ Stop", fg_color="red")
+            self.run_button.configure(text="⬛ Stop", fg_color=theme.DANGER)
             self.pause_button.configure(state="normal")
             self.master.winfo_toplevel().run_command()
         else:
             # Stop execution
             self.is_running = False
-            self.run_button.configure(text="▶ Run", fg_color=["#3B8ED0", "#1F6AA5"])
+            self.run_button.configure(text="▶ Run", fg_color=[theme.PRIMARY, theme.PRIMARY_DARK])
             self.pause_button.configure(state="disabled")
             self.master.winfo_toplevel().stop_command()
             # Force unpause if paused
@@ -316,21 +343,7 @@ class CommandFrame(ctk.CTkFrame):
         self.is_paused = not self.is_paused
 
     def save_params_as_defaults(self, command_name: str):
-        current_params = {}
-        for param_name, widget in self.param_widgets.items():
-            if isinstance(widget, ctk.CTkSlider):
-                value = int(widget.get())
-            elif isinstance(widget, ctk.CTkCheckBox):
-                value = bool(widget.get())
-            elif isinstance(widget, ctk.CTkOptionMenu):
-                value = widget.get()
-            elif isinstance(widget, list):  # Flat multiple choice checkboxes
-                value = [choice for choice, var in widget if var.get()]
-            elif isinstance(widget, dict):  # Tabbed multiple choice (merge all tabs)
-                value = []
-                for tab_choices in widget.values():
-                    value.extend(choice for choice, var in tab_choices if var.get())
-            current_params[param_name] = value
+        current_params = collect_param_values(self.param_widgets)
 
         if os.path.isfile(DEFAULTS_FILE):
             with open(DEFAULTS_FILE, "r") as f:
@@ -344,20 +357,5 @@ class CommandFrame(ctk.CTkFrame):
         self.master.winfo_toplevel().override_parameter_defaults()
 
     def get_current_params(self):
-        """Get current parameter values"""
-        current_params = {}
-        for param_name, widget in self.param_widgets.items():
-            if isinstance(widget, ctk.CTkSlider):
-                value = int(widget.get())
-            elif isinstance(widget, ctk.CTkCheckBox):
-                value = bool(widget.get())
-            elif isinstance(widget, ctk.CTkOptionMenu):
-                value = widget.get()
-            elif isinstance(widget, list):  # Flat multiple choice checkboxes
-                value = [choice for choice, var in widget if var.get()]
-            elif isinstance(widget, dict):  # Tabbed multiple choice (merge all tabs)
-                value = []
-                for tab_choices in widget.values():
-                    value.extend(choice for choice, var in tab_choices if var.get())
-            current_params[param_name] = value
-        return current_params
+        """Get current parameter values."""
+        return collect_param_values(self.param_widgets)
