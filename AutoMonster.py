@@ -638,25 +638,33 @@ class Controller:
                 break
 
     def do_cavern(self, *dungeons_to_do: str, change_team: bool = False, max_rooms: int = 0, progress_callback: Optional[Callable[[float], None]] = None) -> Optional[str]:
+        # DEBUG markers: the last [Cavern]/[Dungeon]/[Node]/[Battle] line printed
+        # before it hangs is where it is stuck (needs F3 debug logs on).
+        log = lambda m: self.log_gui(m, "debug")
         def handle_error_ending(ancestral: bool) -> bool:
             if self.in_screen(ASSETS.NotFullTeam, ASSETS.NoMonsterLeft, ASSETS.NoUndefeated, ASSETS.StartBattleGray,
                               screenshot=self.get_last_screenshot()):
                 if self.in_screen(ASSETS.StartBattleGray, screenshot=self.get_last_screenshot()):
                     logger.warning("Cannot start, invalid monsters")
+                    log("[Cavern] error-ending: StartBattleGray (invalid monsters) -> back")
                     self.click_back()
                 elif self.in_screen(ASSETS.NotFullTeam, screenshot=self.get_last_screenshot()):
                     logger.warning("Does not have full team")
+                    log("[Cavern] error-ending: NotFullTeam -> back")
                     self.click_back()
                 else:
                     logger.warning("No monster left or not enough undefeated")
+                    log("[Cavern] error-ending: no monsters left / no undefeated")
                 for _ in range(1 if ancestral else 2):
                     self.click_back()
                 if not self.wait_for(ASSETS.EnterCavern, timeout=5):
                     logger.warning("Failed to go back to cavern")
+                    log("[Cavern] error-ending: EnterCavern not found after back -> full re-nav")
                     self.navigator.goto_cavern()
                 return True
             return False
 
+        log(f"[Cavern] start: dungeons={list(dungeons_to_do)} change_team={change_team} max_rooms={max_rooms}")
         if len(dungeons_to_do) == 0:
             raise  InputError("No dungeons to do")
 
@@ -673,26 +681,36 @@ class Controller:
         total_rooms_done = 0
         total_expected_rooms = max_rooms * num_dungeons  # Calculate total expected rooms
 
+        log(f"[Cavern] {num_dungeons} valid dungeon(s), navigating to cavern...")
         self.navigator.goto_cavern()
+        log("[Cavern] at cavern screen, starting loop")
         while num_dungeons > 0:
             for dungeon in dungeons_to_do:
                 if dungeon in dungeons_done or not self.in_screen(dungeon):
                     continue
 
+                name = dungeon.replace('.png', '')
+                log(f"[Cavern] {name}: clicking EnterCavern...")
                 if self.click(ASSETS.EnterCavern, pause=2):
                     if dungeon in Ancestral_Cavers:
+                        log(f"[Cavern] {name}: ancestral, waiting FlashRaid (2s)...")
                         if self.wait_for(ASSETS.FlashRaid, timeout=2):
                             logger.debug("Ancestral dungeon was already done")
+                            log(f"[Cavern] {name}: already done -> Cancel")
                             self.click(ASSETS.Cancel)
                             total_rooms_done += max_rooms  # Count all rooms for completed ancestral
                         else:
+                            log(f"[Cavern] {name}: running ancestral dungeon...")
                             self.do_dungeon(False, False, False, change_team=change_team)
+                            log(f"[Cavern] {name}: ancestral do_dungeon returned")
                             total_rooms_done += 1  # Count ancestral as 1 room
                         if handle_error_ending(True):
+                            log(f"[Cavern] {name}: error-ending -> break to next cavern")
                             break
                     else:
                         sub_dungeons: int = 0
                         while True:
+                            log(f"[Cavern] {name}: room {sub_dungeons + 1}, looking for EnterEraSaga...")
                             for _ in range(3):
                                 if self.wait_for(ASSETS.EnterEraSaga, timeout=3):
                                     break
@@ -700,25 +718,31 @@ class Controller:
                                                           self.scale_y(200))
                                 self.pause(1)
                             if not self.click(ASSETS.EnterEraSaga):
+                                log(f"[Cavern] {name}: EnterEraSaga not clickable -> back / next cavern")
                                 self.click_back()
                                 if self.in_screen(ASSETS.EnterCavern):
                                     break
                                 logger.warning("Failed to go back to cavern")
                                 self.navigator.goto_cavern()
                                 break
+                            log(f"[Cavern] {name}: room {sub_dungeons + 1} entered, running do_dungeon...")
                             self.do_dungeon(False, False, False, change_team=change_team)
+                            log(f"[Cavern] {name}: room {sub_dungeons + 1} do_dungeon returned")
                             sub_dungeons += 1
                             total_rooms_done += 1
                             if progress_callback:
                                 progress_callback(min(total_rooms_done / total_expected_rooms, 1.0))
                             if handle_error_ending(False):
+                                log(f"[Cavern] {name}: error-ending -> break room loop")
                                 break
                             if 0 < max_rooms <= sub_dungeons:
                                 logger.debug("Reached max rooms")
+                                log(f"[Cavern] {name}: max_rooms {max_rooms} reached -> back out")
                                 self.click_back()
                                 break
                 else:
                     logger.warning("Failed to enter cavern")
+                    log(f"[Cavern] {name}: EnterCavern click FAILED (not found?)")
 
                 num_dungeons -= 1
                 if progress_callback:
@@ -739,12 +763,15 @@ class Controller:
 
             if self.in_screen(ASSETS.DungeonNotAvailable):
                 logger.debug("Dungeon not available time might be up")
+                log("[Cavern] DungeonNotAvailable -> reopening game, ending")
                 self.open_game(True)
                 break
 
             # Try to move to next cavern, if there's no right arrow we've reached the end
+            log(f"[Cavern] {num_dungeons} left -> clicking RightArrow to next cavern...")
             if not self.click(ASSETS.RightArrow, pause=3):
                 logger.debug("No more caverns to navigate to")
+                log("[Cavern] no RightArrow -> end of cavern list, stopping")
                 break
 
         # Ensure progress shows complete even if we finish early

@@ -54,9 +54,12 @@ class Navigator:
         Raises:
              GoToError: If navigation fails.
         """
+        self.controller.log_gui("[Cavern] goto_cavern: navigating via hub...", "debug")
         self.controller._goto_activity_hub()
         self.controller.scroll_hub(ASSETS.Cavern)
         if self.controller.follow_sequence(ASSETS.Cavern, ASSETS.RightArrow, timeout=20):
             logger.debug("In cavern")
+            self.controller.log_gui("[Cavern] goto_cavern: done", "debug")
         else:
+            self.controller.log_gui("[Cavern] goto_cavern: FAILED", "debug")
             raise GoToError("Failed to enter cavern")

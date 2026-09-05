@@ -12,9 +12,14 @@ class BattleManager:
         self.controller = controller
 
     def auto_battle(self):
+        # DEBUG markers: the last [Battle] line before a hang shows where it is stuck (F3).
+        log = lambda m: self.controller.log_gui(m, "debug")
+        log("[Battle] auto_battle: clicking StartBattle -> AutoBattle...")
         if not self.controller.follow_sequence((ASSETS.StartBattle, ASSETS.StartBattleRankUp, ASSETS.StartBattlePVP),
                                     ASSETS.AutoBattle, None):
+            log("[Battle] auto_battle: FAILED to start battle")
             raise  BattleError("Failed to start battle")
+        log("[Battle] auto_battle: running, waiting for it to end (10 min cap)...")
         self.controller.pause(5)
         counter = 5
         while True:
@@ -22,19 +27,25 @@ class BattleManager:
             if not self.controller.in_screen(ASSETS.AutoBattle, screenshot=sc) or self.controller.in_screen(ASSETS.Cancel, screenshot=sc):
                 # check again because of ancestral monsters >:( they mess up the auto battle
                 if self.controller.in_game(screenshot=sc):
+                    log(f"[Battle] auto_battle: ended after ~{counter}s")
                     break
                 else:
                     logger.debug("Ancestral monster awakened")
+                    log(f"[Battle] auto_battle ~{counter}s: AutoBattle gone but not in game (awaken popup?) -> still waiting")
             if self.controller.in_screen(ASSETS.NextPVP, screenshot=sc):
+                log(f"[Battle] auto_battle: NextPVP shown -> ended (~{counter}s)")
                 break
             counter += 1
             if counter > BATTLE_TIMEOUT_SECONDS:
+                log("[Battle] auto_battle: TIMED OUT after 10 minutes")
                 raise  BattleError(f"Battle is not finished after {BATTLE_TIMEOUT_SECONDS // 60} minutes")
             self.controller.pause(1)
 
     def spin_wheel(self, screenshot=None):
         if self.controller.in_screen(ASSETS.SpinWheel, screenshot=screenshot, retries=2):
+            self.controller.log_gui("[Wheel] SpinWheel found -> SpinWheel/ClaimSpin/Cancel (15s)", "debug")
             self.controller.follow_sequence(ASSETS.SpinWheel, ASSETS.ClaimSpin, ASSETS.Cancel, timeout=15, raise_error=True)
+            self.controller.log_gui("[Wheel] wheel done", "debug")
             return True
         return False
 
@@ -141,6 +152,8 @@ class BattleManager:
         return True
 
     def do_node(self, *, has_wheel: bool, has_cutscene: bool, change_team: bool = False) -> Optional[bool]:
+        # DEBUG markers: [Node] lines (F3) show which step of a node is stuck.
+        log = lambda m: self.controller.log_gui(m, "debug")
         result = True
         skip_part = False
         timeout = 12
@@ -164,21 +177,26 @@ class BattleManager:
                         return True
 
         if not skip_part:
+            log(f"[Node] entering battle node, follow_sequence EnterBattle -> start/limits ({timeout}s)...")
             if not self.controller.follow_sequence((ASSETS.EnterBattleRankUp, ASSETS.EnterBattleStamina),
                                         (ASSETS.StartBattle, ASSETS.StartBattleRankUp, ASSETS.StartBattleGray,
                                          ASSETS.RefillStamina, ASSETS.NoMonsterLeft, ASSETS.NoMonsterLeft,ASSETS.NotFullTeam,
                                          ASSETS.NoUndefeated, ASSETS.SelectTeam, ASSETS.ChangeTeam), timeout=timeout):
+                log("[Node] follow_sequence timed out -> None (stamina empty or bad screen)")
                 return None
 
         if self.controller.in_screen(ASSETS.SelectTeam, screenshot=self.controller.get_last_screenshot()) and not change_team:
             logger.warning("All monsters are dead and change team is disabled")
+            log("[Node] SelectTeam shown but change_team disabled -> None")
             return None
 
         if self.controller.in_screen(ASSETS.RefillStamina, ASSETS.NoMonsterLeft, ASSETS.NotFullTeam, ASSETS.NoUndefeated,
                           screenshot=self.controller.get_last_screenshot()):
+            log("[Node] on a limit screen (stamina/no monsters/team) -> None")
             return None
         ct = True
         if change_team:
+            log("[Node] change_team requested -> change_team() (team select + swipes, can take ~1 min)...")
             ct = self.controller.change_team()
             if not ct:
                 # Team change failed (all monsters dead), go back to dungeon select
@@ -188,23 +206,30 @@ class BattleManager:
                     self.controller.click_back()
                 return None  # Signals do_dungeon to try next dungeon, not count as loss
         if self.controller.in_screen(ASSETS.StartBattleGray):
+            log("[Node] StartBattleGray -> None")
             return None
         self.auto_battle()
         if has_wheel:
             result = self.spin_wheel(screenshot=self.controller.get_last_screenshot())
         self.controller.pause(5)
+        log(f"[Node] finished (result={result})")
         return result
 
     def do_dungeon(self, has_wheel: bool, has_cutscene: bool, has_stamina: bool, *, max_nodes: int = None,
                    max_losses: int = 3, wait_for_stamina_to_refill: bool = True, change_team: bool = False) -> bool:
+        # DEBUG markers: [Dungeon] lines (F3) show the node loop and where it stalls.
+        log = lambda m: self.controller.log_gui(m, "debug")
         nodes = 0
         losses = 0
 
         while True:
+            log(f"[Dungeon] waiting for next node screen (10s), nodes={nodes} losses={losses}...")
             if not self.controller.wait_for(ASSETS.EnterBattleRankUp, ASSETS.EnterBattleStamina, ASSETS.PlayCutscene):
+                log(f"[Dungeon] no node screen -> dungeon done (nodes={nodes})")
                 break
             if max_nodes is not None and nodes >= max_nodes:
                 logger.debug("Reached max nodes")
+                log(f"[Dungeon] max_nodes {max_nodes} reached -> done")
                 break
             result = self.do_node(has_wheel=has_wheel, has_cutscene=has_cutscene, change_team=change_team)
             change_team = False
@@ -218,18 +243,24 @@ class BattleManager:
                         logger.warning("Stamina is empty")
                         if wait_for_stamina_to_refill:
                             logger.debug("Waiting for stamina to refill")
-                            for _ in range(10):
+                            # Looks stuck for up to 10 minutes but is a deliberate wait.
+                            log("[Dungeon] STAMINA EMPTY -> waiting up to 10 minutes to refill (not a hang)")
+                            for i in range(10):
                                 self.controller.pause(60)
                                 self.controller.take_screenshot()
+                                log(f"[Dungeon] stamina wait: minute {i + 1}/10")
                             self.controller.click_back()
                             continue
                         else:
+                            log("[Dungeon] stamina empty, not waiting -> give up (False)")
                             return False
                 else:
+                    log("[Dungeon] node returned None, has_stamina=False -> give up (False)")
                     return False
             elif not result:
                 # False = actual battle loss
                 losses += 1
+                log(f"[Dungeon] node LOST (losses={losses}/{max_losses})")
                 if max_losses != -1 and losses >= max_losses:
                     logger.debug("Reached max losses")
                     return False

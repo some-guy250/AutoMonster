@@ -98,7 +98,11 @@ class MonsterManager:
             self.controller.click(ASSETS.Place, pause=1.5)
 
     def breed_monsters(self, num_breeds: int, use_tree: bool = False, feed_and_sell_monsters: bool = False, sell: bool = False, batch_size: int = 15, progress_callback=None):
+        # DEBUG markers: the last [Breed] line printed before it hangs is where it is stuck.
+        log = lambda m: self.controller.log_gui(m, "debug")
+        log(f"[Breed] start: num_breeds={num_breeds} use_tree={use_tree} sell={sell} feed_and_sell={feed_and_sell_monsters}")
         self.controller.zoom_in()
+        log("[Breed] zoomed in")
 
         num_breeds_done = 0
         breader = ASSETS.Tree if use_tree else ASSETS.Mountain
@@ -109,49 +113,63 @@ class MonsterManager:
         max_count = 2
         while num_breeds_done < num_breeds:
             count = 0
+            log(f"[Breed] outer loop: done={num_breeds_done}/{num_breeds} max_count={max_count}")
             while True:
-                # Stop BEFORE starting another breeding. Checking after the Repeat
-                # click (as before) started one extra breeding and abandoned it, which
-                # left a SpeedUp on screen and made the Repeat wait spin forever.
+                # Stop BEFORE starting another breeding (see git history for why).
                 if count == max_count:
+                    log(f"[Breed] count={count} hit max_count={max_count} -> heading to hatchery")
                     break
+                log("[Breed] waiting for Repeat/SpeedUp...")
                 hatchery_full = False
                 while not self.controller.in_screen(ASSETS.Repeat, ASSETS.SpeedUp, pause_for=0.5):
-                    # The hatchery can already be full, in which case Repeat is not offered
-                    # and this loop would re-click the breader forever. Detect FullHatchery
-                    # here and take the full-hatchery path (back -> hatch) instead.
+                    # Full hatchery means Repeat is never offered: detect it and
+                    # take the full-hatchery path (back -> hatch) instead of looping.
                     if self.controller.in_screen(ASSETS.FullHatchery, pause_for=0, screenshot=self.controller.get_last_screenshot()):
+                        log("[Breed] hatchery FULL before breeding -> back, going to hatch")
                         self.controller.click_back()
                         hatchery_full = True
                         break
                     self.controller.wait_for(breader, timeout=7, raise_error=True, pause_for=0)
+                    log("[Breed] clicking breader (Tree/Mountain)")
                     self.controller.click(breader, raise_error=True, screenshot=self.controller.get_last_screenshot())
                 if hatchery_full:
                     break
+                log("[Breed] waiting for Repeat button...")
                 while not self.controller.in_screen(ASSETS.Repeat, pause_for=0):
                     self.controller.pause(1)
+                log("[Breed] clicking Repeat")
                 self.controller.click(ASSETS.Repeat, raise_error=True)
+                log("[Breed] waiting for TakeEgg...")
                 while not self.controller.in_screen(ASSETS.TakeEgg, pause_for=0):
                     self.controller.pause(1)
+                log("[Breed] clicking TakeEgg")
                 self.controller.click(ASSETS.TakeEgg, screenshot=self.controller.get_last_screenshot())
+                log("[Breed] waiting for FullHatchery (timeout 5)...")
                 self.controller.wait_for(ASSETS.FullHatchery, timeout=5, pause_for=0)
                 if self.controller.in_screen(ASSETS.FullHatchery, pause_for=0, screenshot=self.controller.get_last_screenshot()):
+                    log("[Breed] hatchery FULL -> back, going to hatch")
                     self.controller.click_back()
                     break
                 count += 1
+                log(f"[Breed] egg taken, count={count}")
 
+            log("[Breed] clicking Hatchery")
             self.controller.click(ASSETS.Hatchery, pause=1.5)
             max_count = -1
             number_of_monsters = self.controller.count(ASSETS.HatchDino, ASSETS.HatchPanda)
+            log(f"[Breed] hatchery open: {number_of_monsters} monster(s)")
             while self.controller.in_screen(ASSETS.HatchDino, ASSETS.HatchPanda, pause_for=0):
+                log(f"[Breed] hatching (done={num_breeds_done})")
                 self.click_left_monster(sell=sell)
                 timeout = 0
                 if not self.controller.in_screen(ASSETS.Place, pause_for=0):
+                    log("[Breed] not placed yet -> waiting for hatch (HatchNotYet, 30s cap)")
                     while self.controller.in_screen(ASSETS.HatchNotYet, pause_for=0):
                         self.controller.pause(2)
                         timeout += 2
                         if timeout >= 30:
                             raise AutoMonsterError("Hatching timed out")
+                    log("[Breed] hatch finished -> clicking monster again")
                     self.click_left_monster(sell=sell)
 
                 num_breeds_done += 1
@@ -159,14 +177,19 @@ class MonsterManager:
                 if progress_callback:
                     progress_callback(num_breeds_done / num_breeds)
                 if sell:
+                    log("[Breed] selling")
                     self.controller.follow_sequence(ASSETS.Sell, ASSETS.Yes, ASSETS.Hatchery)
                 else:
+                    log("[Breed] placing in vault")
                     self.controller.follow_sequence(ASSETS.PlaceVault, ASSETS.Cancel, timeout=15, raise_error=True)
                     if feed_and_sell_monsters and (num_breeds_done % batch_size == 0 or (max_count + 1 == number_of_monsters and num_breeds_done >= num_breeds)):
+                        log("[Breed] triggering feed_and_sell_monsters")
                         self.feed_and_sell_monsters()
                     self.controller.click_back()
             max_count = 2 if max_count > 2 else max_count
+            log(f"[Breed] hatchery cleared (done={num_breeds_done})")
 
+        log(f"[Breed] FINISHED: {num_breeds_done} breeds")
         if progress_callback:
             progress_callback(1.0)
 
