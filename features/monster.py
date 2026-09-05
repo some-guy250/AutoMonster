@@ -140,8 +140,15 @@ class MonsterManager:
                 log("[Breed] clicking Repeat")
                 self.controller.click(ASSETS.Repeat, raise_error=True)
                 log("[Breed] waiting for TakeEgg...")
+                take_egg_wait = 0
                 while not self.controller.in_screen(ASSETS.TakeEgg, pause_for=0):
                     self.controller.pause(1)
+                    take_egg_wait += 1
+                    if take_egg_wait >= 60:
+                        raise AutoMonsterError(
+                            "TakeEgg did not appear within 60s after clicking Repeat - "
+                            "check the last screenshot (debug tool or sc/)"
+                        )
                 log("[Breed] clicking TakeEgg")
                 self.controller.click(ASSETS.TakeEgg, screenshot=self.controller.get_last_screenshot())
                 log("[Breed] waiting for FullHatchery (timeout 5)...")

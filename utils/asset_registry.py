@@ -136,7 +136,7 @@ ASSET_SPECS = {
     'monsterempty.png': AssetSpec(region=Region.ALL),
     'unlock.png': AssetSpec(region=Region.ALL),
     'repeat.png': AssetSpec(region=Region.BOTTOM | Region.RIGHT, threshold=0.8),
-    'takeegg.png': AssetSpec(region=Region.BOTTOM, threshold=0.8),
+    'takeegg.png': AssetSpec(region=Region.BOTTOM, threshold=0.75),
     'place.png': AssetSpec(region=Region.BOTTOM | Region.LEFT, threshold=0.8),
     'tree.png': AssetSpec(region=Region.ALL, threshold=0.90),
     'mountain.png': AssetSpec(region=Region.ALL, threshold=0.90),
